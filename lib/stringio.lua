@@ -57,6 +57,20 @@ function stringio.split(str)
 	return result
 end
 
+--! Chops off the next token from the front of a string.
+--! This function returns the the next token from the start of the string,
+--! followed by the substring that follows the delimiter string.
+--! @param str the string to tokenize
+--! @param delim the delimiter pattern to tokenize with, defaults to '%s' (whitespace).
+--! @return the token, the remaining substring
+function stringio.nexttoken(str, delim)
+	delim = delim or "%s" -- here %s is an alias for any whitespace
+	local pattern = string.format("([%s]*)([^%s]+)([%s]*)", delim, delim, delim) -- here %s is a string formatter as in C
+	local discard1, token, discard2 = str:match(pattern)
+--	print(string.format("'%s', '%s'", token, discard))
+	return token, str:sub(#token + #discard1 + #discard2 + 1)
+end
+
 --! Tries to convert a string into a number.
 --! 
 --! <p>This function attempts to parse a string as a numeric value, and convert

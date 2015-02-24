@@ -21,6 +21,22 @@ return {
 	end,
 
 	function()
+		local str = "\t1 2   \t 3:4::::"
+		local tok
+		for i = 1, 2 do
+			tok, str = stringio.nexttoken(str)
+			assert(i == stringio.tonumber(tok),
+				string.format("Incorrect token value parsed: '%s'", tok))
+		end
+		for i = 3, 4 do
+			tok, str = stringio.nexttoken(str, ':')
+			assert(i == stringio.tonumber(tok),
+				string.format("Incorrect token value parsed: '%s'", tok))
+		end
+		assert(#str == 0, "Expected string to be empty after last token")
+	end,
+
+	function()
 		assert(stringio.tonumber('0') == 0, "Conversion to number failed")
 		assert(stringio.tonumber('1.') == 1.0, "Conversion to number failed")
 		assert(stringio.tonumber('.1') == 0.1, "Conversion to number failed")
