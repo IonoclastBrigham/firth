@@ -1,4 +1,4 @@
-local stack = require 'lib/stack'
+local stack = require 'firth/stack'
 
 local st
 local initialcount = 5

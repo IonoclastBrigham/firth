@@ -1,4 +1,4 @@
-local stringio = require 'lib/stringio'
+local stringio = require 'firth/stringio'
 
 local table = require 'table'
 

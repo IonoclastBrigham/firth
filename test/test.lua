@@ -1,4 +1,5 @@
 local io = require 'io'
+local output = io.output()
 local table = require 'table'
 
 
@@ -9,31 +10,47 @@ mt.insert = table.insert
 mt.__index = mt
 setmetatable(messages, mt)
 
-local function assert(bool, msg)
+local function try(bool, msg)
 	if not bool then
 		failures = failures + 1
 		if msg then messages:insert(msg) end
-		io.output():write 'E'
+		output:write 'E'
 	else
-		io.output():write '.'
+		output:write '.'
 	end
-	return bool
+	return bool, msg
+end
+
+local function failed(msg)
+	output:write('E\n')
+	messages:insert(msg)
+	failures = failures + 1
 end
 
 local function dotests(path)
-	local tests = assert(loadfile(path))
-	if tests then
-		tests = tests()
-		for i,test in ipairs(tests) do
-			assert(pcall(test))
+	local success, tests = pcall(loadfile, path)
+	if success then
+		success, tests = pcall(tests)
+		if success then
+			for _, test in ipairs(tests) do
+				try(pcall(test))
+			end
+		else
+			failed(tests)
 		end
+	else
+		failed(tests)
 	end
-	print()
+	output:write('\n')
 end
 
+-- TODO: parameterize this or automate it
 dotests 'test/test-stack.lua'
 dotests 'test/test-stringio.lua'
 
-for _,msg in ipairs(messages) do
-	print(msg)
+if failures > 0 then
+	output:write(string.format("%d failed tests.\n", failures))
+	for _, msg in ipairs(messages) do
+		output:write(string.format("%s\n", msg))
+	end
 end
