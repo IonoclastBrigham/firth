@@ -1,4 +1,14 @@
-forthy language designed specifically for implementing other languages
-include pattern matching either as a language feature or implemented through metaprogramming
-
-
+param pattern matching
+	core language feature?
+	implemented through metaprogramming?
+runtime documentation
+	call lists
+		if foo calls bar:
+			dict.bar.calledby[i] = foo
+			dict.foo.calls[j] = bar
+		if foo is deleted or redefined, remove from bar.calledby
+		words to query both lists
+	attach stack diagram comments to words as a docstring
+	attach preceding comments to words, in a specific form?
+		append string to EOL, to internal buffer
+		: checks this buffer, and attaches to dict entry, if it exists
