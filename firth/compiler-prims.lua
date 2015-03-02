@@ -21,6 +21,16 @@ local prims = {}
 --! @endcond
 
 
+-- stack ops --
+
+function prims.dup(compiler)
+	compiler.stack:dup()
+end
+
+function prims.drop(compiler)
+	compiler.stack:drop()
+end
+
 -- inline operations --
 
 -- Compiles c = a OP b.
@@ -85,7 +95,11 @@ end
 -- os and io primitives --
 
 function prims.dotprint(compiler)
-	stringio.print(compiler.stack:pop()..' ')
+	stringio.print(tostring(compiler.stack:pop())..' ')
+end
+
+function prims.dotprintstack(compiler)
+	stringio.printstack(compiler.stack)
 end
 
 -- parser/compiler control words --
@@ -94,8 +108,10 @@ function prims.exit(compiler)
 	compiler.running = false
 end
 
+-- TODO: ": defer ( -- ? ) nexttoken pushfuncbyname emitcallfromstack ; immediate"
 function prims.defer(compiler)
-	-- TODO
+	local word = compiler:nexttoken()
+	compiler:call(word)
 end
 
 -- opposite of defer
@@ -120,18 +136,43 @@ function prims.enddef(compiler)
 end
 
 function prims.immediate(compiler)
-	-- TODO
+	compiler:immediate()
 end
 
 function prims.char(compiler)
 	local char = compiler:nexttoken()
-	compiler.stack:push(char)
+	compiler:pushstring(char)
+end
+
+function prims.dump(compiler)
+	compiler:push(compiler.last.compilebuf)
+end
+
+function prims.trace(compiler)
+	compiler.trace = true
+end
+
+function prims.notrace(compiler)
+	compiler.trace = nil
+end
+
+-- some non-numeric constants --
+
+function prims.TRUE(compiler)
+	compiler:push(true)
+end
+
+function prims.FALSE(compiler)
+	compiler:push(false)
 end
 
 -- export to dictionary --
 
 function prims.initialize()
 	return {
+		dup = { func = prims.dup },
+		drop = { func = prims.drop },
+
 		['+'] = { func = prims.add, immediate = true },
 		['-'] = { func = prims.sub, immediate = true },
 		['*'] = { func = prims.mul, immediate = true },
@@ -139,6 +180,7 @@ function prims.initialize()
 		['%'] = { func = prims.mod, immediate = true },
 
 		['.'] = { func = prims.dotprint },
+		['..'] = { func = prims.dotprintstack },
 
 		exit = { func = prims.exit, immediate = true },
 		defer = { func = prims.defer, immediate = true },
@@ -148,6 +190,12 @@ function prims.initialize()
 		[';'] = { func = prims.enddef, immediate = true },
 		immediate = { func = prims.immediate }, -- is this immediate?
 		char = { func = prims.char, immediate = true },
+		dump = { func = prims.dump },
+		trace = { func = prims.trace },
+		notrace = { func = prims.notrace },
+
+		['true'] = { func = prims.TRUE, immediate = true },
+		['false'] = { func = prims.FALSE, immediate = true },
 	}
 end
 

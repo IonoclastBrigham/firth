@@ -53,7 +53,7 @@ function compiler:execword(name, entry)
 	if not self.compiling or entry.immediate then
 		-- interpret mode or immediate found
 		local success, err = pcall(entry.func, self)
-		if not success then stringio.print(err) end
+		if not success then stringio.printline(err) end
 	else
 		-- compile mode
 		self:call(name)
@@ -61,9 +61,8 @@ function compiler:execword(name, entry)
 end
 
 function compiler:newfunc(word)
-	self.last = word
+	self.last = { name = word, compilebuf = "" }
 	self.compiling = true
-	self:append("return function(compiler)")
 end
 
 function compiler:call(func)
@@ -71,44 +70,55 @@ function compiler:call(func)
 end
 
 function compiler:done()
-	self:append("end")
-	--stringio.print(self.last.." = "..self.compilebuf)
-	---[[
-	local func, err = loadstring(self.compilebuf)
+	local last = self.last
+	if self.trace then stringio.printline(last.compilebuf) end
+	local func, err = loadstring("return function(compiler)" ..
+								 last.compilebuf ..
+								 "end")
 	if not err then
 		local success, res = pcall(func, self)
 		if success then
-			self.dictionary[self.last] = { func=res }
+			self.last.func = res
+			self.dictionary[last.name] = last
 		else
-			stringio.print(res)
+			stringio.printline("Compile Error:")
+			stringio.printline(res)
 		end
 	else
-		stringio.print(err)
+		stringio.printline("Compile Error:")
+		stringio.printline(err)
 	end
-	--]]
-	self.compilebuf = nil
 	self.compiling = false
 	self.nexttmp = 0
 end
 
 function compiler:immediate(word)
-	self.dictionary[word or self.last].immediate = true
+	local entry = (word and self.dictionary[word] or self.last)
+	entry.immediate = true
 end
 
-function compiler:push(num)
+--! Either compiles push code, or directly pushes value.
+--! @see pushstring()
+function compiler:push(val)
 	if self.compiling then
-		-- compile mode
-		self:pushtmp(num)
+		self:pushtmp(val)
 	else
-		-- interpret mode
-		self.stack:push(num)
+		self.stack:push(val)
 	end
 end
 
+--! Either compiles push code for quoted value, or directly pushes value.
+--! @see push()
+function compiler:pushstring(str)
+	if self.compiling then
+		str = "'"..str.."'"
+	end
+	self:push(str)
+end
+
 function compiler:error(tok)
-	stringio.print("Error: unknown word ( "..tok.." )")
+	stringio.printline("Error: unknown word ( "..tok.." )")
 	self.line = nil
-	self.compilebuf = nil
 	self.compiling = false
 end
 
@@ -128,16 +138,13 @@ function compiler:poptmp()
 end
 
 function compiler:pushtmp(var)
-	self:append("compiler:push(%s)", var)
+	self:append("compiler.stack:push(%s)", var)
 end
 
 function compiler:append(...)
 	local code = string.format(...)
-	if self.compilebuf then
-		self.compilebuf = string.format("%s\n%s", self.compilebuf, code)
-	else
-		self.compilebuf = code
-	end
+	local last = self.last
+	last.compilebuf = string.format("%s\n%s", last.compilebuf, code)
 end
 
 
