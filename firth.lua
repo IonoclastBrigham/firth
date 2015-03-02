@@ -13,12 +13,39 @@
 --------------------------------------------------------------------------------
 
 
-local compiler = require 'firth.compiler'
-local stringio = require 'firth.stringio'
+--! @cond
+local _, stringio = assert(pcall(require, 'firth.stringio'))
+local _, compiler = assert(pcall(require, 'firth.compiler'))
+
+local c
+--! @endcond
 
 
-c = compiler.new()
-while c.running do
-	stringio.print 'ok '
-	c:parse(stringio.readline())
-end
+--! The Firth repl and such.
+--! This is rather shoddy code, atm.
+firth = {
+	--! @fn repl()
+	--! @brief Executes the Firth Read-Eval-Print Loop.
+	repl = function()
+		if not c then
+			c = compiler.new()
+		else
+			c.running = true
+		end
+
+		while c.running do
+			stringio.print 'ok '
+			c:parse(stringio.readline())
+		end
+	end,
+
+	--! @fn reload()
+	--! @brief Reloads the firth compiler code.
+	--! This is probably broken.
+	reload = function()
+		package.loaded['firth.compiler'] = nil
+		_, compiler = assert(pcall(require, 'firth.compiler'))
+	end
+}
+
+firth.repl()
