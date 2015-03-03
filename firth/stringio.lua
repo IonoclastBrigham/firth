@@ -176,7 +176,7 @@ end
 --! @param stack an array or stack object.
 function stringio.printstack(stack)
 	for i = -1, -(#stack), -1 do
-		stringio.printline(i, ': ', stack[#stack + i + 1])
+		stringio.printline('[', i, '] = ', tostring(stack[#stack + i + 1]))
 	end
 end
 
