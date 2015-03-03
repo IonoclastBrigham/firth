@@ -87,9 +87,8 @@ end
 function compiler:done()
 	local last = self.last
 	if self.trace then stringio.printline(last.compilebuf) end
-	local func, err = loadstring("return function(compiler)" ..
-								 last.compilebuf ..
-								 "end")
+	local luasrc = "return function(compiler)"..last.compilebuf.."\nend"
+	local func, err = loadstring(luasrc)
 	if not err then
 		local success, res = pcall(func, self)
 		if success then
@@ -98,10 +97,12 @@ function compiler:done()
 		else
 			stringio.printline("Compile Error:")
 			stringio.printline(res)
+			stringio.printline(luasrc)
 		end
 	else
 		stringio.printline("Compile Error:")
 		stringio.printline(err)
+		stringio.printline(luasrc)
 	end
 	self.compiling = false
 	self.nexttmp = 0
