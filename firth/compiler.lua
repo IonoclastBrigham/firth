@@ -35,7 +35,7 @@ function compiler:parse(line)
 		local tok = self:nexttoken()
 		local val = self.dictionary[tok]
 		if val then
-			self:execword(tok, val)
+			self:execword(val)
 		else
 			val = stringio.tonumber(tok)
 			if val then
@@ -48,7 +48,7 @@ function compiler:parse(line)
 	end
 end
 
-function compiler:execword(name, entry)
+function compiler:execword(entry)
 	-- TODO: compile mode-specific vocabulary?
 	if not self.compiling or entry.immediate then
 		-- interpret mode or immediate found
@@ -56,7 +56,7 @@ function compiler:execword(name, entry)
 		if not success then stringio.printline(err) end
 	else
 		-- compile mode
-		self:call(name)
+		self:call(entry.name)
 	end
 end
 
@@ -65,12 +65,20 @@ function compiler:newfunc(word)
 	self.compiling = true
 end
 
-function compiler:call(func)
-	self.last.calls = self.last.calls or {}
-	self.last.calls[func] = true
-	self.dictionary[func].calledby = self.dictionary[func].calledby or {}
-	self.dictionary[func].calledby[self.last.name] = true
-	self:append("compiler.dictionary['%s'].func(compiler)", func)
+function compiler:call(word)
+	if self.compiling then
+--		self.last.calls = self.last.calls or {}
+		self.last.calls[word] = true
+--		self.dictionary[word].calledby = self.dictionary[func].calledby or {}
+		self.dictionary[word].calledby[self.last.name] = true
+		self:append("compiler.dictionary['%s'].func(compiler)", word)
+	else
+		if type(word) ~= "function" then
+			word = self.dictionary[word].func
+		end
+		local success, err = pcall(word, self)
+		if not success then stringio.printline(err) end
+	end
 end
 
 function compiler:done()
