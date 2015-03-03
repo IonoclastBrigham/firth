@@ -74,7 +74,7 @@ function compiler:call(word)
 	if self.compiling then
 		self.last.calls[word] = true
 		self.dictionary[word].calledby[self.last.name] = true
-		self:append("compiler.dictionary['%s'].func(compiler)", word)
+		self:append("compiler.dictionary[%q].func(compiler)", word)
 	else
 		if type(word) ~= "function" then
 			word = self.dictionary[word].func
@@ -127,7 +127,7 @@ end
 --! @see push()
 function compiler:pushstring(str)
 	if self.compiling then
-		str = "'"..str.."'"
+		str = string.format("%q", str):gsub("\\\\", "\\") -- restore backslashes
 	end
 	self:push(str)
 end
