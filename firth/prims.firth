@@ -1,0 +1,20 @@
+: // char \n parse drop ; immediate // There, now we can comment our code!
+
+// /////////////////////////////////////////////////////////////////////////////
+// prims.firth
+// Basic primitives for low level code and compiler manipulation
+// Copyright © 2015 Brigham Toskin
+// <https://github.com/IonoclastBrigham/firth/blob/master/LICENSE>
+// /////////////////////////////////////////////////////////////////////////////
+
+: ( char ) parse drop ; immediate // allow single-line paren-delimited  comments
+
+// some basic arithmetic shortcuts
+: 1+ ( n -- n+1 ) 1 + ;
+: 2* ( n -- 2n ) 2 * ;
+
+: nextword ( -- name ) char %s parse ; 
+: defer ( -- ) nextword call ; immediate
+: eval ( -- ... ) false compilemode nextword call true compilemode ; immediate
+: [ ( -- ) false compilemode ; immediate
+: ] ( -- ) true compilemode ;

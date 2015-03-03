@@ -84,7 +84,7 @@ end
 
 --! Compiles c = a % b.
 --! @param compiler the Compiler object that called this function.
-function prims.plus(compiler)
+function prims.mod(compiler)
 	if compiler.compiling then
 		binop(compiler, '%')
 	else
@@ -104,19 +104,28 @@ end
 
 -- parser/compiler control words --
 
+function prims.loadfile(compiler)
+	compiler:loadfile(compiler.stack:pop())
+end
+
 function prims.exit(compiler)
 	compiler.running = false
 end
 
--- TODO: ": defer ( -- ? ) nexttoken pushfuncbyname emitcallfromstack ; immediate"
-function prims.defer(compiler)
-	local word = compiler:nexttoken()
-	compiler:call(word)
-end
+---- TODO: ": defer ( -- ? ) nexttoken pushfuncbyname emitcallfromstack ; immediate"
+--function prims.defer(compiler)
+--	local word = compiler:nexttoken()
+--	compiler:call(word)
+--end
+--
+---- opposite of defer
+--function prims.eval(compiler)
+--	local word = compiler:nexttoken()
+--	compiler:call(word)
+--end
 
--- opposite of defer
-function prims.eval(compiler)
-	-- TODO
+function prims.compilemode(compiler)
+	compiler.compiling = compiler.stack:pop()
 end
 
 --! Parses next token from input stream, and pushes it as a string.
@@ -142,6 +151,11 @@ end
 function prims.char(compiler)
 	local char = compiler:nexttoken()
 	compiler:pushstring(char)
+end
+
+function prims.call(compiler)
+	local word = compiler.stack:pop()
+	compiler:call(word)
 end
 
 -- reflection, debugging, internal compiler state, etc. --
@@ -171,7 +185,7 @@ end
 function prims.calls(compiler)
 	local word = compiler:nexttoken()
 	for callee, _ in pairs(compiler.dictionary[word].calledby) do
-		stringio.printline(string.format("\tCalled By %s", callee))
+		stringio.printline(string.format("\tCalled by %s", callee))
 	end
 end
 
@@ -184,18 +198,28 @@ end
 
 -- some non-numeric constants --
 
-function prims.TRUE(compiler)
+function prims.pushtrue(compiler)
 	compiler:push(true)
 end
 
-function prims.FALSE(compiler)
+function prims.pushfalse(compiler)
 	compiler:push(false)
 end
 
 -- export to dictionary --
 
+local function buildentries(dict)
+	for name, entry in pairs(dict) do
+		entry.name = name
+		entry.calls = {}
+		entry.calledby = {}
+		assert(entry.func, name.." improperly initialized")
+	end
+	return dict
+end
+
 function prims.initialize()
-	return {
+	return buildentries{
 		dup = { func = prims.dup },
 		drop = { func = prims.drop },
 
@@ -208,14 +232,17 @@ function prims.initialize()
 		['.'] = { func = prims.dotprint },
 		['..'] = { func = prims.dotprintstack },
 
+		loadfile = { func = prims.loadfile },
 		exit = { func = prims.exit, immediate = true },
-		defer = { func = prims.defer, immediate = true },
-		eval  = { func = prims.eval, immediate = true },
+--		defer = { func = prims.defer, immediate = true },
+--		eval  = { func = prims.eval, immediate = true },
+		compilemode  = { func = prims.compilemode },
 		parse = { func = prims.parse },
 		[':'] = { func = prims.define, immediate = true },
 		[';'] = { func = prims.enddef, immediate = true },
 		immediate = { func = prims.immediate }, -- is this immediate?
 		char = { func = prims.char, immediate = true },
+		call = { func = prims.call },
 
 		dump = { func = prims.dump },
 		['dumpword:'] = { func = prims.dumpword },
@@ -224,8 +251,8 @@ function prims.initialize()
 		['calls:'] = { func = prims.calls },
 		['calledby:'] = { func = prims.calledby },
 
-		['true'] = { func = prims.TRUE, immediate = true },
-		['false'] = { func = prims.FALSE, immediate = true },
+		['true'] = { func = prims.pushtrue, immediate = true },
+		['false'] = { func = prims.pushfalse, immediate = true },
 	}
 end
 

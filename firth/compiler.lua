@@ -48,6 +48,11 @@ function compiler:parse(line)
 	end
 end
 
+function compiler:loadfile(path)
+	-- TODO: default/search paths
+	for line in assert(io.lines(path)) do self:parse(line) end
+end
+
 function compiler:execword(entry)
 	-- TODO: compile mode-specific vocabulary?
 	if not self.compiling or entry.immediate then
@@ -67,9 +72,7 @@ end
 
 function compiler:call(word)
 	if self.compiling then
---		self.last.calls = self.last.calls or {}
 		self.last.calls[word] = true
---		self.dictionary[word].calledby = self.dictionary[func].calledby or {}
 		self.dictionary[word].calledby[self.last.name] = true
 		self:append("compiler.dictionary['%s'].func(compiler)", word)
 	else
@@ -176,8 +179,9 @@ function compiler.new()
 		nexttmp = 0,
 		running = true,
 	}
-	
-	return setmetatable(c, mt)
+	setmetatable(c, mt)
+	c:loadfile "firth/prims.firth"
+	return c
 end
 
 return compiler
