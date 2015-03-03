@@ -61,11 +61,15 @@ function compiler:execword(name, entry)
 end
 
 function compiler:newfunc(word)
-	self.last = { name = word, compilebuf = "" }
+	self.last = { name = word, compilebuf = "", calls = {}, calledby = {} }
 	self.compiling = true
 end
 
 function compiler:call(func)
+	self.last.calls = self.last.calls or {}
+	self.last.calls[func] = true
+	self.dictionary[func].calledby = self.dictionary[func].calledby or {}
+	self.dictionary[func].calledby[self.last.name] = true
 	self:append("compiler.dictionary['%s'].func(compiler)", func)
 end
 

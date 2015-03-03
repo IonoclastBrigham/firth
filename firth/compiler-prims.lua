@@ -144,8 +144,20 @@ function prims.char(compiler)
 	compiler:pushstring(char)
 end
 
+-- reflection, debugging, internal compiler state, etc. --
+
 function prims.dump(compiler)
-	compiler:push(compiler.last.compilebuf)
+	compiler.stack:push(compiler.last.compilebuf)
+end
+
+function prims.dumpword(compiler)
+	local word = compiler:nexttoken()
+	local entry = compiler.dictionary[word]
+	if not entry then
+		compiler:error(word)
+		return
+	end
+	compiler.stack:push(entry.compilebuf)
 end
 
 function prims.trace(compiler)
@@ -154,6 +166,20 @@ end
 
 function prims.notrace(compiler)
 	compiler.trace = nil
+end
+
+function prims.calls(compiler)
+	local word = compiler:nexttoken()
+	for callee, _ in pairs(compiler.dictionary[word].calledby) do
+		stringio.printline(string.format("\tCalled By %s", callee))
+	end
+end
+
+function prims.calledby(compiler)
+	local word = compiler:nexttoken()
+	for callee, _ in pairs(compiler.dictionary[word].calls) do
+		stringio.printline(string.format("\tCalls %s", callee))
+	end
 end
 
 -- some non-numeric constants --
@@ -190,9 +216,13 @@ function prims.initialize()
 		[';'] = { func = prims.enddef, immediate = true },
 		immediate = { func = prims.immediate }, -- is this immediate?
 		char = { func = prims.char, immediate = true },
+
 		dump = { func = prims.dump },
+		['dumpword:'] = { func = prims.dumpword },
 		trace = { func = prims.trace },
 		notrace = { func = prims.notrace },
+		['calls:'] = { func = prims.calls },
+		['calledby:'] = { func = prims.calledby },
 
 		['true'] = { func = prims.TRUE, immediate = true },
 		['false'] = { func = prims.FALSE, immediate = true },
