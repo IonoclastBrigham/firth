@@ -12,3 +12,4 @@ runtime documentation
 	attach preceding comments to words, in a specific form?
 		append string to EOL, to internal buffer
 		: checks this buffer, and attaches to dict entry, if it exists
+create a vocabulary for writing executable grammars for parsing DSLs
