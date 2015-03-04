@@ -31,6 +31,32 @@ function prims.drop(compiler)
 	compiler.stack:drop()
 end
 
+-- flow control --
+
+function prims.ifstmt(compiler)
+	if compiler.compiling then
+		compiler:append("if compiler.stack:pop() then")
+	else
+		-- TODO: ???
+	end
+end
+
+function prims.elsestmt(compiler)
+	if compiler.compiling then
+		compiler:append("else")
+	else
+		-- TODO: ???
+	end
+end
+
+function prims.endstmt(compiler)
+	if compiler.compiling then
+		compiler:append("end")
+	else
+		-- TODO: ???
+	end
+end
+
 -- inline operations --
 
 -- Compiles c = a OP b.
@@ -111,18 +137,6 @@ end
 function prims.exit(compiler)
 	compiler.running = false
 end
-
----- TODO: ": defer ( -- ? ) nexttoken pushfuncbyname emitcallfromstack ; immediate"
---function prims.defer(compiler)
---	local word = compiler:nexttoken()
---	compiler:call(word)
---end
---
----- opposite of defer
---function prims.eval(compiler)
---	local word = compiler:nexttoken()
---	compiler:call(word)
---end
 
 function prims.compilemode(compiler)
 	compiler.compiling = compiler.stack:pop()
@@ -213,7 +227,7 @@ local function buildentries(dict)
 		entry.name = name
 		entry.calls = {}
 		entry.calledby = {}
-		assert(entry.func, name.." improperly initialized")
+		assert(type(entry.func) == "function", name.." improperly initialized")
 	end
 	return dict
 end
@@ -222,6 +236,10 @@ function prims.initialize()
 	return buildentries{
 		dup = { func = prims.dup },
 		drop = { func = prims.drop },
+
+		['if'] = { func = prims.ifstmt, immediate = true },
+		['else'] = { func = prims.elsestmt, immediate = true },
+		['end'] = { func = prims.endstmt, immediate = true }, -- TODO: generic end, works for loops, etc?
 
 		['+'] = { func = prims.add, immediate = true },
 		['-'] = { func = prims.sub, immediate = true },
@@ -234,8 +252,6 @@ function prims.initialize()
 
 		loadfile = { func = prims.loadfile },
 		exit = { func = prims.exit, immediate = true },
---		defer = { func = prims.defer, immediate = true },
---		eval  = { func = prims.eval, immediate = true },
 		compilemode  = { func = prims.compilemode },
 		parse = { func = prims.parse },
 		[':'] = { func = prims.define, immediate = true },
