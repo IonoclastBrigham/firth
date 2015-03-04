@@ -34,11 +34,17 @@ end
 -- flow control --
 
 function prims.ifstmt(compiler)
-	compiler:append("if compiler.stack:pop() then")
+	local cond = compiler:poptmp()
+	compiler:append("if %s then", cond)
 end
 
 function prims.elsestmt(compiler)
 	compiler:append("else")
+end
+
+function prims.loopstmt(compiler)
+	local count = compiler:poptmp()
+	compiler:append("for _ = 1, %s do", count)
 end
 
 function prims.endstmt(compiler)
@@ -207,6 +213,7 @@ function prims.initialize()
 
 		['if'] = { func = prims.ifstmt, immediate = true },
 		['else'] = { func = prims.elsestmt, immediate = true },
+		['loop'] = { func = prims.loopstmt, immediate = true },
 		['end'] = { func = prims.endstmt, immediate = true }, -- TODO: generic end, works for loops, etc?
 
 		['+'] = { func = prims.add, immediate = true },
