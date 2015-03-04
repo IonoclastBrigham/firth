@@ -20,3 +20,4 @@
 : eval ( -- ... ) false compilemode nextword call true compilemode ; immediate
 : [ ( -- ) false compilemode ; immediate
 : ] ( -- ) true compilemode ;
+: ;immediate ( -- ) defer ; defer immediate ; immediate
