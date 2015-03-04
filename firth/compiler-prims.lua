@@ -34,27 +34,15 @@ end
 -- flow control --
 
 function prims.ifstmt(compiler)
-	if compiler.compiling then
-		compiler:append("if compiler.stack:pop() then")
-	else
-		-- TODO: ???
-	end
+	compiler:append("if compiler.stack:pop() then")
 end
 
 function prims.elsestmt(compiler)
-	if compiler.compiling then
-		compiler:append("else")
-	else
-		-- TODO: ???
-	end
+	compiler:append("else")
 end
 
 function prims.endstmt(compiler)
-	if compiler.compiling then
-		compiler:append("end")
-	else
-		-- TODO: ???
-	end
+	compiler:append("end")
 end
 
 -- inline operations --
@@ -71,57 +59,37 @@ end
 --! Compiles c = a + b.
 --! @param compiler the Compiler object that called this function.
 function prims.add(compiler)
-	if compiler.compiling then
-		binop(compiler, '+')
-	else
-		compiler.stack:push(compiler.stack:pop() + compiler.stack:pop())
-	end
+	binop(compiler, '+')
 end
 
 --! Compiles c = a - b.
 --! @param compiler the Compiler object that called this function.
 function prims.sub(compiler)
-	if compiler.compiling then
-		binop(compiler, '-')
-	else
-		compiler.stack:push(compiler.stack:pop() - compiler.stack:pop())
-	end
+	binop(compiler, '-')
 end
 
 --! Compiles c = a * b.
 --! @param compiler the Compiler object that called this function.
 function prims.mul(compiler)
-	if compiler.compiling then
-		binop(compiler, '*')
-	else
-		compiler.stack:push(compiler.stack:pop() * compiler.stack:pop())
-	end
+	binop(compiler, '*')
 end
 
 --! Compiles c = a / b.
 --! @param compiler the Compiler object that called this function.
 function prims.div(compiler)
-	if compiler.compiling then
-		binop(compiler, '/')
-	else
-		compiler.stack:push(compiler.stack:pop() / compiler.stack:pop())
-	end
+	binop(compiler, '/')
 end
 
 --! Compiles c = a % b.
 --! @param compiler the Compiler object that called this function.
 function prims.mod(compiler)
-	if compiler.compiling then
-		binop(compiler, '%')
-	else
-		compiler.stack:push(compiler.stack:pop() % compiler.stack:pop())
-	end
+	binop(compiler, '%')
 end
 
 -- os and io primitives --
 
 function prims.dotprint(compiler)
-	stringio.print(tostring(compiler.stack:pop())..' ')
+	stringio.print(tostring(compiler.stack:pop()), ' ')
 end
 
 function prims.dotprintstack(compiler)
@@ -256,16 +224,16 @@ function prims.initialize()
 		parse = { func = prims.parse },
 		[':'] = { func = prims.define, immediate = true },
 		[';'] = { func = prims.enddef, immediate = true },
-		immediate = { func = prims.immediate }, -- is this immediate?
+		immediate = { func = prims.immediate },
 		char = { func = prims.char, immediate = true },
 		call = { func = prims.call },
 
 		dump = { func = prims.dump },
-		['dumpword:'] = { func = prims.dumpword },
+		['dumpword:'] = { func = prims.dumpword, immediate = true },
 		trace = { func = prims.trace },
 		notrace = { func = prims.notrace },
-		['calls:'] = { func = prims.calls },
-		['calledby:'] = { func = prims.calledby },
+		['calls:'] = { func = prims.calls, immediate = true },
+		['calledby:'] = { func = prims.calledby, immediate = true },
 
 		['true'] = { func = prims.pushtrue, immediate = true },
 		['false'] = { func = prims.pushfalse, immediate = true },

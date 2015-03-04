@@ -1,4 +1,6 @@
-: // char \n parse drop ; immediate // There, now we can comment our code!
+: // char \n parse drop ; immediate
+
+// There, now we can comment our code! So... let's get to it!
 
 // /////////////////////////////////////////////////////////////////////////////
 // prims.firth

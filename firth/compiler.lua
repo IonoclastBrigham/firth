@@ -46,21 +46,23 @@ function compiler:parse(line)
 			end
 		end
 	end
+	if #self.scratch > 0 and not self.compiling then self:done() end
 end
 
 function compiler:loadfile(path)
 	-- TODO: default/search paths
-	for line in assert(io.lines(path)) do self:parse(line) end
+	for line in assert(io.lines(path)) do
+		if not self.running then break end
+		self:parse(line)
+	end
 end
 
 function compiler:execword(entry)
 	-- TODO: compile mode-specific vocabulary?
-	if not self.compiling or entry.immediate then
-		-- interpret mode or immediate found
+	if entry.immediate then
 		local success, err = pcall(entry.func, self)
 		if not success then stringio.printline(err) end
 	else
-		-- compile mode
 		self:call(entry.name)
 	end
 end
@@ -74,26 +76,26 @@ function compiler:call(word)
 	if self.compiling then
 		self.last.calls[word] = true
 		self.dictionary[word].calledby[self.last.name] = true
-		self:append("compiler.dictionary[%q].func(compiler)", word)
-	else
-		if type(word) ~= "function" then
-			word = self.dictionary[word].func
-		end
-		local success, err = pcall(word, self)
-		if not success then stringio.printline(err) end
 	end
+	self:append("compiler.dictionary[%q].func(compiler)", word)
 end
 
 function compiler:done()
-	local last = self.last
-	if self.trace then stringio.printline(last.compilebuf) end
-	local luasrc = "return function(compiler)"..last.compilebuf.."\nend"
+	local compilebuf = self.compiling and self.last.compilebuf or self.scratch
+	if self.trace then stringio.printline(compilebuf) end
+	local luasrc = "return function(compiler)"..compilebuf.."\nend"
 	local func, err = loadstring(luasrc)
 	if not err then
+		-- exec returned function to the the actual function we want
 		local success, res = pcall(func, self)
 		if success then
-			self.last.func = res
-			self.dictionary[last.name] = last
+			if self.compiling then
+				self.last.func = res
+				self.dictionary[self.last.name] = self.last
+			else
+				success, err = pcall(res, self)
+				if not success then stringio.printline(err) end
+			end
 		else
 			stringio.printline("Compile Error:")
 			stringio.printline(res)
@@ -104,7 +106,11 @@ function compiler:done()
 		stringio.printline(err)
 		stringio.printline(luasrc)
 	end
-	self.compiling = false
+	if self.compiling then
+		self.compiling = false
+	else
+		self.scratch = ""
+	end
 	self.nexttmp = 0
 end
 
@@ -116,19 +122,14 @@ end
 --! Either compiles push code, or directly pushes value.
 --! @see pushstring()
 function compiler:push(val)
-	if self.compiling then
-		self:pushtmp(val)
-	else
-		self.stack:push(val)
-	end
+	-- TODO: redundant, now?
+	self:pushtmp(val)
 end
 
 --! Either compiles push code for quoted value, or directly pushes value.
 --! @see push()
 function compiler:pushstring(str)
-	if self.compiling then
-		str = string.format("%q", str):gsub("\\\\", "\\") -- restore backslashes
-	end
+	str = string.format("%q", str):gsub("\\\\", "\\") -- restore backslashes
 	self:push(str)
 end
 
@@ -159,8 +160,13 @@ end
 
 function compiler:append(...)
 	local code = string.format(...)
-	local last = self.last
-	last.compilebuf = string.format("%s\n%s", last.compilebuf, code)
+	local format = "%s\n%s"
+	if self.compiling then
+		local last = self.last
+		last.compilebuf = string.format(format, last.compilebuf, code)
+	else
+		self.scratch = string.format(format, self.scratch, code)
+	end
 end
 
 
@@ -177,6 +183,7 @@ function compiler.new()
 		stack = stack.new(),
 		dictionary = prims.initialize(),
 		compiling = false,
+		scratch = "",
 		nexttmp = 0,
 		running = true,
 	}
