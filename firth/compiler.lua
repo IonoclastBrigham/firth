@@ -139,11 +139,11 @@ function compiler:error(tok)
 	self.compiling = false
 end
 
-function compiler:newtmp()
+function compiler:newtmp(initialval)
 	local nexttmp = self.nexttmp
 	local var = string.format("__tmp%d__", nexttmp)
 	self.nexttmp = nexttmp + 1
-	self:append("local %s", var)
+	self:append("local %s = %s", var, tostring(initialval))
 
 	return var
 end
