@@ -34,7 +34,7 @@ firth = {
 		end
 
 		while c.running do
-			stringio.print 'ok '
+			stringio.print(c.compiling and '>>\t' or 'ok ')
 			c:parse(stringio.readline())
 		end
 	end,
