@@ -47,6 +47,10 @@ function prims.loopstmt(compiler)
 	compiler:append("for _ = 1, %s do", count)
 end
 
+function prims.dostmt(compiler)
+	compiler:append("do")
+end
+
 function prims.endstmt(compiler)
 	compiler:append("end")
 end
@@ -92,6 +96,45 @@ function prims.mod(compiler)
 	binop(compiler, '%')
 end
 
+-- boolean stuff --
+
+function prims.pushtrue(compiler)
+	compiler:push(true)
+end
+
+function prims.pushfalse(compiler)
+	compiler:push(false)
+end
+
+function prims.pushnot(compiler)
+	local stack = compiler:newtmp("compiler.stack")
+	compiler:append("%s[#%s] = not %s[#%s]", stack, stack, stack, stack)
+end
+
+function prims.less(compiler)
+	binop(compiler, "<")
+end
+
+function prims.greater(compiler)
+	binop(compiler, ">")
+end
+
+function prims.equal(compiler)
+	binop(compiler, "=")
+end
+
+function prims.lesseq(compiler)
+	binop(compiler, "<=")
+end
+
+function prims.greatereq(compiler)
+	binop(compiler, ">=")
+end
+
+function prims.noteq(compiler)
+	binop(compiler, "~=")
+end
+
 -- os and io primitives --
 
 function prims.dotprint(compiler)
@@ -121,6 +164,15 @@ function prims.parse(compiler)
 	local delim = compiler.stack:pop()
 	local token = compiler:nexttoken(delim)
 	compiler.stack:push(token)
+end
+
+function prims.push(compiler)
+	local val = compiler.stack:pop()
+	if type(val) == "string" then
+		compiler:pushstring(val)
+	else
+		compiler:push(val)
+	end
 end
 
 function prims.define(compiler)
@@ -184,16 +236,6 @@ function prims.calledby(compiler)
 	end
 end
 
--- some non-numeric constants --
-
-function prims.pushtrue(compiler)
-	compiler:push(true)
-end
-
-function prims.pushfalse(compiler)
-	compiler:push(false)
-end
-
 -- export to dictionary --
 
 local function buildentries(dict)
@@ -214,13 +256,24 @@ function prims.initialize()
 		['if'] = { func = prims.ifstmt, immediate = true },
 		['else'] = { func = prims.elsestmt, immediate = true },
 		['loop'] = { func = prims.loopstmt, immediate = true },
-		['end'] = { func = prims.endstmt, immediate = true }, -- TODO: generic end, works for loops, etc?
+		['do'] = { func = prims.dostmt, immediate = true },
+		['end'] = { func = prims.endstmt, immediate = true },
 
 		['+'] = { func = prims.add, immediate = true },
 		['-'] = { func = prims.sub, immediate = true },
 		['*'] = { func = prims.mul, immediate = true },
 		['/'] = { func = prims.div, immediate = true },
 		['%'] = { func = prims.mod, immediate = true },
+
+		['true'] = { func = prims.pushtrue, immediate = true },
+		['false'] = { func = prims.pushfalse, immediate = true },
+		['not'] = { func = prims.pushnot, immediate = true },
+		['<'] = { func = prims.less, immediate = true },
+		['>'] = { func = prims.greater, immediate = true },
+		['='] = { func = prims.equal, immediate = true },
+		['<='] = { func = prims.lesseq, immediate = true },
+		['>='] = { func = prims.greatereq, immediate = true },
+		['~='] = { func = prims.noteq, immediate = true },
 
 		['.'] = { func = prims.dotprint },
 		['..'] = { func = prims.dotprintstack },
@@ -229,6 +282,7 @@ function prims.initialize()
 		exit = { func = prims.exit, immediate = true },
 		compilemode  = { func = prims.compilemode },
 		parse = { func = prims.parse },
+		push = { func = prims.push },
 		[':'] = { func = prims.define, immediate = true },
 		[';'] = { func = prims.enddef, immediate = true },
 		immediate = { func = prims.immediate },
@@ -241,9 +295,6 @@ function prims.initialize()
 		notrace = { func = prims.notrace },
 		['calls:'] = { func = prims.calls, immediate = true },
 		['calledby:'] = { func = prims.calledby, immediate = true },
-
-		['true'] = { func = prims.pushtrue, immediate = true },
-		['false'] = { func = prims.pushfalse, immediate = true },
 	}
 end
 
