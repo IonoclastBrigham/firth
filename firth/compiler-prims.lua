@@ -120,7 +120,7 @@ function prims.greater(compiler)
 end
 
 function prims.equal(compiler)
-	binop(compiler, "=")
+	binop(compiler, "==")
 end
 
 function prims.lesseq(compiler)
