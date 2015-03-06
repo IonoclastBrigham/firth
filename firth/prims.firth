@@ -6,8 +6,8 @@ char : define true compilemode
 ; immediate
 
 : nextword char %s parse ;
-: defer nextword call ; immediate
-: ;immed defer ; defer immediate ; immediate
+: postpone nextword call ; immediate
+: ;immed postpone ; postpone immediate ; immediate
 
 : // char \n parse drop ;immed // There, now we can comment our code!
 
@@ -18,13 +18,30 @@ char : define true compilemode
 // <https://github.com/IonoclastBrigham/firth/blob/master/LICENSE>
 // /////////////////////////////////////////////////////////////////////////////
 
-: ( char ) parse drop ; immediate // inline, single-line comments
+: ( char ) parse drop ;immed // inline, single-line comments
 
 // some basic arithmetic shortcuts
+// TODO: alias or inline these instead of calling
 : 1+ ( n -- n+1 ) 1 + ;
+: inc ( n -- n+1 ) 1+ ;
+: 1- ( n -- n-1 ) 1 - ;
+: dec ( n -- n-1 ) 1- ;
+: -1* ( n -- -n ) -1 * ;
+: neg ( n -- -n ) -1* ;
 : 2* ( n -- 2n ) 2 * ;
+: 2/ ( n -- n/2 ) 2 / ;
 
 // a few parser/interpreter/compiler control words
-: eval ( -- ... ) false compilemode nextword call true compilemode ; immediate
-: [ ( -- ) false compilemode ; immediate
+: eval ( -- ... )
+	false compilemode // TODO: preserve previous value on cstack
+	nextword call
+	true compilemode
+;immed
+: [ ( -- ) false compilemode ;immed
 : ] ( -- ) true compilemode ;
+
+
+// values and variables
+: " ( -- str ) char " parse push ;immed
+: const: ( val -- ) postpone : push postpone ; ;immed
+// : var: ( val -- ) ;
