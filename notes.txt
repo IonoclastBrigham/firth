@@ -1,13 +1,44 @@
+Implementation Notes
+--------------------
+Switched from direct interpretation to pre-compiling interpret mode lines
+	Facilitates branching /loops, which don't work in a direct-interpreted context
+	Necessitated pre-compiling and executing the current scratch buffer when
+	switching to compile mode, to keep things consistent
+Broke down lua "newfunc/define" functionality into more basic primitives
+	Moved definition of ":" from lua lang to firth land
+	Uncovered compile-mode switch bug
+		If the last word on an interpreted line switch to compile, infinite recursion
+		This is because it calls:
+			compiler:done(), on EOL
+			which compiles, executes scratch buffer
+			which sets compile mode true
+			which triggers state transition logic
+			which calls compiler:end()
+			which compiles, executes scratch buffer...
+		The Fix:
+			clear scratch buffer as soon as it is first compiled
+			bail from done() if compilebuffer is empty or nil
+		New bug:
+			because it bails if buffer is empty...
+			: NOP ( -- ) ; // will never leave compile mode
+		New Fix:
+			just comment out the nil/empty check
+			let it compile and empty function
+	
+
+
+Ideas / TODOs
+-------------
+implement ; in firth land
+	refactor compiler:done() into lower level primitives, call from prims.enddef()
+	strip out as much junk as possible
+	write ; word in firth and nix prims.enddef()
 param pattern matching
 	core language feature?
 	implemented through metaprogramming?
 runtime documentation
 	call lists
-		if foo calls bar:
-			dict.bar.calledby[i] = foo
-			dict.foo.calls[j] = bar
 		if foo is deleted or redefined, remove from bar.calledby
-		words to query both lists
 	attach stack diagram comments to words as a docstring
 	attach preceding comments to words, in a specific form?
 		append string to EOL, to internal buffer

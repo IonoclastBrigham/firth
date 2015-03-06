@@ -97,7 +97,7 @@ function compiler:done()
 		compilebuf = self.scratch
 		self.scratch = ""
 	end
-	if not compilebuf or #compilebuf == 0 then return end
+	--if not compilebuf or #compilebuf == 0 then return end
 	if self.trace then stringio.printline(compilebuf) end
 	
 	local luasrc = "return function(compiler)"..compilebuf.."\nend"
