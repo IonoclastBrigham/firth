@@ -90,14 +90,11 @@ function compiler:call(word)
 end
 
 function compiler:done()
---	print(debug.traceback("=========Stack trace========"))
---	print("=======Stack trace end=======")
 	local compilebuf
 	if self.compiling then
 		compilebuf = self.last.compilebuf
 	else
 		compilebuf = self.scratch
---		print "CLEARING SCRATCH BUFFER"
 		self.scratch = ""
 	end
 	if not compilebuf or #compilebuf == 0 then return end
@@ -130,7 +127,6 @@ function compiler:done()
 	end
 	if self.compiling and not preserve then self.compiling = false end
 	self.nexttmp = 0
---	print "EXITING done()"
 end
 
 function compiler:immediate(word)
