@@ -156,7 +156,15 @@ function prims.exit(compiler)
 end
 
 function prims.compilemode(compiler)
-	compiler.compiling = compiler.stack:pop()
+	local compiling = compiler.stack:pop()
+	if (not compiler.compiling) and compiling then
+		compiler:done()
+	end
+	compiler.compiling = compiling
+end
+
+function prims.compiling(compiler)
+	compiler.stack:push(compiler.compiling)
 end
 
 --! Parses next token from input stream, and pushes it as a string.
@@ -176,8 +184,7 @@ function prims.push(compiler)
 end
 
 function prims.define(compiler)
-	local word = compiler:nexttoken()
-	compiler:newfunc(word)
+	compiler:newentry(compiler.stack:pop())
 end
 
 function prims.enddef(compiler)
@@ -281,9 +288,10 @@ function prims.initialize()
 		loadfile = { func = prims.loadfile },
 		exit = { func = prims.exit, immediate = true },
 		compilemode  = { func = prims.compilemode },
+		['compiling?'] = { func = prims.compiling },
 		parse = { func = prims.parse },
 		push = { func = prims.push },
-		[':'] = { func = prims.define, immediate = true },
+		define = { func = prims.define },
 		[';'] = { func = prims.enddef, immediate = true },
 		immediate = { func = prims.immediate },
 		char = { func = prims.char, immediate = true },

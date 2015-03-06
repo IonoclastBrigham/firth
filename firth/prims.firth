@@ -1,6 +1,15 @@
-: // char \n parse drop ; immediate
+char prims.firth drop
+char see_comment_block_below_for_copyright_notice drop
 
-// There, now we can comment our code! So... let's get to it!
+char : define true compilemode
+	char %s parse define true compilemode
+; immediate
+
+: nextword char %s parse ;
+: defer nextword call ; immediate
+: ;immed defer ; defer immediate ; immediate
+
+: // char \n parse drop ;immed // There, now we can comment our code!
 
 // /////////////////////////////////////////////////////////////////////////////
 // prims.firth
@@ -9,15 +18,13 @@
 // <https://github.com/IonoclastBrigham/firth/blob/master/LICENSE>
 // /////////////////////////////////////////////////////////////////////////////
 
-: ( char ) parse drop ; immediate // allow single-line paren-delimited  comments
+: ( char ) parse drop ; immediate // inline, single-line comments
 
 // some basic arithmetic shortcuts
 : 1+ ( n -- n+1 ) 1 + ;
 : 2* ( n -- 2n ) 2 * ;
 
-: nextword ( -- name ) char %s parse ; 
-: defer ( -- ) nextword call ; immediate
+// a few parser/interpreter/compiler control words
 : eval ( -- ... ) false compilemode nextword call true compilemode ; immediate
 : [ ( -- ) false compilemode ; immediate
 : ] ( -- ) true compilemode ;
-: ;immediate ( -- ) defer ; defer immediate ; immediate

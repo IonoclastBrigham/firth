@@ -28,7 +28,7 @@ function compiler:nexttoken(delim)
 	return token
 end
 
-function compiler:parse(line)
+function compiler:parse(line, num)
 	self.line = line
 	self.running = true
 	while self.line and #self.line > 0 and self.running do
@@ -41,7 +41,7 @@ function compiler:parse(line)
 			if val then
 				self:push(val)
 			else
-				self:error(tok)
+				self:error(tok, num)
 				break
 			end
 		end
@@ -51,9 +51,11 @@ end
 
 function compiler:loadfile(path)
 	-- TODO: default/search paths
+	local num = 1
 	for line in assert(io.lines(path)) do
 		if not self.running then break end
-		self:parse(line)
+		self:parse(line, num)
+		num = num + 1
 	end
 end
 
@@ -67,8 +69,15 @@ function compiler:execword(entry)
 	end
 end
 
-function compiler:newfunc(word)
+function compiler:newentry(word)
 	self.last = { name = word, compilebuf = "", calls = {}, calledby = {} }
+end
+
+function compiler:newfunc(word)
+	if not self.compiling then
+		self:done()
+	end
+	self:newentry(word)
 	self.compiling = true
 end
 
@@ -81,10 +90,22 @@ function compiler:call(word)
 end
 
 function compiler:done()
-	local compilebuf = self.compiling and self.last.compilebuf or self.scratch
+--	print(debug.traceback("=========Stack trace========"))
+--	print("=======Stack trace end=======")
+	local compilebuf
+	if self.compiling then
+		compilebuf = self.last.compilebuf
+	else
+		compilebuf = self.scratch
+--		print "CLEARING SCRATCH BUFFER"
+		self.scratch = ""
+	end
+	if not compilebuf or #compilebuf == 0 then return end
 	if self.trace then stringio.printline(compilebuf) end
+	
 	local luasrc = "return function(compiler)"..compilebuf.."\nend"
 	local func, err = loadstring(luasrc)
+	local preserve = false
 	if not err then
 		-- exec returned function to the the actual function we want
 		local success, res = pcall(func, self)
@@ -95,23 +116,21 @@ function compiler:done()
 			else
 				success, err = pcall(res, self)
 				if not success then stringio.printline(err) end
+				if self.compiling then preserve = true end
 			end
 		else
-			stringio.printline("Compile Error:")
+			stringio.printline("Compile Error (buildfunc):")
 			stringio.printline(res)
 			stringio.printline(luasrc)
 		end
 	else
-		stringio.printline("Compile Error:")
+		stringio.printline("Compile Error (loadstring):")
 		stringio.printline(err)
 		stringio.printline(luasrc)
 	end
-	if self.compiling then
-		self.compiling = false
-	else
-		self.scratch = ""
-	end
+	if self.compiling and not preserve then self.compiling = false end
 	self.nexttmp = 0
+--	print "EXITING done()"
 end
 
 function compiler:immediate(word)
@@ -133,7 +152,8 @@ function compiler:pushstring(str)
 	self:push(str)
 end
 
-function compiler:error(tok)
+function compiler:error(tok, num)
+	if num then stringio.print(num..": ") end
 	stringio.printline("Error: unknown word ( "..tok.." )")
 	self.line = nil
 	self.compiling = false
