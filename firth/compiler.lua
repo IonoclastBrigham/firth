@@ -70,7 +70,7 @@ function compiler:execword(entry)
 end
 
 function compiler:newentry(word)
-	self.last = { name = word, compilebuf = "", calls = {}, calledby = {} }
+	self.last = { name = word, compilebuf = {}, calls = {}, calledby = {} }
 end
 
 function compiler:newfunc(word)
@@ -96,7 +96,7 @@ function compiler:currentbuf()
 		name = self.last.name
 	else
 		compilebuf = self.scratch
-		self.scratch = ""
+		self.scratch = {}
 		name = "self.scratch"
 	end
 	return compilebuf or "", name
@@ -104,7 +104,9 @@ end
 
 function compiler:buildfunc(compilebuf, name)
 	self.nexttmp = 0
-	local luasrc = "return function(compiler)"..compilebuf.."\nend"
+	table.insert(compilebuf, 1, "return function(compiler)")
+	table.insert(compilebuf, "end")
+	local luasrc = table.concat(compilebuf, "\n")
 	local func, err = loadstring(luasrc, name)
 	if func then
 		-- exec returned function to the the actual function we want
@@ -126,7 +128,7 @@ end
 
 function compiler:done()
 	local compilebuf, name = self:currentbuf()
-	if self.trace then stringio.printline("TRACE '"..name.."':", compilebuf) end
+	if self.trace then stringio.printline("TRACE '"..name.."':", table.concat(compilebuf, "\n")) end
 	local func = self:buildfunc(compilebuf, name)
 
 	local preserve = false -- FIXME: this is a hack
@@ -194,12 +196,10 @@ end
 
 function compiler:append(...)
 	local code = string.format(...)
-	local format = "%s\n%s"
 	if self.compiling then
-		local last = self.last
-		last.compilebuf = string.format(format, last.compilebuf, code)
+		table.insert(self.last.compilebuf, code)
 	else
-		self.scratch = string.format(format, self.scratch, code)
+		table.insert(self.scratch, code)
 	end
 end
 
@@ -218,7 +218,7 @@ function compiler.new()
 		dictionary = prims.initialize(),
 		compiling = false,
 		trace = false,
-		scratch = "",
+		scratch = {},
 		nexttmp = 0,
 		running = true,
 	}
