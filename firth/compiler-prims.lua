@@ -226,7 +226,11 @@ function prims.trace(compiler)
 end
 
 function prims.notrace(compiler)
-	compiler.trace = nil
+	compiler.trace = false
+end
+
+function prims.tracing(compiler)
+	compiler.stack:push(compiler.trace)
 end
 
 function prims.calls(compiler)
@@ -301,6 +305,7 @@ function prims.initialize()
 		['dumpword:'] = { func = prims.dumpword, immediate = true },
 		trace = { func = prims.trace },
 		notrace = { func = prims.notrace },
+		['trace?'] = { func = prims.tracing },
 		['calls:'] = { func = prims.calls, immediate = true },
 		['calledby:'] = { func = prims.calledby, immediate = true },
 	}

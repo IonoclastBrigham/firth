@@ -41,7 +41,7 @@ function compiler:parse(line, num)
 			if val then
 				self:push(val)
 			else
-				self:error(tok, num)
+				self:lookuperror(tok, num)
 				break
 			end
 		end
@@ -63,7 +63,7 @@ function compiler:execword(entry)
 	-- TODO: compile mode-specific vocabulary?
 	if entry.immediate then
 		local success, err = pcall(entry.func, self)
-		if not success then stringio.printline(err) end
+		if not success then self:runtimeerror(entry.name, err) end
 	else
 		self:call(entry.name)
 	end
@@ -89,32 +89,28 @@ function compiler:call(word)
 	self:append("compiler.dictionary[%q].func(compiler)", word)
 end
 
-function compiler:done()
-	local compilebuf
+function compiler:currentbuf()
+	local compilebuf, name
 	if self.compiling then
 		compilebuf = self.last.compilebuf
+		name = self.last.name
 	else
 		compilebuf = self.scratch
 		self.scratch = ""
+		name = "self.scratch"
 	end
-	--if not compilebuf or #compilebuf == 0 then return end
-	if self.trace then stringio.printline(compilebuf) end
-	
+	return compilebuf or "", name
+end
+
+function compiler:buildfunc(compilebuf, name)
+	self.nexttmp = 0
 	local luasrc = "return function(compiler)"..compilebuf.."\nend"
-	local func, err = loadstring(luasrc)
-	local preserve = false
-	if not err then
+	local func, err = loadstring(luasrc, name)
+	if func then
 		-- exec returned function to the the actual function we want
 		local success, res = pcall(func, self)
 		if success then
-			if self.compiling then
-				self.last.func = res
-				self.dictionary[self.last.name] = self.last
-			else
-				success, err = pcall(res, self)
-				if not success then stringio.printline(err) end
-				if self.compiling then preserve = true end
-			end
+			return res
 		else
 			stringio.printline("Compile Error (buildfunc):")
 			stringio.printline(res)
@@ -125,8 +121,26 @@ function compiler:done()
 		stringio.printline(err)
 		stringio.printline(luasrc)
 	end
+	return nil
+end
+
+function compiler:done()
+	local compilebuf, name = self:currentbuf()
+	if self.trace then stringio.printline("TRACE '"..name.."':", compilebuf) end
+	local func = self:buildfunc(compilebuf, name)
+
+	local preserve = false -- FIXME: this is a hack
+	if func then
+		if self.compiling then
+			self.last.func = func
+			self.dictionary[name] = self.last
+		else
+			success, err = pcall(func, self)
+			if not success then self:runtimeerror(name, err) end
+			preserve = self.compiling
+		end
+	end
 	if self.compiling and not preserve then self.compiling = false end
-	self.nexttmp = 0
 end
 
 function compiler:immediate(word)
@@ -148,11 +162,15 @@ function compiler:pushstring(str)
 	self:push(str)
 end
 
-function compiler:error(tok, num)
+function compiler:lookuperror(tok, num)
 	if num then stringio.print(num..": ") end
-	stringio.printline("Error: unknown word ( "..tok.." )")
+	stringio.printline("Error: unknown word '"..tok.."'")
 	self.line = nil
 	self.compiling = false
+end
+
+function compiler:runtimeerror(name, msg)
+	error("Runtime error: '"..tostring(name).."': "..msg)
 end
 
 function compiler:newtmp(initialval)
@@ -199,6 +217,7 @@ function compiler.new()
 		stack = stack.new(),
 		dictionary = prims.initialize(),
 		compiling = false,
+		trace = false,
 		scratch = "",
 		nexttmp = 0,
 		running = true,

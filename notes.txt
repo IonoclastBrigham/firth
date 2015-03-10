@@ -33,6 +33,7 @@ implement ; in firth land
 	refactor compiler:done() into lower level primitives, call from prims.enddef()
 	strip out as much junk as possible
 	write ; word in firth and nix prims.enddef()
+coalesce compilebuf concatenations and do one table.concat() just before compiling
 param pattern matching
 	core language feature?
 	implemented through metaprogramming?
