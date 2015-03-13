@@ -69,8 +69,7 @@ multiline control structures and comments
 			we can keep looping if not found
 			regular parse uses this and drops the result?
 compilebuf dump
-	refactor to work with new compiler fixes
-	break into more primitive words and reenable compiler trace
+	break into more primitive words and implement in firth
 param pattern matching
 	core language feature?
 	implemented through metaprogramming?

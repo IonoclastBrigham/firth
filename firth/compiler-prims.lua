@@ -189,17 +189,17 @@ end
 -- reflection, debugging, internal compiler state, etc. --
 
 function prims.dump(compiler)
-	compiler.stack:push(compiler.last.compilebuf)
+	compiler.stack:push(table.concat(compiler.last.compilebuf, '\n'))
 end
 
 function prims.dumpword(compiler)
 	local word = compiler:nexttoken()
 	local entry = compiler.dictionary[word]
 	if not entry then
-		compiler:error(word)
+		compiler:lookuperror(word)
 		return
 	end
-	compiler.stack:push(entry.compilebuf)
+	compiler.stack:push(table.concat(entry.compilebuf, '\n'))
 end
 
 function prims.trace(compiler)
