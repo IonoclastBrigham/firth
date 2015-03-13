@@ -46,6 +46,7 @@ interpret compilebuf buildfunc bindfunc immediate
 : * ( a b -- a*b ) char * binop ;immed
 : / ( a b -- a/b ) char / binop ;immed
 : % ( a b -- a%b ) char % binop ;immed
+: ^ ( a b -- a^b ) char ^ binop ;immed
 // TODO: alias or inline these instead of calling
 : 1+ ( n -- n+1 ) 1 + ;
 : inc ( n -- n+1 ) 1+ ;
@@ -63,3 +64,6 @@ interpret compilebuf buildfunc bindfunc immediate
 : <= ( a b -- a<=b ) " <=" binop ;immed
 : >= ( a b -- a>=b ) " >=" binop ;immed
 : ~= ( a b -- a!=b ) " ~=" binop ;immed
+: and ( a b -- a&&b ) " and" binop ;immed
+: or ( a b -- a||b ) " or" binop ;immed
+: xor dup 2 pick and rot rot or not or if false else true end ; // FIXME!
