@@ -46,17 +46,22 @@ function compiler:parse(line, num)
 			end
 		end
 	end
-	if #self.scratch > 0 and not self.compiling then self:done() end
+	-- automatic function closing at EOL
+	if #self.scratch > 0 and not self.compiling then self:interpretpending() end
 end
 
 function compiler:loadfile(path)
 	-- TODO: default/search paths
 	local num = 1
+	self.running = true
+	self.cstack:push(self.path)
+	self.path = path
 	for line in assert(io.lines(path)) do
-		if not self.running then break end
 		self:parse(line, num)
 		num = num + 1
+		if not self.running then break end
 	end
+	self.path = self.cstack:pop()
 end
 
 function compiler:execword(entry)
@@ -69,16 +74,8 @@ function compiler:execword(entry)
 	end
 end
 
-function compiler:newentry(word)
-	self.last = { name = word, compilebuf = {}, calls = {}, calledby = {} }
-end
-
-function compiler:newfunc(word)
-	if not self.compiling then
-		self:done()
-	end
-	self:newentry(word)
-	self.compiling = true
+function compiler:newentry(name)
+	self.last = { name = name, compilebuf = {"return function(compiler)"}, calls = {}, calledby = {} }
 end
 
 function compiler:call(word)
@@ -90,29 +87,21 @@ function compiler:call(word)
 end
 
 function compiler:currentbuf()
-	local compilebuf, name
-	if self.compiling then
-		compilebuf = self.last.compilebuf
-		name = self.last.name
-	else
-		compilebuf = self.scratch
-		self.scratch = {}
-		name = "self.scratch"
-	end
-	return compilebuf or "", name
+	return self.last.name, self.last.compilebuf
 end
 
-function compiler:buildfunc(compilebuf, name)
+function compiler:buildfunc(name, compilebuf)
 	self.nexttmp = 0
-	table.insert(compilebuf, 1, "return function(compiler)")
+	if not self.compiling and #compilebuf == 1 then return nil, nil end
 	table.insert(compilebuf, "end")
 	local luasrc = table.concat(compilebuf, "\n")
+	if self.trace then stringio.printline(luasrc, '\n') end
 	local func, err = loadstring(luasrc, name)
 	if func then
 		-- exec returned function to the the actual function we want
 		local success, res = pcall(func, self)
 		if success then
-			return res
+			return name, res
 		else
 			stringio.printline("Compile Error (buildfunc):")
 			stringio.printline(res)
@@ -123,26 +112,27 @@ function compiler:buildfunc(compilebuf, name)
 		stringio.printline(err)
 		stringio.printline(luasrc)
 	end
-	return nil
+	return nil, nil
 end
 
-function compiler:done()
-	local compilebuf, name = self:currentbuf()
-	if self.trace then stringio.printline("TRACE '"..name.."':", table.concat(compilebuf, "\n")) end
-	local func = self:buildfunc(compilebuf, name)
-
-	local preserve = false -- FIXME: this is a hack
+function compiler:bindfunc(name, func)
 	if func then
-		if self.compiling then
-			self.last.func = func
-			self.dictionary[name] = self.last
-		else
-			success, err = pcall(func, self)
-			if not success then self:runtimeerror(name, err) end
-			preserve = self.compiling
-		end
+		self.last.func = func
+		self.dictionary[name] = self.last
 	end
-	if self.compiling and not preserve then self.compiling = false end
+end
+
+function compiler:execfunc(name, func)
+	if func then
+		local success, err = pcall(func, self)
+		if not success then self:runtimeerror(name, err) end
+	end
+end
+
+function compiler:interpretpending()
+	local scratch = self.scratch
+	self.scratch = {"return function(compiler)"}
+	self:execfunc(self:buildfunc("__SCRATCH__", scratch))
 end
 
 function compiler:immediate(word)
@@ -165,14 +155,15 @@ function compiler:pushstring(str)
 end
 
 function compiler:lookuperror(tok, num)
-	if num then stringio.print(num..": ") end
-	stringio.printline("Error: unknown word '"..tok.."'")
 	self.line = nil
 	self.compiling = false
+	stringio.print(self.path..':')
+	if num then stringio.print(num..": ") end
+	error("Error: unknown word '"..tok.."'")
 end
 
 function compiler:runtimeerror(name, msg)
-	error("Runtime error: '"..tostring(name).."': "..msg)
+	error("Runtime error: '"..tostring(name).."': "..msg, 2)
 end
 
 function compiler:newtmp(initialval)
@@ -215,12 +206,14 @@ compiler = {}
 function compiler.new()
 	local c = {
 		stack = stack.new(),
+		cstack = stack.new(),
 		dictionary = prims.initialize(),
 		compiling = false,
 		trace = false,
-		scratch = {},
+		scratch = {"return function(compiler)"},
 		nexttmp = 0,
 		running = true,
+		path = "stdin",
 	}
 	setmetatable(c, mt)
 	c:loadfile "firth/prims.firth"

@@ -1,12 +1,18 @@
 char prims.firth drop
 char see_comment_block_below_for_copyright_notice drop
 
-char : define true compilemode
-	char %s parse define true compilemode
-; immediate
-
-: nextword char %s parse ;
-: postpone nextword call ; immediate
+char : define compile
+	char %s parse define compile
+interpret compilebuf buildfunc bindfunc immediate
+: nextword
+	char %s parse
+interpret compilebuf buildfunc bindfunc
+: postpone
+	nextword call
+interpret compilebuf buildfunc bindfunc immediate
+: ;
+	postpone interpret compilebuf buildfunc bindfunc
+interpret compilebuf buildfunc bindfunc immediate
 : ;immed postpone ; postpone immediate ; immediate
 
 : // char \n parse drop ;immed // There, now we can comment our code!
@@ -32,13 +38,13 @@ char : define true compilemode
 : 2/ ( n -- n/2 ) 2 / ;
 
 // a few parser/interpreter/compiler control words
+: [ ( -- ) postpone interpret ;immed
+: ] ( -- ) compile ;
 : eval ( -- ... )
-	false compilemode // TODO: preserve previous value on cstack
+	postpone [ // TODO: preserve previous value on cstack?
 	nextword call
-	true compilemode
+	]
 ;immed
-: [ ( -- ) false compilemode ;immed
-: ] ( -- ) true compilemode ;
 
 
 // values and variables

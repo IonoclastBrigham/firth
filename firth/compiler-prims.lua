@@ -57,13 +57,13 @@ end
 
 -- inline operations --
 
--- Compiles c = a OP b.
+-- Compiles <code>l r OP</code> to <code>PUSH(l OP r)</code>.
 local function binop(compiler, op)
-	local a = compiler:poptmp()
-	local b = compiler:poptmp()
-	local c = compiler:newtmp()
-	compiler:append("%s = %s %s %s", c, a, op, b)
-	compiler:pushtmp(c)
+	local roperand = compiler:poptmp()
+	local loperand = compiler:poptmp()
+	local lval = compiler:newtmp()
+	compiler:append("%s = %s %s %s", lval, loperand, op, roperand)
+	compiler:pushtmp(lval)
 end
 
 --! Compiles c = a + b.
@@ -155,19 +155,22 @@ function prims.exit(compiler)
 	compiler.running = false
 end
 
-function prims.compilemode(compiler)
-	local compiling = compiler.stack:pop()
-	if (not compiler.compiling) and compiling then
-		compiler:done()
+function prims.compile(compiler)
+	if not compiler.compiling then
+		compiler:interpretpending()
 	end
-	compiler.compiling = compiling
+	compiler.compiling = true
+end
+
+function prims.interpret(compiler)
+	compiler.compiling = false
 end
 
 function prims.compiling(compiler)
 	compiler.stack:push(compiler.compiling)
 end
 
---! Parses next token from input stream, and pushes it as a string.
+--! ( c -- word ) Parses next token from input stream, and pushes it as a string.
 function prims.parse(compiler)
 	local delim = compiler.stack:pop()
 	local token = compiler:nexttoken(delim)
@@ -187,8 +190,25 @@ function prims.define(compiler)
 	compiler:newentry(compiler.stack:pop())
 end
 
-function prims.enddef(compiler)
-	compiler:done()
+--! ( -- name, buf )
+function prims.compilebuf(compiler)
+	local name, buf = compiler:currentbuf()
+	compiler.stack:push(name)
+	compiler.stack:push(buf)
+end
+
+--! ( name, buf -- name, func )
+function prims.buildfunc(compiler)
+	local buf = compiler.stack:pop()
+	local _, func = compiler:buildfunc(compiler.stack:top(), buf)
+	compiler.stack:push(func)
+end
+
+--! ( name, func -- )
+function prims.bindfunc(compiler)
+	local func = compiler.stack:pop()
+	local name = compiler.stack:pop()
+	compiler:bindfunc(name, func)
 end
 
 function prims.immediate(compiler)
@@ -291,12 +311,15 @@ function prims.initialize()
 
 		loadfile = { func = prims.loadfile },
 		exit = { func = prims.exit, immediate = true },
-		compilemode  = { func = prims.compilemode },
+		compile  = { func = prims.compile },
+		interpret = { func = prims.interpret, immediate = true },
 		['compiling?'] = { func = prims.compiling },
 		parse = { func = prims.parse },
 		push = { func = prims.push },
 		define = { func = prims.define },
-		[';'] = { func = prims.enddef, immediate = true },
+		compilebuf = { func = prims.compilebuf },
+		buildfunc = { func = prims.buildfunc },
+		bindfunc = { func = prims.bindfunc },
 		immediate = { func = prims.immediate },
 		char = { func = prims.char, immediate = true },
 		call = { func = prims.call },

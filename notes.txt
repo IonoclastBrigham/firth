@@ -29,10 +29,50 @@ Broke down lua "newfunc/define" functionality into more basic primitives
 
 Ideas / TODOs
 -------------
-implement ; in firth land
-	refactor compiler:done() into lower level primitives, call from prims.enddef()
-	strip out as much junk as possible
-	write ; word in firth and nix prims.enddef()
+boolean logic operators
+^ exponentiation operator
+access lua tables form firth land
+	table.field ( t k -- v )
+		pop fieldname from stack
+		pop table from stack
+		push field with given name
+	.field: name ( t -- v )
+		immediate word so it can grab a field name token
+		compiles itself as:
+			push word
+			push "table.field"
+			call
+		: .field: ( -- ) nextword push table.field ;immed
+	compiler
+		lua prim
+		function prims.compiler(compiler) compiler.stack:push(compiler) end
+	dictionary
+		: dictionary ( -- dict ) compiler .field: dictionary ;
+	'
+		for this to work, push has to assign tables to a local tmp, and compile to push that name?
+		: ' ( -- ) dictionary nextword table.field push ;immed
+multiline control structures and comments
+	flow control in interpret mode
+		call interpretpending() whenever we hit an immediate
+		if, loops, etc.
+			push self.compiling onto cstack
+			self.compiling = true
+			set compile target to a scratch buffer (need to rework scratch/last scheme)
+			append lua keyword
+		end
+			append "end"
+			pop self.compiling from cstack
+			if not compiling anymore, build and execute
+	multiline comments
+		in a loop, read and throw away lines from input device until close comment
+		need to rework compiler input scheme
+			lines(file) returns an iterator function; useful?
+		version of parse that returns whether the delimiter was found
+			we can keep looping if not found
+			regular parse uses this and drops the result?
+compilebuf dump
+	refactor to work with new compiler fixes
+	break into more primitive words and reenable compiler trace
 param pattern matching
 	core language feature?
 	implemented through metaprogramming?
@@ -44,3 +84,8 @@ runtime documentation
 		append string to EOL, to internal buffer
 		: checks this buffer, and attaches to dict entry, if it exists
 create a vocabulary for writing executable grammars for parsing DSLs
+whittle the lua codebase down to
+	generic io and string handling
+	access table fields
+	compile buffers to lua functions
+	call lua functions
