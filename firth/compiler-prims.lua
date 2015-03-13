@@ -31,6 +31,18 @@ function prims.drop(compiler)
 	compiler.stack:drop()
 end
 
+function prims.swap(compiler)
+	compiler.stack:swap()
+end
+
+function prims.rot(compiler)
+	compiler.stack:rot()
+end
+
+function prims.pick(compiler)
+	return compiler.stack:pick(compiler.stack:pop())
+end
+
 -- flow control --
 
 function prims.ifstmt(compiler)
@@ -231,6 +243,9 @@ function prims.initialize()
 	return buildentries{
 		dup = { func = prims.dup },
 		drop = { func = prims.drop },
+		swap = { func = prims.swap },
+		rot = { func = prims.rot },
+		pick = { func = prims.pick },
 
 		['if'] = { func = prims.ifstmt, immediate = true },
 		['else'] = { func = prims.elsestmt, immediate = true },
