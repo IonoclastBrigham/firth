@@ -35,8 +35,10 @@ firth = {
 
 		while c.running do
 			stringio.print(c.compiling and '>>\t' or 'ok ')
-			c:parse(stringio.readline())
+			local success, msg = pcall(c.parse, c, stringio.readline(), 1)
+			if not success then stringio.printline(msg) end
 		end
+		stringio.printline()
 	end,
 
 	--! @fn reload()

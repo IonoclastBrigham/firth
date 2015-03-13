@@ -30,7 +30,7 @@ end
 
 function compiler:parse(line, num)
 	self.line = line
-	self.running = true
+	self.running = type(line) == "string"
 	while self.line and #self.line > 0 and self.running do
 		local tok = self:nexttoken()
 		local val = self.dictionary[tok]
