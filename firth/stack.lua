@@ -74,6 +74,13 @@ function stack:rot()
 	self[top-2], self[top-1], self[top] = self[top-1], self[top], self[top-2]
 end
 
+--! Rotates the top 3 stack elements upward.
+function stack:revrot()
+	local top = #self
+	if top < 3 then return end
+	self[top-2], self[top-1], self[top] = self[top], self[top-2], self[top-1]
+end
+
 --! Removes the second item from the top.
 function stack:nip()
 	local top = #self

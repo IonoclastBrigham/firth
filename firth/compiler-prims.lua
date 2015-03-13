@@ -39,6 +39,10 @@ function prims.rot(compiler)
 	compiler.stack:rot()
 end
 
+function prims.revrot(compiler)
+	compiler.stack:revrot()
+end
+
 function prims.pick(compiler)
 	return compiler.stack:pick(compiler.stack:pop())
 end
@@ -246,6 +250,7 @@ function prims.initialize()
 		drop = { func = prims.drop },
 		swap = { func = prims.swap },
 		rot = { func = prims.rot },
+		['-rot'] = { func = prims.revrot },
 		pick = { func = prims.pick },
 
 		['if'] = { func = prims.ifstmt, immediate = true },

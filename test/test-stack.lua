@@ -98,6 +98,15 @@ return {
 	end,
 
 	function()
+		local len = #st
+		st:revrot() -- (3, 1, 3, 3)
+		assert(len == #st, "revrot() did alter size")
+		assert(st[4] == 3, "revrot() did not grab and shift correctly")
+		assert(st[3] == 3, "revrot() did not grab and shift correctly")
+		assert(st[2] == 1, "revrot() did not grab and shift correctly")
+	end,
+
+	function()
 		st:clear() -- ()
 		assert(#st == 0, "clear() did not empty stack")
 	end,
