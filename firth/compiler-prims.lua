@@ -98,7 +98,8 @@ end
 -- os and io primitives --
 
 function prims.dotprint(compiler)
-	stringio.print(tostring(compiler.stack:pop()), ' ')
+	local tos = compiler.stack:pop()
+	stringio.print(tostring(tos), ' ')
 end
 
 function prims.dotprintstack(compiler)

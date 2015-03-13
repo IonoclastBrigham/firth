@@ -29,7 +29,6 @@ Broke down lua "newfunc/define" functionality into more basic primitives
 
 Ideas / TODOs
 -------------
-. crashes, with an empty stack
 access lua tables form firth land
 	table.field ( t k -- v )
 		pop fieldname from stack
