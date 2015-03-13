@@ -26,7 +26,26 @@ interpret compilebuf buildfunc bindfunc immediate
 
 : ( char ) parse drop ;immed // inline, single-line comments
 
-// some basic arithmetic shortcuts
+// a few parser/interpreter/compiler control words
+: [ ( -- ) postpone interpret ;immed
+: ] ( -- ) compile ;
+: eval ( -- ... )
+	postpone [ // TODO: preserve previous value on cstack?
+	nextword call
+	]
+;immed
+
+// values and variables
+: " ( -- str ) char " parse push ;immed
+: const: ( val -- ) postpone : push postpone ; ;immed
+// : var: ( val -- ) ;
+
+// some basic arithmetic operators and shortcuts
+: + ( a b -- a+b ) char + binop ;immed
+: - ( a b -- a-b ) char - binop ;immed
+: * ( a b -- a*b ) char * binop ;immed
+: / ( a b -- a/b ) char / binop ;immed
+: % ( a b -- a%b ) char % binop ;immed
 // TODO: alias or inline these instead of calling
 : 1+ ( n -- n+1 ) 1 + ;
 : inc ( n -- n+1 ) 1+ ;
@@ -37,17 +56,10 @@ interpret compilebuf buildfunc bindfunc immediate
 : 2* ( n -- 2n ) 2 * ;
 : 2/ ( n -- n/2 ) 2 / ;
 
-// a few parser/interpreter/compiler control words
-: [ ( -- ) postpone interpret ;immed
-: ] ( -- ) compile ;
-: eval ( -- ... )
-	postpone [ // TODO: preserve previous value on cstack?
-	nextword call
-	]
-;immed
-
-
-// values and variables
-: " ( -- str ) char " parse push ;immed
-: const: ( val -- ) postpone : push postpone ; ;immed
-// : var: ( val -- ) ;
+// some basic boolean operators
+: > ( a b -- a>b ) char > binop ;immed
+: < ( a b -- a<b ) char < binop ;immed
+: = ( a b -- a==b ) " ==" binop ;immed
+: <= ( a b -- a<=b ) " <=" binop ;immed
+: >= ( a b -- a>=b ) " >=" binop ;immed
+: ~= ( a b -- a!=b ) " ~=" binop ;immed

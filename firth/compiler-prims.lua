@@ -57,43 +57,15 @@ end
 
 -- inline operations --
 
--- Compiles <code>l r OP</code> to <code>PUSH(l OP r)</code>.
-local function binop(compiler, op)
+--! ( operator -- )
+function prims.binop(compiler)
+	local op = compiler.stack:pop()
+
 	local roperand = compiler:poptmp()
 	local loperand = compiler:poptmp()
 	local lval = compiler:newtmp()
 	compiler:append("%s = %s %s %s", lval, loperand, op, roperand)
 	compiler:pushtmp(lval)
-end
-
---! Compiles c = a + b.
---! @param compiler the Compiler object that called this function.
-function prims.add(compiler)
-	binop(compiler, '+')
-end
-
---! Compiles c = a - b.
---! @param compiler the Compiler object that called this function.
-function prims.sub(compiler)
-	binop(compiler, '-')
-end
-
---! Compiles c = a * b.
---! @param compiler the Compiler object that called this function.
-function prims.mul(compiler)
-	binop(compiler, '*')
-end
-
---! Compiles c = a / b.
---! @param compiler the Compiler object that called this function.
-function prims.div(compiler)
-	binop(compiler, '/')
-end
-
---! Compiles c = a % b.
---! @param compiler the Compiler object that called this function.
-function prims.mod(compiler)
-	binop(compiler, '%')
 end
 
 -- boolean stuff --
@@ -109,30 +81,6 @@ end
 function prims.pushnot(compiler)
 	local stack = compiler:newtmp("compiler.stack")
 	compiler:append("%s[#%s] = not %s[#%s]", stack, stack, stack, stack)
-end
-
-function prims.less(compiler)
-	binop(compiler, "<")
-end
-
-function prims.greater(compiler)
-	binop(compiler, ">")
-end
-
-function prims.equal(compiler)
-	binop(compiler, "==")
-end
-
-function prims.lesseq(compiler)
-	binop(compiler, "<=")
-end
-
-function prims.greatereq(compiler)
-	binop(compiler, ">=")
-end
-
-function prims.noteq(compiler)
-	binop(compiler, "~=")
 end
 
 -- os and io primitives --
@@ -290,21 +238,11 @@ function prims.initialize()
 		['do'] = { func = prims.dostmt, immediate = true },
 		['end'] = { func = prims.endstmt, immediate = true },
 
-		['+'] = { func = prims.add, immediate = true },
-		['-'] = { func = prims.sub, immediate = true },
-		['*'] = { func = prims.mul, immediate = true },
-		['/'] = { func = prims.div, immediate = true },
-		['%'] = { func = prims.mod, immediate = true },
+		binop = { func = prims.binop },
 
 		['true'] = { func = prims.pushtrue, immediate = true },
 		['false'] = { func = prims.pushfalse, immediate = true },
 		['not'] = { func = prims.pushnot, immediate = true },
-		['<'] = { func = prims.less, immediate = true },
-		['>'] = { func = prims.greater, immediate = true },
-		['='] = { func = prims.equal, immediate = true },
-		['<='] = { func = prims.lesseq, immediate = true },
-		['>='] = { func = prims.greatereq, immediate = true },
-		['~='] = { func = prims.noteq, immediate = true },
 
 		['.'] = { func = prims.dotprint },
 		['..'] = { func = prims.dotprintstack },
