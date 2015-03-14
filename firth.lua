@@ -24,21 +24,38 @@ local c
 --! The Firth repl and such.
 --! This is rather shoddy code, atm.
 firth = {
-	--! @fn repl()
-	--! @brief Executes the Firth Read-Eval-Print Loop.
-	repl = function()
+	instance = function()
 		if not c then
 			c = compiler.new()
 		else
 			c.running = true
 		end
+		return c
+	end,
 
+	doline = function(c, line)
+		local success, msg = pcall(c.parse, c, line, 1)
+		if not success then stringio.printline(msg) end
+	end,
+
+	--! @fn repl()
+	--! @brief Executes the Firth Read-Eval-Print Loop.
+	repl = function()
+		c = firth.instance()
 		while c.running do
 			stringio.print(c.compiling and '>>\t' or 'ok ')
-			local success, msg = pcall(c.parse, c, stringio.readline(), 1)
-			if not success then stringio.printline(msg) end
+			firth.doline(c, stringio.readline())
 		end
 		stringio.printline()
+	end,
+
+	--! @fn cli()
+	--! @brief runs each argument as a line of firth code.
+	cli = function(args)
+		c = firth.instance()
+		for _, code in ipairs(args) do
+			firth.doline(c, code)
+		end
 	end,
 
 	--! @fn reload()
@@ -50,4 +67,10 @@ firth = {
 	end
 }
 
-firth.repl()
+local args = {...}
+if #args > 0 then
+	firth.cli(args)
+else
+	args = nil
+	firth.repl()
+end
