@@ -27,6 +27,10 @@ function prims.dup(compiler)
 	compiler.stack:dup()
 end
 
+function prims.over(compiler)
+	compiler.stack:over()
+end
+
 function prims.drop(compiler)
 	compiler.stack:drop()
 end
@@ -97,6 +101,32 @@ end
 function prims.pushnot(compiler)
 	local stack = compiler:newtmp("compiler.stack")
 	compiler:append("%s[#%s] = not %s[#%s]", stack, stack, stack, stack)
+end
+
+-- bitwise boolean ops --
+
+-- only available in LuaJIT 2.0+ or Lua 5.2+
+local bitops = bit or bit32
+if bitops then
+	function prims.band(compiler)
+		local stack = compiler.stack
+		stack:push(bitops.band(stack:pop(), stack:pop()))
+	end
+
+	function prims.bor(compiler)
+		local stack = compiler.stack
+		stack:push(bitops.bor(stack:pop(), stack:pop()))
+	end
+
+	function prims.bxor(compiler)
+		local stack = compiler.stack
+		stack:push(bitops.bxor(stack:pop(), stack:pop()))
+	end
+
+	function prims.bnot(compiler)
+		local stack = compiler.stack
+		stack:push(bitops.bnot(stack:pop()))
+	end
 end
 
 -- os and io primitives --
@@ -235,6 +265,12 @@ end
 -- export to dictionary --
 
 local function buildentries(dict)
+	if bitops then
+		dict["&"] = { func = prims.band }
+		dict["|"] = { func = prims.bor }
+		dict["^"] = { func = prims.bxor }
+		dict["~"] = { func = prims.bnot }
+	end
 	for name, entry in pairs(dict) do
 		entry.name = name
 		entry.calls = {}
@@ -247,6 +283,7 @@ end
 function prims.initialize()
 	return buildentries{
 		dup = { func = prims.dup },
+		over = { func = prims.over },
 		drop = { func = prims.drop },
 		swap = { func = prims.swap },
 		rot = { func = prims.rot },

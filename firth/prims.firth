@@ -37,6 +37,7 @@ interpret compilebuf buildfunc bindfunc immediate
 
 // values and variables
 : " ( -- str ) char " parse push ;immed
+: ." ( -- ) char " parse push char . call ;immed
 : const: ( val -- ) postpone : push postpone ; ;immed
 // : var: ( val -- ) ;
 
@@ -46,7 +47,7 @@ interpret compilebuf buildfunc bindfunc immediate
 : * ( a b -- a*b ) char * binop ;immed
 : / ( a b -- a/b ) char / binop ;immed
 : % ( a b -- a%b ) char % binop ;immed
-: ^ ( a b -- a^b ) char ^ binop ;immed
+: ** ( a b -- a^b ) char ^ binop ;immed
 // TODO: alias or inline these instead of calling
 : 1+ ( n -- n+1 ) 1 + ;
 : inc ( n -- n+1 ) 1+ ;
@@ -57,6 +58,12 @@ interpret compilebuf buildfunc bindfunc immediate
 : 2* ( n -- 2n ) 2 * ;
 : 2/ ( n -- n/2 ) 2 / ;
 
+// some higher level stack manipulations
+: 2dup ( a b -- a b a b ) over over ;
+: 3dup ( a b c -- a b c a b c ) 2 pick 2 pick 2 pick ;
+: 2drop ( a b -- ) drop drop ;
+: 3drop ( a b c -- ) drop drop drop ;
+
 // some basic boolean operators
 : > ( a b -- a>b ) char > binop ;immed
 : < ( a b -- a<b ) char < binop ;immed
@@ -66,4 +73,8 @@ interpret compilebuf buildfunc bindfunc immediate
 : ~= ( a b -- a!=b ) " ~=" binop ;immed
 : and ( a b -- a&&b ) " and" binop ;immed
 : or ( a b -- a||b ) " or" binop ;immed
-: xor dup 2 pick and rot rot or not or if false else true end ; // FIXME!
+: nand ( a b -- !a&&b ) postpone and postpone not ;immed
+: nor ( a b -- !a||b ) postpone or postpone not ;immed
+: xor ( a b -- aXORb ) 2dup or -rot nand and ;
+// I think this is kinda cool—if obtuse—so I'm gonna leave it here as a comment:
+// : xor 2dup nand dup rot nand -rot nand nand ;
