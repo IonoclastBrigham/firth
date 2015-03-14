@@ -29,6 +29,14 @@ Broke down lua "newfunc/define" functionality into more basic primitives
 
 Ideas / TODOs
 -------------
+experimental optimization branch
+	expliclitly track stack size
+		don't rely on slow # operator
+		allows for pushing nil
+	precache table lookups as locals in compiled code, where possible
+		locals outside of function, that the function closes over
+		track which methods, structures, word funcs, and fields are accessed
+		implies we get the forthy redefinition behavior (original always called)
 access lua tables form firth land
 	table.field ( t k -- v )
 		pop fieldname from stack
