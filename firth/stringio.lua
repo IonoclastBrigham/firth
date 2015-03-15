@@ -65,7 +65,7 @@ end
 --! @return the token, the remaining substring
 function stringio.nexttoken(str, delim)
 	delim = delim or "%s" -- here %s is an alias for any whitespace
-	local pattern = string.format("([%s]*)([^%s]+)([%s]*)", delim, delim, delim) -- here %s is a string formatter as in C
+	local pattern = string.format("([%s]*)([^%s]+)([%s]?)", delim, delim, delim) -- here %s is a string formatter as in C
 	local discard1, token, discard2 = str:match(pattern)
 --	print(string.format("'%s', '%s', '%s'", discard1, token, discard2))
 	return token, str:sub(#token + #discard1 + #discard2 + 1)
