@@ -29,7 +29,6 @@ Broke down lua "newfunc/define" functionality into more basic primitives
 
 Ideas / TODOs
 -------------
-.x to print TOS as hex
 refactor scratch/last scheme
 	instead of scratch or last, push onto cstack
 	make this more flexible and controllable from firth land?

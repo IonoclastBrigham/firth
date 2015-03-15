@@ -140,6 +140,11 @@ function prims.dotprintstack(compiler)
 	stringio.printstack(compiler.stack)
 end
 
+function prims.dotprinthex(compiler)
+	local tos = compiler.stack:pop()
+	stringio.print(string.format("0x%X", tonumber(tos)), ' ')
+end
+
 -- parser/compiler control words --
 
 function prims.loadfile(compiler)
@@ -305,6 +310,7 @@ function prims.initialize()
 		['not'] = { func = prims.pushnot, immediate = true },
 
 		['.'] = { func = prims.dotprint },
+		['.x'] = { func = prims.dotprinthex },
 		['..'] = { func = prims.dotprintstack },
 
 		loadfile = { func = prims.loadfile },
