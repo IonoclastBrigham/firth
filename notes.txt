@@ -77,7 +77,7 @@ compilebuf dump
 param pattern matching
 	core compiler/language feature?
 	implemented through metaprogramming?
-	// assumes something like : concat ( s1 s2 == s1s2 ) ... ;
+	// assumes something like : concat ( s1 s2 -- s1s2 ) ... ;
 	: strreps	( s n -- n*s )
 				(( _ 1 )) drop
 				(( _ _ )) over swap loops over concat end swap drop
