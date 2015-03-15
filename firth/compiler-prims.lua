@@ -211,7 +211,9 @@ function prims.immediate(compiler)
 end
 
 function prims.char(compiler)
-	local char = compiler:nexttoken()
+	local str = compiler:nexttoken()
+	local char = str:sub(1, 1)
+	if char == "%" or char == "\\" then char = str:sub(1, 2) end
 	compiler:pushstring(char)
 end
 

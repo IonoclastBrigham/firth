@@ -29,7 +29,7 @@ Broke down lua "newfunc/define" functionality into more basic primitives
 
 Ideas / TODOs
 -------------
-make char push sub(1,1) unless that char is a % or \; then push sub(1,2)
+.x to print TOS as hex
 refactor scratch/last scheme
 	instead of scratch or last, push onto cstack
 	make this more flexible and controllable from firth land?
