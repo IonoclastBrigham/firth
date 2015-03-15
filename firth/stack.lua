@@ -23,69 +23,82 @@ local stack = {}
 --! Pushes an item onto the stack.
 --! @param val value to push onto the stack
 function stack:push(val)
-	table.insert(self, val)
+	local top = self.height + 1
+	rawset(self, top, val)
+	self.height = top
 end
 
 --! Pops an item off the stack
 --! @return the former top stack item.
 function stack:pop()
-	return table.remove(self)
+	local val = rawget(self, self.height)
+	self:drop()
+	return val
 end
 
 --! Peeks at the top item, non-destructively.
 --! @return a copy of the top of the stack, without popping it.
 function stack:top()
-	return self[#self]
+	return rawget(self, self.height)
 end
 
 --! Pushes a copy of the top stack entry.
 function stack:dup()
-	self:push(self[#self])
+	if self.height < 1 then return end
+	self:push(self:top())
 end
 
 --! Removes the top stack item.
 function stack:drop()
-	self[#self] = nil
+	local top = self.height
+	if top < 1 then return end
+	rawset(self, top, nil)
+	self.height = top - 1
 end
 
 --! Removes all items from the stack.
 function stack:clear()
-	for i in next, self do rawset(self, i, nil) end
+	local top = self.height
+	for i = top, 1, -1 do rawset(self, i, nil) end
+	self.height = 0
 end
 
 --! Swaps the location of the two top items.
 function stack:swap()
-	local top = #self
+	local top = self.height
 	if top < 2 then return end
-	self[top], self[top-1] = self[top-1], self[top]
+	local prev = top - 1
+	self[top], self[prev] = self[prev], self[top]
 end
 
 --! Pushes a copy of the second item from the top.
 function stack:over()
-	local top = #self
+	local top = self.height
 	if top < 2 then return end
-	self:push(self[top-1])
+	self:push(rawget(self, top-1))
 end
 
 --! Rotates the top 3 stack elements downward.
 function stack:rot()
-	local top = #self
+	local top = self.height
 	if top < 3 then return end
 	self[top-2], self[top-1], self[top] = self[top-1], self[top], self[top-2]
 end
 
 --! Rotates the top 3 stack elements upward.
 function stack:revrot()
-	local top = #self
+	local top = self.height
 	if top < 3 then return end
 	self[top-2], self[top-1], self[top] = self[top], self[top-2], self[top-1]
 end
 
 --! Removes the second item from the top.
 function stack:nip()
-	local top = #self
+	local top = self.height
 	if top < 2 then return end
-	table.remove(self, top-1)
+	local prev = top - 1
+	rawset(self, prev, rawget(self, top))
+	self:drop()
 end
 
 --! Swaps the top two items, and pushes a copy of the former top item.
@@ -97,13 +110,21 @@ end
 --! Pushes a copy of the specified item.
 --! @param idx zero-based offset from the top of the stack of item to duplicate.
 function stack:pick(idx)
-	self:push(self[#self - idx])
+	local top = self.height
+	if (idx < 0) or (idx >= top) then return end
+	self:push(rawget(self, top - idx))
 end
 
 --! Removes the item at the given index and pushes it back onto the stack.
 --! @param idx offset of item to duplicate from the top of the stack.
 function stack:roll(idx)
-	self:push(table.remove(self, idx))
+	local top = self.height
+	if (idx < 1) or (idx >= top) then return end
+	local tmp = rawget(self, top - idx)
+	for i = top-idx, top-1 do
+		rawset(self, i, rawget(self, i+1))
+	end
+	rawset(self, top, tmp)
 end
 
 
@@ -127,7 +148,7 @@ stack = {}
 --! </pre>
 --! @return a newly initialized stack object.
 function stack.new()
-	local s = {}
+	local s = { height = 0 }
 	return setmetatable(s, mt)
 end
 

@@ -3,6 +3,28 @@ local stack = require 'firth/stack'
 local st
 local initialcount = 5
 
+-- prints stack contents with error message
+local function assert(bool, msg, level)
+	level = level or 2
+	if not bool then
+		error(msg.."\nstack: "..table.concat(st, ', '), level)
+	end
+end
+
+local function assertstack(name, ...)
+	local items = {...}
+	assert(#items == st.height,
+		string.format("%s(): stack height %d (expected %d)",
+			name, st.height, #items),
+		3)
+	for i = 1, st.height do
+		assert(st[i] == items[i], 
+			string.format("%s(): stack[%d] == %s (expected %s)",
+				name, i, tostring(st[i]), tostring(items[i])),
+			3)
+	end
+end
+
 return {
 
 	function()
@@ -13,101 +35,100 @@ return {
 	function()
 		for i = 1, initialcount do
 			st:push(i)
-			assert(st[#st] == i, "Error pushing "..i.." onto stack")
-		end -- (1, 2, 3, 4, 5)
-		assert(#st == initialcount, "Error pushing "..initialcount.." items onto stack.")
+			assert(st[st.height] == i, "Error pushing "..i.." onto stack")
+		end 
+		assertstack("push", 1, 2, 3, 4, 5)
 	end,
 
 	function()
-		local top = st:pop() -- (1, 2, 3, 4)
-		assert(top == initialcount, "pop() returned incorrect TOS val: "..top)
-		assert(#st == initialcount - 1, "pop() did not decrement size")
+		local top = st.height
+		local topitem = st:pop()
+		assertstack("pop", 1, 2, 3, 4)
+		assert(topitem == top, "pop() returned incorrect TOS val: "..topitem)
 	end,
 
 	function()
-		st:drop() -- (1, 2, 3)
-		assert(#st == initialcount - 2, "drop() did not decrement size")
+		local top = st.height
+		st:drop()
+		assertstack("drop", 1, 2, 3)
 	end,
 
 	function()
-		local top = st:top() -- (1, 2, 3)
-		assert(top == initialcount - 2, "top() returned incorrect TOS val: "..top)
-		assert(#st == initialcount - 2, "top() did alter size")
+		local top = st.height
+		local topitem = st:top()
+		assertstack("top", 1, 2, 3)
+		assert(topitem == top, "top() returned incorrect TOS val: "..top)
 	end,
 
 	function()
-		st:dup() -- (1, 2, 3, 3)
-		local top = st[#st]
-		local next = st[#st - 1]
-		assert(top == next, "dup() did not duplicate correct val: "..top)
-		assert(#st == initialcount - 1, "dup() did not leave stack correct size")
-		st[#st] = nil -- (1, 2, 3) cleans up dup'ed val for testing swap()
+		local top = st.height
+		st:dup()
+		assertstack("dup", 1, 2, 3, 3)
+		local topitem = st[st.height]
+		local previtem = st[st.height - 1]
+		st[st.height] = 4 -- sets up for testing swap()
 	end,
 
 	function()
-		local len = #st
-		st:swap() -- (1, 3, 2)
-		assert(len == #st, "swap() did alter size")
-		assert(st[#st] == (st[#st - 1] - 1),
-			"swap() did not properly swap top items: "..st[#st]..', '..st[#st - 1])
+		local top = st.height
+		st:swap()
+		assertstack("swap", 1, 2, 4, 3)
 	end,
 
 	function()
-		local len = #st
-		st:over() -- (1, 3, 2, 3)
-		assert(#st == len + 1, "over() did not increment size")
-		assert(st[len + 1] == st[len - 1], "over() did not properly dup second from top item")
+		local top = st.height
+		st:over()
+		assertstack("over", 1, 2, 4, 3, 4)
 	end,
 
 	function()
-		local len = #st
-		st:rot() -- (1, 2, 3, 3)
-		assert(len == #st, "rot() did alter size")
-		assert(st[len] == st[len - 1], "rot() did not rotate stack")
-		st[#st] = nil -- (1, 2, 3) cleans up dup'ed val for testing nip()
+		local top = st.height
+		st:rot()
+		assertstack("rot", 1, 2, 3, 4, 4)
+		st[top] = 5 -- replaces dup'ed val for testing nip()
 	end,
 
 	function()
-		local len = #st
-		st:nip() -- (1, 3)
-		assert(#st == len - 1, "nip() did not decrement size")
+		local top = st.height
+		st:nip()
+		assertstack("nip", 1, 2, 3, 5)
 	end,
 
 	function()
-		local len = #st
-		st:tuck() -- (3, 1, 3)
-		assert(#st == len + 1, "tuck() did not increment size")
-		assert(st[len + 1] == st[len - 1], "tuck() did not swap and copy correctly")
+		local top = st.height
+		st:tuck()
+		assertstack("tuck", 1, 2, 5, 3, 5)
 	end,
 
 	function()
-		local len = #st
-		st:pick(2) -- (3, 1, 3, 3)
-		assert(#st == len + 1, "pick() did not increment size")
-		assert(st[len + 1] == st[len - 2], "pick() did not dup correctly: "..st[len + 1]..', '..st[len - 2])
+		local top = st.height
+		st:pick(2)
+		assertstack("pick", 1, 2, 5, 3, 5, 5)
 	end,
 
 	function()
-		local len = #st
-		st:roll(2) -- (3, 3, 3, 1)
-		assert(len == #st, "roll() did alter size")
-		assert(st[1] == 3, "roll() did not grab and shift correctly")
-		assert(st[2] == 3, "roll() did not grab and shift correctly")
-		assert(st[3] == 3, "roll() did not grab and shift correctly")
-		assert(st[4] == 1, "roll() did not grab and shift correctly")
+		local top = st.height
+		st:roll(2)
+		assertstack("roll", 1, 2, 5, 5, 5, 3)
 	end,
 
 	function()
-		local len = #st
-		st:revrot() -- (3, 1, 3, 3)
-		assert(len == #st, "revrot() did alter size")
-		assert(st[4] == 3, "revrot() did not grab and shift correctly")
-		assert(st[3] == 3, "revrot() did not grab and shift correctly")
-		assert(st[2] == 1, "revrot() did not grab and shift correctly")
+		local top = st.height
+		local a, b, c = st[top], st[top-1], st[top-2]
+		st:revrot()
+		assertstack("-rot", 1, 2, 5, 3, 5, 5)
+	end,
+	
+	function()
+		local top = st.height
+		st:push(nil)
+		assert(st.height == top + 1, "push(nil) did not increment size")
+		assert(st:pop() == nil, "pop() didn't properly return nil")
+		assert(st.height == top, "pop() didn't properly return nil")
 	end,
 
 	function()
 		st:clear() -- ()
-		assert(#st == 0, "clear() did not empty stack")
+		assert(st.height == 0, "clear() did not empty stack")
 	end,
 }
