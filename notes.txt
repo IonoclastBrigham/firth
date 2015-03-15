@@ -29,14 +29,11 @@ Broke down lua "newfunc/define" functionality into more basic primitives
 
 Ideas / TODOs
 -------------
-experimental optimization branch
-	expliclitly track stack size
-		don't rely on slow # operator
-		allows for pushing nil
-	precache table lookups as locals in compiled code, where possible
-		locals outside of function, that the function closes over
-		track which methods, structures, word funcs, and fields are accessed
-		implies we get the forthy redefinition behavior (original always called)
+make char push sub(1,1) unless that char is a % or \; then push sub(1,2)
+refactor scratch/last scheme
+	instead of scratch or last, push onto cstack
+	make this more flexible and controllable from firth land?
+	should set us up for nested functions/lambdas
 access lua tables form firth land
 	table.field ( t k -- v )
 		pop fieldname from stack
@@ -79,8 +76,13 @@ multiline control structures and comments
 compilebuf dump
 	break into more primitive words and implement in firth
 param pattern matching
-	core language feature?
+	core compiler/language feature?
 	implemented through metaprogramming?
+	// assumes something like : concat ( s1 s2 == s1s2 ) ... ;
+	: strreps	( s n -- n*s )
+				(( _ 1 )) drop
+				(( _ _ )) over swap loops over concat end swap drop
+	;
 runtime documentation
 	call lists
 		if foo is deleted or redefined, remove from bar.calledby
