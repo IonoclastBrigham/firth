@@ -30,10 +30,34 @@ Broke down lua "newfunc/define" functionality into more basic primitives
 Ideas / TODOs
 -------------
 experimental optimization branch
-	precache table lookups as locals in compiled code, where possible
+	precache table lookups as closed-over locals in compiled code, where possible
 		locals outside of function, that the function closes over
 		track which methods, structures, word funcs, and fields are accessed
 		implies we get the forthy redefinition behavior (original always called)
+	two parallel dictionaries
+		one stores the thing that we care about
+			compiled function -> call it
+			anything else -> push it?
+		one stores all the metadata
+			compilebuf
+			calls and calledby
+			whatever else
+	inline functions
+		compiles to an immediate that compiles the firth code in the body inline
+		implies immediate
+		explicit?
+			: ;inline postpone interpret compilebuf inlinefunc bindfunc immediate ;immed
+		automatic?
+			fewer than x words in def?
+			fewer than y lines of generate lua in compilebuf?
+	aliases
+		simply adds a second key that points to the same value
+		eliminates an additional call overhead for convenience words
+		: [ ( -- ) postpone interpret ;immed	// current way
+		' interpret alias: [					// new way
+	pre-cache used lua library functions as locals and close over them
+		bitops
+		stringio
 access lua tables form firth land
 	table.field ( t k -- v )
 		pop fieldname from stack
