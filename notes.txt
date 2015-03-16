@@ -29,6 +29,17 @@ Broke down lua "newfunc/define" functionality into more basic primitives
 
 Ideas / TODOs
 -------------
+better error debug messagges (xpcall and debug lib)
+new compiler/machinery words
+	does>
+		defines action for value type words
+	@ ( xt -- x )
+		"load" (push onto stack)
+	! ( x xt -- )
+		"store" (pop from stack and store in dec entry's data area)
+	variable ( x name -- )
+	constant ( x name -- )
+	defined? ( name -- b )
 refactor scratch/last scheme
 	instead of scratch or last, push onto cstack
 	make this more flexible and controllable from firth land?
