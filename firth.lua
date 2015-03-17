@@ -34,7 +34,7 @@ firth = {
 	end,
 
 	doline = function(c, line)
-		local success, msg = pcall(c.parse, c, line, 1)
+		local success, msg = pcall(c.interpretline, c, line, 1)
 		if not success then stringio.printline(msg) end
 	end,
 

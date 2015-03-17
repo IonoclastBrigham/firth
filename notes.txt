@@ -30,6 +30,7 @@ Broke down lua "newfunc/define" functionality into more basic primitives
 Ideas / TODOs
 -------------
 better error debug messagges (xpcall and debug lib)
+	if "debug mode", compile in a local var that counts firth source line
 new compiler/machinery words
 	does>
 		defines action for value type words
