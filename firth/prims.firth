@@ -24,7 +24,8 @@ interpret compilebuf buildfunc bindfunc immediate
 // <https://github.com/IonoclastBrigham/firth/blob/master/LICENSE>
 // /////////////////////////////////////////////////////////////////////////////
 
-: ( char ) parse drop ;immed // inline, single-line comments
+: " char " parse push ;immed // ( -- s )
+: ( char ( >ts " %b()" parsematch drop ;immed ( inline (nestable) single-line comments)
 
 // a few parser/interpreter/compiler control words
 : [ ( -- ) postpone interpret ;immed
@@ -36,7 +37,6 @@ interpret compilebuf buildfunc bindfunc immediate
 ;immed
 
 // strings and such
-: " ( -- str ) char " parse push ;immed
 : ." ( -- ) postpone " char . call ;immed
 : CR ( -- ) char \n .raw ;
 

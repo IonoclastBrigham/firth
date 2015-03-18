@@ -186,6 +186,18 @@ function prims.parse(compiler)
 	compiler.stack:push(token)
 end
 
+function prims.parsematch(compiler)
+	local pattern = compiler.stack:pop()
+	local success, token, line = pcall(stringio.matchtoken, compiler.line, pattern)
+	if not success then compiler:runtimeerror("parsematch", "UNABLE TO RETRIEVE TOKEN") end
+	compiler.stack:push(token)
+	compiler.line = line
+end
+
+function prims.ungettoken(compiler)
+	compiler.line = tostring(compiler.stack:pop())..compiler.line
+end
+
 function prims.push(compiler)
 	local val = compiler.stack:pop()
 	if type(val) == "string" then
@@ -331,6 +343,8 @@ function prims.initialize()
 		interpret = { func = prims.interpret, immediate = true },
 		['compiling?'] = { func = prims.compiling },
 		parse = { func = prims.parse },
+		parsematch = { func = prims.parsematch },
+		['>ts'] = { func = prims.ungettoken },
 		push = { func = prims.push },
 		define = { func = prims.define },
 		compilebuf = { func = prims.compilebuf },
