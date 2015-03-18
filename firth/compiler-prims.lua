@@ -137,7 +137,12 @@ function prims.dotprint(compiler)
 end
 
 function prims.dotprintstack(compiler)
-	stringio.printstack(compiler.stack)
+	stringio.stacktrace(compiler.stack)
+end
+
+function prims.dotprinthex(compiler)
+	local tos = compiler.stack:pop()
+	stringio.print(string.format("0x%X", tonumber(tos)), ' ')
 end
 
 -- parser/compiler control words --
@@ -168,7 +173,8 @@ end
 --! ( c -- word ) Parses next token from input stream, and pushes it as a string.
 function prims.parse(compiler)
 	local delim = compiler.stack:pop()
-	local token = compiler:nexttoken(delim)
+	local success, token = pcall(compiler.nexttoken, compiler, delim)
+	if not success then compiler:runtimeerror("parse", "UNABLE TO RETRIEVE TOKEN") end
 	compiler.stack:push(token)
 end
 
@@ -211,7 +217,9 @@ function prims.immediate(compiler)
 end
 
 function prims.char(compiler)
-	local char = compiler:nexttoken()
+	local str = compiler:nexttoken()
+	local char = str:sub(1, 1)
+	if char == "%" or char == "\\" then char = str:sub(1, 2) end
 	compiler:pushstring(char)
 end
 
@@ -276,6 +284,8 @@ local function buildentries(dict)
 		entry.calls = {}
 		entry.calledby = {}
 		assert(type(entry.func) == "function", name.." improperly initialized")
+		entry[name] = entry.func
+		entry.func = nil
 	end
 	return dict
 end
@@ -303,6 +313,7 @@ function prims.initialize()
 		['not'] = { func = prims.pushnot, immediate = true },
 
 		['.'] = { func = prims.dotprint },
+		['.x'] = { func = prims.dotprinthex },
 		['..'] = { func = prims.dotprintstack },
 
 		loadfile = { func = prims.loadfile },

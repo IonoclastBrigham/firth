@@ -28,7 +28,7 @@ function compiler:nexttoken(delim)
 	return token
 end
 
-function compiler:parse(line, num)
+function compiler:interpretline(line, num)
 	self.line = line
 	self.running = type(line) == "string"
 	while self.line and #self.line > 0 and self.running do
@@ -57,7 +57,7 @@ function compiler:loadfile(path)
 	self.cstack:push(self.path)
 	self.path = path
 	for line in assert(io.lines(path)) do
-		self:parse(line, num)
+		self:interpretline(line, num)
 		num = num + 1
 		if not self.running then break end
 	end
@@ -66,11 +66,12 @@ end
 
 function compiler:execword(entry)
 	-- TODO: compile mode-specific vocabulary?
+	local name = entry.name
 	if entry.immediate then
-		local success, err = pcall(entry.func, self)
-		if not success then self:runtimeerror(entry.name, err) end
+--		print("IMMEDIATE "..name..'{'..table.concathash(entry, ' ')..'}')
+		self:execfunc(name, entry[name])
 	else
-		self:call(entry.name)
+		self:call(name)
 	end
 end
 
@@ -83,7 +84,7 @@ function compiler:call(word)
 		self.last.calls[word] = true
 		self.dictionary[word].calledby[self.last.name] = true
 	end
-	self:append("compiler.dictionary[%q].func(compiler)", word)
+	self:append("compiler.dictionary[%q][%q](compiler)", word, word)
 end
 
 function compiler:currentbuf()
@@ -92,11 +93,14 @@ end
 
 function compiler:buildfunc(name, compilebuf)
 	self.nexttmp = 0
+
+	-- don't bother compiling empty interpret buffers (i.e. blank lines)
 	if not self.compiling and #compilebuf == 1 then return nil, nil end
+
 	table.insert(compilebuf, "end")
 	local luasrc = table.concat(compilebuf, "\n")
 	if self.trace then stringio.printline(luasrc, '\n') end
-	local func, err = loadstring(luasrc, name)
+	local func, err = loadstring(luasrc, "__FIRTH__ "..name)
 	if func then
 		-- exec returned function to the the actual function we want
 		local success, res = pcall(func, self)
@@ -117,22 +121,132 @@ end
 
 function compiler:bindfunc(name, func)
 	if func then
-		self.last.func = func
+		self.last[name] = func
 		self.dictionary[name] = self.last
 	end
 end
 
 function compiler:execfunc(name, func)
 	if func then
-		local success, err = pcall(func, self)
-		if not success then self:runtimeerror(name, err) end
+		xpcall(func, self.xperrhandler, self)
+	elseif name then -- func == nil, but we have a name
+		self:runtimeerror("execfunc", name.." received, but func is null")
 	end
 end
 
 function compiler:interpretpending()
 	local scratch = self.scratch
 	self.scratch = {"return function(compiler)"}
-	self:execfunc(self:buildfunc("__SCRATCH__", scratch))
+	self:execfunc(self:buildfunc("[INTERP_BUFFER]", scratch))
+end
+
+local function sortmatches(buckets, tok)
+	local result = {}
+
+	for i, matches in ipairs(buckets) do
+		local idx = i + 1
+		local ch = tok:sub(idx, idx)
+		table.sort(matches, function(a, b)
+			return (a:sub(idx, idx) == ch) and (b:sub(idx, idx) ~= ch)
+		end)
+	end
+
+	for _, matches in ipairs(buckets) do
+		for _, match in ipairs(matches) do
+			table.insert(result, match)
+		end
+	end
+
+	if #result == 0 then result[1] = "(NO SUGGESTIONS FOUND)" end
+	return result
+end
+
+function compiler:lookuperror(tok, num)
+	self.line = nil
+	self.compiling = false
+
+	local prefix = "in "..self.path..':'
+	if num then prefix = prefix..num..':' end
+	local buckets = {}
+	for k,v in pairs(self.dictionary) do
+		for i = 1, #tok do
+			buckets[i] = buckets[i] or {}
+			if i > #k then break end
+			if tok:sub(i,i) == k:sub(i,i) then
+				table.insert(buckets[i], k..(v.immediate and " (immediate)" or ""))
+				break
+			end
+		end
+	end
+	local suffix = "Did You Mean..?\n\t"..table.concat(sortmatches(buckets, tok), "\n\t")
+	self:runtimeerror("interpretline", "UNKNOWN WORD '"..tok.."'\n"..suffix)
+end
+
+function compiler:runtimeerror(name, msg)
+	local __FIRTH_DUMPTRACE__ = true
+	error(" in "..name..': '..msg, 2)
+end
+
+-- returns a stack frame iterator
+local function frames(start)
+	local i = start or 0
+	return function()
+		local frame = debug.getinfo(i, "Snf") -- source, name, function ref
+		i = i + 1
+		return frame
+	end
+end
+
+-- returns true if local __FIRTH_DUMPTRACE__ == true, at frame frameidx.
+-- this is a signal that we've hit an internal error mechanism, and the
+-- actual error occurred one frame below that.
+local function dumptrace(frameidx)
+	for i = 1, math.huge do -- "counted forever"
+		local name, value = debug.getlocal(frameidx, i)
+		if not name then break end
+		if (name == "__FIRTH_DUMPTRACE__") and (value == true) then return true end
+	end
+	return false
+end
+
+function compiler:traceframe(frame, level)
+	local source = stringio.split(frame.source, ' ')
+	local name, kind
+	if source[1] == "__FIRTH__" then
+		name = source[2]
+		kind = (name == "[INTERP_BUFFER]") and "    <anon>" or "    <word>"
+	else
+		local fname = frame.name
+		if fname then
+			name = fname
+		else
+			local func = frame.func
+			if func == self.interpretline then
+				name = "interpretline"
+			else
+				name = tostring(func)
+			end
+		end
+		name = '<'..name..'>'
+		kind = "<internal>"
+	end
+	return '\t'..kind..": "..tostring(name)
+end
+
+function compiler:stacktrace(msg)
+	local __FIRTH_DUMPTRACE__ = true
+
+	local stackframes = {}
+	local i = 2
+	for frame in frames(i) do
+		if dumptrace(i) then
+			stackframes = {}
+		elseif frame.what == "Lua" then
+			stackframes[#stackframes+1] = self:traceframe(frame, i)
+		end
+		i = i + 1
+	end
+	return "Call Trace:\n"..table.concat(stackframes, '\n')
 end
 
 function compiler:immediate(word)
@@ -152,18 +266,6 @@ end
 function compiler:pushstring(str)
 	str = string.format("%q", str):gsub("\\\\", "\\") -- restore backslashes
 	self:push(str)
-end
-
-function compiler:lookuperror(tok, num)
-	self.line = nil
-	self.compiling = false
-	stringio.print(self.path..':')
-	if num then stringio.print(num..": ") end
-	error("Error: unknown word '"..tok.."'")
-end
-
-function compiler:runtimeerror(name, msg)
-	error("Runtime error: '"..tostring(name).."': "..msg, 2)
 end
 
 function compiler:newtmp(initialval)
@@ -204,7 +306,8 @@ compiler = {}
 
 --! compiler constructor.
 function compiler.new()
-	local c = {
+	local c
+	c = {
 		stack = stack.new(),
 		cstack = stack.new(),
 		dictionary = prims.initialize(),
@@ -213,7 +316,13 @@ function compiler.new()
 		scratch = {"return function(compiler)"},
 		nexttmp = 0,
 		running = true,
-		path = "stdin",
+		path = "stdin";
+
+		xperrhandler = function(msg)
+			stringio.printline(string.format("ERROR: %s, stack: [%s]",
+					msg, table.concat(c.stack, ' ')))
+			stringio.printline(c:stacktrace(msg))
+		end
 	}
 	setmetatable(c, mt)
 	c:loadfile "firth/prims.firth"

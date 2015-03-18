@@ -17,6 +17,12 @@ local table = require "table"
 
 local mt
 local stack = {}
+
+-- throw if stack is too short for operation
+local function assertsize(st, min, msg)
+	local __FIRTH_DUMPTRACE__ = true
+	assert(min <= st.height, msg) -- TODO: use st.height when implemented
+end
 --! @endcond
 
 
@@ -31,6 +37,7 @@ end
 --! Pops an item off the stack
 --! @return the former top stack item.
 function stack:pop()
+	assertsize(self, 1, "UNDERFLOW")
 	local val = rawget(self, self.height)
 	self:drop()
 	return val
@@ -39,19 +46,20 @@ end
 --! Peeks at the top item, non-destructively.
 --! @return a copy of the top of the stack, without popping it.
 function stack:top()
+	assertsize(self, 1, "STACK EMPTY")
 	return rawget(self, self.height)
 end
 
 --! Pushes a copy of the top stack entry.
 function stack:dup()
-	if self.height < 1 then return end
+	assertsize(self, 1, "STACK EMPTY")
 	self:push(self:top())
 end
 
 --! Removes the top stack item.
 function stack:drop()
+	assertsize(self, 1, "UNDERFLOW")
 	local top = self.height
-	if top < 1 then return end
 	rawset(self, top, nil)
 	self.height = top - 1
 end
@@ -65,37 +73,39 @@ end
 
 --! Swaps the location of the two top items.
 function stack:swap()
+	assertsize(self, 2, "INSUFFICIENT HEIGHT")
 	local top = self.height
-	if top < 2 then return end
 	local prev = top - 1
 	self[top], self[prev] = self[prev], self[top]
 end
 
 --! Pushes a copy of the second item from the top.
 function stack:over()
+	assertsize(self, 2, "INSUFFICIENT HEIGHT")
 	local top = self.height
-	if top < 2 then return end
 	self:push(rawget(self, top-1))
 end
 
 --! Rotates the top 3 stack elements downward.
 function stack:rot()
+	assertsize(self, 3, "INSUFFICIENT HEIGHT")
 	local top = self.height
-	if top < 3 then return end
-	self[top-2], self[top-1], self[top] = self[top-1], self[top], self[top-2]
+	local prev, second = top - 1, top - 2
+	self[second], self[prev], self[top] = self[prev], self[top], self[second]
 end
 
 --! Rotates the top 3 stack elements upward.
 function stack:revrot()
+	assertsize(self, 3, "INSUFFICIENT HEIGHT")
 	local top = self.height
-	if top < 3 then return end
-	self[top-2], self[top-1], self[top] = self[top], self[top-2], self[top-1]
+	local prev, second = top - 1, top - 2
+	self[second], self[prev], self[top] = self[top], self[second], self[prev]
 end
 
 --! Removes the second item from the top.
 function stack:nip()
+	assertsize(self, 2, "INSUFFICIENT HEIGHT")
 	local top = self.height
-	if top < 2 then return end
 	local prev = top - 1
 	rawset(self, prev, rawget(self, top))
 	self:drop()
@@ -110,16 +120,16 @@ end
 --! Pushes a copy of the specified item.
 --! @param idx zero-based offset from the top of the stack of item to duplicate.
 function stack:pick(idx)
+	assertsize(self, idx + 1, "INSUFFICIENT HEIGHT")
 	local top = self.height
-	if (idx < 0) or (idx >= top) then return end
 	self:push(rawget(self, top - idx))
 end
 
 --! Removes the item at the given index and pushes it back onto the stack.
 --! @param idx offset of item to duplicate from the top of the stack.
 function stack:roll(idx)
+	assertsize(self, idx + 1, "INSUFFICIENT HEIGHT")
 	local top = self.height
-	if (idx < 1) or (idx >= top) then return end
 	local tmp = rawget(self, top - idx)
 	for i = top-idx, top-1 do
 		rawset(self, i, rawget(self, i+1))

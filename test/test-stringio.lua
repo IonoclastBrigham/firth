@@ -33,7 +33,7 @@ return {
 			assert(i == stringio.tonumber(tok),
 				string.format("Incorrect token value parsed: '%s'", tok))
 		end
-		assert(#str == 0, "Expected string to be empty after last token")
+		assert(str == ":::", "Expected ':::' after last token; got '"..str.."'")
 	end,
 
 	function()

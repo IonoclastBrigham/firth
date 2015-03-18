@@ -65,7 +65,7 @@ end
 --! @return the token, the remaining substring
 function stringio.nexttoken(str, delim)
 	delim = delim or "%s" -- here %s is an alias for any whitespace
-	local pattern = string.format("([%s]*)([^%s]+)([%s]*)", delim, delim, delim) -- here %s is a string formatter as in C
+	local pattern = string.format("([%s]*)([^%s]+)([%s]?)", delim, delim, delim) -- here %s is a string formatter as in C
 	local discard1, token, discard2 = str:match(pattern)
 --	print(string.format("'%s', '%s', '%s'", discard1, token, discard2))
 	return token, str:sub(#token + #discard1 + #discard2 + 1)
@@ -170,14 +170,42 @@ function stringio.printline(...)
 	stringio.print('\n')
 end
 
+function stringio.printstack(stack)
+	local success, err = pcall(function()
+		stringio.print "stack: ["
+		for i = 1, #stack-1 do
+			stringio.print(stack[i], ' ')
+		end
+		if #stack > 0 then stringio.print(stack[#stack]) end
+		stringio.printline ']'
+	end)
+	if not success then
+		print('\n'..err)
+	end
+end
+
 --! Non destructively prints the contents a stack, from the top down.
 --! Prints the contents of the passed stack, one item per line, prepended
 --! with a negative index from the top.
 --! @param stack an array or stack object.
-function stringio.printstack(stack)
+function stringio.stacktrace(stack)
 	for i = -1, -(#stack), -1 do
 		stringio.printline('[', i, '] = ', tostring(stack[#stack + i + 1]))
 	end
+end
+
+--! @private
+local function getquotespec(val)
+	return (type(val) == "string") and "q" or "s"
+end
+
+function table.concathash(t, sep)
+	local kvs = {}
+	for k,v in pairs(t) do
+		local fmt = '%'..getquotespec(k)..' = %'..getquotespec(v)
+		kvs[#kvs+1] = string.format(fmt, tostring(k), tostring(v))
+	end
+	return table.concat(kvs, sep)
 end
 
 return stringio
