@@ -44,6 +44,10 @@ interpret compilebuf buildfunc bindfunc immediate
 : const: ( val -- ) postpone : push postpone ; ;immed
 // : var: ( val -- ) ;
 
+0.1 const: version
+: copyright ." Firth ver." version . ." Copyright © 2015 Brigham Toskin." ;
+: © copyright ; // TODO: alias
+
 // some basic arithmetic operators and shortcuts
 : + ( a b -- a+b ) char + binop ;immed
 : - ( a b -- a-b ) char - binop ;immed
