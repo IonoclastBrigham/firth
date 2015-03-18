@@ -38,7 +38,7 @@ interpret compilebuf buildfunc bindfunc immediate
 // strings and such
 : " ( -- str ) char " parse push ;immed
 : ." ( -- ) postpone " char . call ;immed
-: CR ( -- ) char \n . ;
+: CR ( -- ) char \n .raw ;
 
 // values and variables
 : const: ( val -- ) postpone : push postpone ; ;immed

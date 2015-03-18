@@ -131,9 +131,17 @@ end
 
 -- os and io primitives --
 
-function prims.dotprint(compiler)
+function prims.rawprint(compiler)
 	local tos = compiler.stack:pop()
-	stringio.print(tostring(tos), ' ')
+	if type(tos) ~= "string" then compiler:runtimeerror(".raw", "NOT A STRING") end
+	stringio.print(tos)
+end
+
+function prims.dotprint(compiler)
+	local stack = compiler.stack
+	local tos = stack:top()
+	stack[#stack] = tostring(tos)..' ' -- TODO: use stack.height
+	prims.rawprint(compiler)
 end
 
 function prims.dotprintstack(compiler)
@@ -312,6 +320,7 @@ function prims.initialize()
 		['false'] = { func = prims.pushfalse, immediate = true },
 		['not'] = { func = prims.pushnot, immediate = true },
 
+		['.raw'] = { func = prims.rawprint },
 		['.'] = { func = prims.dotprint },
 		['.x'] = { func = prims.dotprinthex },
 		['..'] = { func = prims.dotprintstack },
