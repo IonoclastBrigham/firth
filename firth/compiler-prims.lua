@@ -62,7 +62,7 @@ function prims.elsestmt(compiler)
 	compiler:append("else")
 end
 
-function prims.loopstmt(compiler)
+function prims.loopsstmt(compiler)
 	local count = compiler:poptmp()
 	compiler:append("for _ = 1, %s do", count)
 end
@@ -302,7 +302,7 @@ function prims.initialize()
 
 		['if'] = { func = prims.ifstmt, immediate = true },
 		['else'] = { func = prims.elsestmt, immediate = true },
-		['loop'] = { func = prims.loopstmt, immediate = true },
+		['loops'] = { func = prims.loopsstmt, immediate = true },
 		['do'] = { func = prims.dostmt, immediate = true },
 		['end'] = { func = prims.endstmt, immediate = true },
 
