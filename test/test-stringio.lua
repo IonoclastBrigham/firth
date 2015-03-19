@@ -37,6 +37,20 @@ return {
 	end,
 
 	function()
+		local nested = "(I'd like to talk to you about a thing (you know... the thing))"
+		local str = "  \t"..nested.."123"
+		local tok
+		tok, str = stringio.matchtoken(str, "%b()")
+		assert(tok == nested,
+			string.format("Incorrect token value parsed: '%s'", tok))
+		assert(str == "123", "Expected '123' after last token; got '"..str.."'")
+		tok, str = stringio.matchtoken(str, '2')
+		assert(tok == '2',
+			string.format("Incorrect token value parsed: '%s'", tok))
+		assert(str == "3", "Expected '3' after last token; got '"..str.."'")
+	end,
+
+	function()
 		assert(stringio.tonumber('0') == 0, "Conversion to number failed")
 		assert(stringio.tonumber('1.') == 1.0, "Conversion to number failed")
 		assert(stringio.tonumber('.1') == 0.1, "Conversion to number failed")

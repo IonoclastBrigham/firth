@@ -131,9 +131,17 @@ end
 
 -- os and io primitives --
 
-function prims.dotprint(compiler)
+function prims.rawprint(compiler)
 	local tos = compiler.stack:pop()
-	stringio.print(tostring(tos), ' ')
+	if type(tos) ~= "string" then compiler:runtimeerror(".raw", "NOT A STRING") end
+	stringio.print(tos)
+end
+
+function prims.dotprint(compiler)
+	local stack = compiler.stack
+	local tos = stack:top()
+	stack[#stack] = tostring(tos)..' ' -- TODO: use stack.height
+	prims.rawprint(compiler)
 end
 
 function prims.dotprintstack(compiler)
@@ -176,6 +184,18 @@ function prims.parse(compiler)
 	local success, token = pcall(compiler.nexttoken, compiler, delim)
 	if not success then compiler:runtimeerror("parse", "UNABLE TO RETRIEVE TOKEN") end
 	compiler.stack:push(token)
+end
+
+function prims.parsematch(compiler)
+	local pattern = compiler.stack:pop()
+	local success, token, line = pcall(stringio.matchtoken, compiler.line, pattern)
+	if not success then compiler:runtimeerror("parsematch", "UNABLE TO RETRIEVE TOKEN") end
+	compiler.stack:push(token)
+	compiler.line = line
+end
+
+function prims.ungettoken(compiler)
+	compiler.line = tostring(compiler.stack:pop())..compiler.line
 end
 
 function prims.push(compiler)
@@ -312,6 +332,7 @@ function prims.initialize()
 		['false'] = { func = prims.pushfalse, immediate = true },
 		['not'] = { func = prims.pushnot, immediate = true },
 
+		['.raw'] = { func = prims.rawprint },
 		['.'] = { func = prims.dotprint },
 		['.x'] = { func = prims.dotprinthex },
 		['..'] = { func = prims.dotprintstack },
@@ -322,6 +343,8 @@ function prims.initialize()
 		interpret = { func = prims.interpret, immediate = true },
 		['compiling?'] = { func = prims.compiling },
 		parse = { func = prims.parse },
+		parsematch = { func = prims.parsematch },
+		['>ts'] = { func = prims.ungettoken },
 		push = { func = prims.push },
 		define = { func = prims.define },
 		compilebuf = { func = prims.compilebuf },

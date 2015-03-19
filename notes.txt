@@ -58,6 +58,11 @@ experimental optimization branch
 	pre-cache used lua library functions as locals and close over them
 		bitops
 		stringio
+stack data type
+	: stack ( -- stack ) compiler.stack:push(stack.new()) ;
+	: >s ( stack x -- stack ) stack:push(x) ;
+	: s> ( stack -- stack x ) compiler.stack:push(compiler.stack:top():pop())
+	stack 1 >s 2 >s 3 >s s> s> s> .S 
 better error debug messagges (xpcall and debug lib)
 	if "debug mode", compile in a local var that counts firth source line
 new compiler/machinery words

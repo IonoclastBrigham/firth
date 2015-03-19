@@ -42,6 +42,7 @@ firth = {
 	--! @brief Executes the Firth Read-Eval-Print Loop.
 	repl = function()
 		c = firth.instance()
+		firth.doline(c, 'copyright CR')
 		while c.running do
 			stringio.print(c.compiling and '>>\t' or 'ok ')
 			firth.doline(c, stringio.readline())

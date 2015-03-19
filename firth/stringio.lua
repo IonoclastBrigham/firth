@@ -58,17 +58,36 @@ function stringio.split(str)
 end
 
 --! Chops off the next token from the front of a string.
---! This function returns the the next token from the start of the string,
---! followed by the substring that follows the delimiter string.
+--! This function calculates the the next token, delimited as specified, from
+--! the start of the string, followed by the substring that follows the
+--! delimiter string.
 --! @param str the string to tokenize
---! @param delim the delimiter pattern to tokenize with, defaults to '%s' (whitespace).
+--! @param delim the delimiter pattern to tokenize with,
+--! 	defaults to '%s' (whitespace).
 --! @return the token, the remaining substring
+--! @see #matchtoken()
 function stringio.nexttoken(str, delim)
 	delim = delim or "%s" -- here %s is an alias for any whitespace
 	local pattern = string.format("([%s]*)([^%s]+)([%s]?)", delim, delim, delim) -- here %s is a string formatter as in C
 	local discard1, token, discard2 = str:match(pattern)
 --	print(string.format("'%s', '%s', '%s'", discard1, token, discard2))
 	return token, str:sub(#token + #discard1 + #discard2 + 1)
+end
+
+--! Chops off the next matching token from the front of a string.
+--! This function matches the first occurrence of specified pattern, extracting
+--! and returning the matching substring, followed by the substring that follows
+--! the match. This function differs from #nexttoken() in that it finds a
+--! positive match, rather than the first thing it finds that doesn't match a
+--! delimiter pattern.
+--! @param str the string to tokenize
+--! @param pattern the pattern to match against
+--! @return the token, the remaining substring
+--! @see #nexttoken()
+function stringio.matchtoken(str, pattern)
+	local tstart, tend = str:find(pattern)
+	local token = str:sub(tstart, tend)
+	return token, str:sub(tend + 1)
 end
 
 --! Tries to convert a string into a number.

@@ -91,11 +91,17 @@ function compiler:currentbuf()
 	return self.last.name, self.last.compilebuf
 end
 
-function compiler:buildfunc(name, compilebuf)
-	self.nexttmp = 0
+--! @private
+local function NOP() end
 
-	-- don't bother compiling empty interpret buffers (i.e. blank lines)
-	if not self.compiling and #compilebuf == 1 then return nil, nil end
+function compiler:buildfunc(name, compilebuf)
+	self.nexttmp = 0 -- TODO: cstack?
+
+	-- don't bother compiling empty buffers (i.e. blank lines)
+	if #compilebuf == 1 then
+		if not self.compiling then return nil, nil end
+		return name, NOP
+	end
 
 	table.insert(compilebuf, "end")
 	local luasrc = table.concat(compilebuf, "\n")
@@ -123,6 +129,8 @@ function compiler:bindfunc(name, func)
 	if func then
 		self.last[name] = func
 		self.dictionary[name] = self.last
+	else
+		self:runtimeerror("bindfunc", "NIL FUNCTION REF")
 	end
 end
 
@@ -130,7 +138,7 @@ function compiler:execfunc(name, func)
 	if func then
 		xpcall(func, self.xperrhandler, self)
 	elseif name then -- func == nil, but we have a name
-		self:runtimeerror("execfunc", name.." received, but func is null")
+		self:runtimeerror("execfunc", "NIL FUNCTION REF")
 	end
 end
 
