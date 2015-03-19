@@ -191,15 +191,16 @@ end
 
 function stringio.printstack(stack)
 	local success, err = pcall(function()
+		local height = stack.height
 		stringio.print "stack: ["
-		for i = 1, #stack-1 do
+		for i = 1, height-1 do
 			stringio.print(stack[i], ' ')
 		end
-		if #stack > 0 then stringio.print(stack[#stack]) end
+		if height > 0 then stringio.print(stack[height]) end
 		stringio.printline ']'
 	end)
 	if not success then
-		print('\n'..err)
+		stringio.print('\n'..err)
 	end
 end
 
@@ -208,8 +209,8 @@ end
 --! with a negative index from the top.
 --! @param stack an array or stack object.
 function stringio.stacktrace(stack)
-	for i = -1, -(#stack), -1 do
-		stringio.printline('[', i, '] = ', tostring(stack[#stack + i + 1]))
+	for i = -1, -(stack.height), -1 do
+		stringio.printline('[', i, '] = ', tostring(stack[stack.height + i + 1]))
 	end
 end
 

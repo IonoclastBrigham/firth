@@ -57,7 +57,7 @@ firth = {
 		for _, code in ipairs(args) do
 			firth.doline(c, code)
 		end
-		if #c.stack > 0 then stringio.printstack(c.stack) end
+		if c.stack.height > 0 then stringio.printstack(c.stack) end
 	end,
 
 	--! @fn reload()
