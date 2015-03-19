@@ -31,7 +31,6 @@ Ideas / TODOs
 -------------
 experimental optimization branch
 	precache table lookups as closed-over locals in compiled code, where possible
-		locals outside of function, that the function closes over
 		track which methods, structures, word funcs, and fields are accessed
 		implies we get the forthy redefinition behavior (original always called)
 	two parallel dictionaries
@@ -56,8 +55,28 @@ experimental optimization branch
 		: [ ( -- ) postpone interpret ;immed	// current way
 		' interpret alias: [					// new way
 	pre-cache used lua library functions as locals and close over them
-		bitops
+		string
+		io
 		stringio
+		table
+	compile time optimization module
+		likely to be complicated
+			load as a separate, optional module
+			patch itself into the compiler machinery
+		calculate stack deltas
+			: foo bar baz ;
+			foo.delta = bar.delta + baz.delta
+			capture stack usage even for immediates that compile executable code
+				+.consumes = 2
+				+.writes = 1
+		build a simple tree to represent input
+			use knowledge of ops and stack usage to group expressions
+			transform and optimize tree is possible
+			generate lua code from optimized tree
+		stack elision
+			use locals wherever possible
+			commit stack changes lazily
+			pre-calculate results when literals are arguments?
 stack data type
 	: stack ( -- stack ) compiler.stack:push(stack.new()) ;
 	: >s ( stack x -- stack ) stack:push(x) ;
