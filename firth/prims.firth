@@ -11,7 +11,7 @@ interpret compilebuf buildfunc bindfunc
 	nextword call
 interpret compilebuf buildfunc bindfunc immediate
 : ;
-	postpone interpret compilebuf buildfunc bindfunc
+	compilebuf buildfunc bindfunc postpone interpret
 interpret compilebuf buildfunc bindfunc immediate
 : ;immed postpone ; postpone immediate ; immediate
 
