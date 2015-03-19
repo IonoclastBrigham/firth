@@ -60,14 +60,14 @@ end
 function stack:drop()
 	assertsize(self, 1, "UNDERFLOW")
 	local top = self.height
-	rawset(self, top, nil)
+	rawset(self, top, 0)
 	self.height = top - 1
 end
 
 --! Removes all items from the stack.
 function stack:clear()
 	local top = self.height
-	for i = top, 1, -1 do rawset(self, i, nil) end
+	for i = top, 1, -1 do rawset(self, i, 0) end
 	self.height = 0
 end
 
@@ -158,8 +158,9 @@ stack = {}
 --! </pre>
 --! @return a newly initialized stack object.
 function stack.new()
-	local s = { height = 0 }
-	return setmetatable(s, mt)
+	local s = setmetatable({ height = 0 }, mt)
+	for i = 32,1,-1 do s[i] = 0 end -- poke in some null data to pre-reserve array 
+	return s
 end
 
 return stack
