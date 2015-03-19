@@ -75,8 +75,17 @@ function compiler:execword(entry)
 	end
 end
 
+--! @private
+local function newcompilebuf()
+	return {[[
+local compiler = ...
+local dictionary, stack = compiler.dictionary, compiler.stack
+return function()
+	]]}
+end
+
 function compiler:newentry(name)
-	self.last = { name = name, compilebuf = {"return function(compiler)"}, calls = {}, calledby = {} }
+	self.last = { name = name, compilebuf = newcompilebuf(), calls = {}, calledby = {} }
 end
 
 function compiler:call(word)
@@ -84,7 +93,7 @@ function compiler:call(word)
 		self.last.calls[word] = true
 		self.dictionary[word].calledby[self.last.name] = true
 	end
-	self:append("compiler.dictionary[%q][%q](compiler)", word, word)
+	self:append("dictionary[%q][%q]()", word, word)
 end
 
 function compiler:currentbuf()
@@ -144,7 +153,7 @@ end
 
 function compiler:interpretpending()
 	local scratch = self.scratch
-	self.scratch = {"return function(compiler)"}
+	self.scratch = newcompilebuf()
 	self:execfunc(self:buildfunc("[INTERP_BUFFER]", scratch))
 end
 
@@ -286,13 +295,12 @@ function compiler:newtmp(initialval)
 end
 
 function compiler:poptmp()
-	local var = self:newtmp()
-	self:append("%s = compiler.stack:pop()", var)
+	local var = self:newtmp("stack:pop()")
 	return var
 end
 
 function compiler:pushtmp(var)
-	self:append("compiler.stack:push(%s)", var)
+	self:append("stack:push(%s)", var)
 end
 
 function compiler:append(...)
@@ -314,14 +322,15 @@ compiler = {}
 
 --! compiler constructor.
 function compiler.new()
+	-- build compiler object
 	local c
 	c = {
+		dictionary = {},
 		stack = stack.new(),
 		cstack = stack.new(),
-		dictionary = prims.initialize(),
 		compiling = false,
 		trace = false,
-		scratch = {"return function(compiler)"},
+		scratch = newcompilebuf(),
 		nexttmp = 0,
 		running = true,
 		path = "stdin";
@@ -333,7 +342,15 @@ function compiler.new()
 		end
 	}
 	setmetatable(c, mt)
+
+	-- initialize dictionary with core words
+	prims.initialize(c)
 	c:loadfile "firth/prims.firth"
+
+	-- cleanup memory
+	collectgarbage()
+	collectgarbage()
+
 	return c
 end
 

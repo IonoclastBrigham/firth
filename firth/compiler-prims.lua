@@ -14,291 +14,15 @@
 
 
 --! @cond
-local string = require 'string'
-local stringio = require 'firth.stringio'
+local os = require "os"
+local string = require "string"
+local stringio = require "firth.stringio"
 
-local prims = {}
---! @endcond
+local clock = os.clock
 
-
--- stack ops --
-
-function prims.dup(compiler)
-	compiler.stack:dup()
-end
-
-function prims.over(compiler)
-	compiler.stack:over()
-end
-
-function prims.drop(compiler)
-	compiler.stack:drop()
-end
-
-function prims.swap(compiler)
-	compiler.stack:swap()
-end
-
-function prims.rot(compiler)
-	compiler.stack:rot()
-end
-
-function prims.revrot(compiler)
-	compiler.stack:revrot()
-end
-
-function prims.pick(compiler)
-	return compiler.stack:pick(compiler.stack:pop())
-end
-
--- flow control --
-
-function prims.ifstmt(compiler)
-	local cond = compiler:poptmp()
-	compiler:append("if %s then", cond)
-end
-
-function prims.elsestmt(compiler)
-	compiler:append("else")
-end
-
-function prims.loopsstmt(compiler)
-	local count = compiler:poptmp()
-	compiler:append("for _ = 1, %s do", count)
-end
-
-function prims.dostmt(compiler)
-	compiler:append("do")
-end
-
-function prims.endstmt(compiler)
-	compiler:append("end")
-end
-
--- inline operations --
-
---! ( operator -- )
-function prims.binop(compiler)
-	local op = compiler.stack:pop()
-
-	local roperand = compiler:poptmp()
-	local loperand = compiler:poptmp()
-	local lval = compiler:newtmp()
-	compiler:append("%s = %s %s %s", lval, loperand, op, roperand)
-	compiler:pushtmp(lval)
-end
-
--- boolean stuff --
-
-function prims.pushtrue(compiler)
-	compiler:push(true)
-end
-
-function prims.pushfalse(compiler)
-	compiler:push(false)
-end
-
-function prims.pushnot(compiler)
-	local stack = compiler:newtmp("compiler.stack")
-	compiler:append("%s[#%s] = not %s[#%s]", stack, stack, stack, stack)
-end
-
--- bitwise boolean ops --
-
--- only available in LuaJIT 2.0+ or Lua 5.2+
-local bitops = bit or bit32
-if bitops then
-	function prims.band(compiler)
-		local stack = compiler.stack
-		stack:push(bitops.band(stack:pop(), stack:pop()))
-	end
-
-	function prims.bor(compiler)
-		local stack = compiler.stack
-		stack:push(bitops.bor(stack:pop(), stack:pop()))
-	end
-
-	function prims.bxor(compiler)
-		local stack = compiler.stack
-		stack:push(bitops.bxor(stack:pop(), stack:pop()))
-	end
-
-	function prims.bnot(compiler)
-		local stack = compiler.stack
-		stack:push(bitops.bnot(stack:pop()))
-	end
-end
-
--- os and io primitives --
-
-function prims.rawprint(compiler)
-	local tos = compiler.stack:pop()
-	if type(tos) ~= "string" then compiler:runtimeerror(".raw", "NOT A STRING") end
-	stringio.print(tos)
-end
-
-function prims.dotprint(compiler)
-	local stack = compiler.stack
-	local tos = stack:top()
-	stack[#stack] = tostring(tos)..' ' -- TODO: use stack.height
-	prims.rawprint(compiler)
-end
-
-function prims.dotprintstack(compiler)
-	stringio.stacktrace(compiler.stack)
-end
-
-function prims.dotprinthex(compiler)
-	local tos = compiler.stack:pop()
-	stringio.print(string.format("0x%X", tonumber(tos)), ' ')
-end
-
--- parser/compiler control words --
-
-function prims.loadfile(compiler)
-	compiler:loadfile(compiler.stack:pop())
-end
-
-function prims.exit(compiler)
-	compiler.running = false
-end
-
-function prims.compile(compiler)
-	if not compiler.compiling then
-		compiler:interpretpending()
-	end
-	compiler.compiling = true
-end
-
-function prims.interpret(compiler)
-	compiler.compiling = false
-end
-
-function prims.compiling(compiler)
-	compiler.stack:push(compiler.compiling)
-end
-
---! ( c -- word ) Parses next token from input stream, and pushes it as a string.
-function prims.parse(compiler)
-	local delim = compiler.stack:pop()
-	local success, token = pcall(compiler.nexttoken, compiler, delim)
-	if not success then compiler:runtimeerror("parse", "UNABLE TO RETRIEVE TOKEN") end
-	compiler.stack:push(token)
-end
-
-function prims.parsematch(compiler)
-	local pattern = compiler.stack:pop()
-	local success, token, line = pcall(stringio.matchtoken, compiler.line, pattern)
-	if not success then compiler:runtimeerror("parsematch", "UNABLE TO RETRIEVE TOKEN") end
-	compiler.stack:push(token)
-	compiler.line = line
-end
-
-function prims.ungettoken(compiler)
-	compiler.line = tostring(compiler.stack:pop())..compiler.line
-end
-
-function prims.push(compiler)
-	local val = compiler.stack:pop()
-	if type(val) == "string" then
-		compiler:pushstring(val)
-	else
-		compiler:push(val)
-	end
-end
-
-function prims.define(compiler)
-	compiler:newentry(compiler.stack:pop())
-end
-
---! ( -- name, buf )
-function prims.compilebuf(compiler)
-	local name, buf = compiler:currentbuf()
-	compiler.stack:push(name)
-	compiler.stack:push(buf)
-end
-
---! ( name, buf -- name, func )
-function prims.buildfunc(compiler)
-	local buf = compiler.stack:pop()
-	local _, func = compiler:buildfunc(compiler.stack:top(), buf)
-	compiler.stack:push(func)
-end
-
---! ( name, func -- )
-function prims.bindfunc(compiler)
-	local func = compiler.stack:pop()
-	local name = compiler.stack:pop()
-	compiler:bindfunc(name, func)
-end
-
-function prims.immediate(compiler)
-	compiler:immediate()
-end
-
-function prims.char(compiler)
-	local str = compiler:nexttoken()
-	local char = str:sub(1, 1)
-	if char == "%" or char == "\\" then char = str:sub(1, 2) end
-	compiler:pushstring(char)
-end
-
-function prims.call(compiler)
-	local word = compiler.stack:pop()
-	compiler:call(word)
-end
-
--- reflection, debugging, internal compiler state, etc. --
-
-function prims.dump(compiler)
-	compiler.stack:push(table.concat(compiler.last.compilebuf, '\n'))
-end
-
-function prims.dumpword(compiler)
-	local word = compiler:nexttoken()
-	local entry = compiler.dictionary[word]
-	if not entry then
-		compiler:lookuperror(word)
-		return
-	end
-	compiler.stack:push(table.concat(entry.compilebuf, '\n'))
-end
-
-function prims.trace(compiler)
-	compiler.trace = true
-end
-
-function prims.notrace(compiler)
-	compiler.trace = false
-end
-
-function prims.tracing(compiler)
-	compiler.stack:push(compiler.trace)
-end
-
-function prims.calls(compiler)
-	local word = compiler:nexttoken()
-	for callee, _ in pairs(compiler.dictionary[word].calledby) do
-		stringio.printline(string.format("\tCalled by %s", callee))
-	end
-end
-
-function prims.calledby(compiler)
-	local word = compiler:nexttoken()
-	for callee, _ in pairs(compiler.dictionary[word].calls) do
-		stringio.printline(string.format("\tCalls %s", callee))
-	end
-end
-
--- export to dictionary --
+local exports = {}
 
 local function buildentries(dict)
-	if bitops then
-		dict["&"] = { func = prims.band }
-		dict["|"] = { func = prims.bor }
-		dict["^"] = { func = prims.bxor }
-		dict["~"] = { func = prims.bnot }
-	end
 	for name, entry in pairs(dict) do
 		entry.name = name
 		entry.calls = {}
@@ -307,62 +31,346 @@ local function buildentries(dict)
 		entry[name] = entry.func
 		entry.func = nil
 	end
-	return dict
+end
+--! @endcond
+
+function exports.initialize(compiler)
+	assert(compiler, "INVALID COMPILER REF")
+	local dictionary, stack = compiler.dictionary, compiler.stack
+	
+	-- stack ops --
+
+	local function dup()
+		stack:dup()
+	end
+
+	local function over()
+		stack:over()
+	end
+
+	local function drop()
+		stack:drop()
+	end
+
+	local function swap()
+		stack:swap()
+	end
+
+	local function rot()
+		stack:rot()
+	end
+
+	local function revrot()
+		stack:revrot()
+	end
+
+	local function pick()
+		return stack:pick(stack:pop())
+	end
+
+	-- flow control --
+
+	local function ifstmt()
+		local cond = compiler:poptmp()
+		compiler:append("if %s then", cond)
+	end
+
+	local function elsestmt()
+		compiler:append("else")
+	end
+
+	local function loopsstmt()
+		local count = compiler:poptmp()
+		compiler:append("for _ = 1, %s do", count)
+	end
+
+	local function dostmt()
+		compiler:append("do")
+	end
+
+	local function endstmt()
+		compiler:append("end")
+	end
+
+	-- inline operations --
+
+	--! ( operator -- )
+	local function binop()
+		local op = stack:pop()
+
+		local roperand = compiler:poptmp()
+		local loperand = compiler:poptmp()
+		local lval = compiler:newtmp()
+		compiler:append("%s = %s %s %s", lval, loperand, op, roperand)
+		compiler:pushtmp(lval)
+	end
+
+	-- boolean stuff --
+
+	local function pushtrue()
+		compiler:push(true)
+	end
+
+	local function pushfalse()
+		compiler:push(false)
+	end
+
+	local function pushnot()
+		local height = compiler:newtmp("stack.height")
+		compiler:append("stack[%s] = not stack[%s]", height, height)
+	end
+
+	-- bitwise boolean ops --
+
+	-- only available in LuaJIT 2.0+ or Lua 5.2+
+	local b = bit or bit32
+	local band, bor, bxor, bnot
+	if b then
+		local bitand, bitor, bitxor, bitnot = b.band, b.bor, b.bxor, b.bnot
+
+		function band()
+			stack:push(bitand(stack:pop(), stack:pop()))
+		end
+
+		function bor()
+			stack:push(bitor(stack:pop(), stack:pop()))
+		end
+
+		function bxor()
+			stack:push(bitxor(stack:pop(), stack:pop()))
+		end
+
+		function bnot()
+			stack:push(bitnot(stack:pop()))
+		end
+	end
+
+	-- os and io primitives --
+
+	local function rawprint()
+		local tos = stack:pop()
+		if type(tos) ~= "string" then compiler:runtimeerror(".raw", "NOT A STRING") end
+		stringio.print(tos)
+	end
+
+	local function dotprint()
+		stack[stack.height] = tostring(stack:top())..' '
+		rawprint()
+	end
+
+	local function dotprintstack()
+		stringio.stacktrace(stack)
+	end
+
+	local function dotprinthex()
+		local tos = stack:pop()
+		stringio.print(string.format("0x%X", tonumber(tos)), ' ')
+	end
+
+	-- parser/compiler control words --
+
+	local function loadfile()
+		compiler:loadfile(stack:pop())
+	end
+
+	local function exit()
+		compiler.running = false
+	end
+
+	local function compile()
+		if not compiler.compiling then
+			compiler:interpretpending()
+		end
+		compiler.compiling = true
+	end
+
+	local function interpret()
+		compiler.compiling = false
+	end
+
+	local function compiling()
+		stack:push(compiler.compiling)
+	end
+
+	--! ( c -- word ) Parses next token from input stream, and pushes it as a string.
+	local function parse()
+		local delim = stack:pop()
+		local success, token = pcall(compiler.nexttoken, compiler, delim)
+		if not success then compiler:runtimeerror("parse", "UNABLE TO RETRIEVE TOKEN") end
+		stack:push(token)
+	end
+
+	local function parsematch()
+		local pattern = stack:pop()
+		local success, token, line = pcall(stringio.matchtoken, compiler.line, pattern)
+		if not success then compiler:runtimeerror("parsematch", "UNABLE TO RETRIEVE TOKEN") end
+		stack:push(token)
+		compiler.line = line
+	end
+
+	local function ungettoken()
+		compiler.line = tostring(stack:pop())..compiler.line
+	end
+
+	local function push()
+		local val = stack:pop()
+		if type(val) == "string" then
+			compiler:pushstring(val)
+		else
+			compiler:push(val)
+		end
+	end
+
+	local function define()
+		compiler:newentry(stack:pop())
+	end
+
+	--! ( -- name, buf )
+	local function compilebuf()
+		local name, buf = compiler:currentbuf()
+		stack:push(name)
+		stack:push(buf)
+	end
+
+	--! ( name, buf -- name, func )
+	local function buildfunc()
+		local buf = stack:pop()
+		local _, func = compiler:buildfunc(stack:top(), buf)
+		stack:push(func)
+	end
+
+	--! ( name, func -- )
+	local function bindfunc()
+		local func = stack:pop()
+		local name = stack:pop()
+		compiler:bindfunc(name, func)
+	end
+
+	local function immediate()
+		compiler:immediate()
+	end
+
+	local function char()
+		local str = compiler:nexttoken()
+		local char = str:sub(1, 1)
+		if char == "%" or char == "\\" then char = str:sub(1, 2) end
+		compiler:pushstring(char)
+	end
+
+	local function call()
+		compiler:call(stack:pop())
+	end
+
+	-- reflection, debugging, internal compiler state, etc. --
+
+	local function dumpword()
+		local word = compiler:nexttoken()
+		local entry = dictionary[word]
+		if not entry then compiler:lookuperror(word) end
+		stack:push(table.concat(entry.compilebuf, '\n'))
+	end
+
+	local function dump()
+		stack:push(table.concat(compiler.last.compilebuf, '\n'))
+	end
+
+	local function trace()
+		compiler.trace = true
+	end
+
+	local function notrace()
+		compiler.trace = false
+	end
+
+	local function tracing()
+		stack:push(compiler.trace)
+	end
+
+	local function calls()
+		local word = compiler:nexttoken()
+		for caller, _ in pairs(dictionary[word].calledby) do
+			stringio.printline(string.format("\tcalled by %s", caller))
+		end
+	end
+
+	local function calledby()
+		local word = compiler:nexttoken()
+		for callee, _ in pairs(dictionary[word].calls) do
+			stringio.printline(string.format("\tcalls %s", callee))
+		end
+	end
+
+	local function tstart()
+		stack:push(clock())
+	end
+
+	local function tend()
+		local fin = clock()
+		local diff = fin - stack:pop()
+		stringio.printline(diff)
+	end
+
+	dictionary.dup = { func = dup }
+	dictionary.over = { func = over }
+	dictionary.drop = { func = drop }
+	dictionary.swap = { func = swap }
+	dictionary.rot = { func = rot }
+	dictionary['-rot'] = { func = revrot }
+	dictionary.pick = { func = pick }
+
+	dictionary['if'] = { func = ifstmt, immediate = true }
+	dictionary['else'] = { func = elsestmt, immediate = true }
+	dictionary['loops'] = { func = loopsstmt, immediate = true }
+	dictionary['do'] = { func = dostmt, immediate = true }
+	dictionary['end'] = { func = endstmt, immediate = true }
+
+	dictionary.binop = { func = binop }
+
+	dictionary['true'] = { func = pushtrue, immediate = true }
+	dictionary['false'] = { func = pushfalse, immediate = true }
+	dictionary['not'] = { func = pushnot, immediate = true }
+
+	dictionary['.raw'] = { func = rawprint }
+	dictionary['.'] = { func = dotprint }
+	dictionary['.x'] = { func = dotprinthex }
+	dictionary['..'] = { func = dotprintstack }
+
+	dictionary.loadfile = { func = loadfile }
+	dictionary.exit = { func = exit, immediate = true }
+	dictionary.compile  = { func = compile }
+	dictionary.interpret = { func = interpret, immediate = true }
+	dictionary['compiling?'] = { func = compiling }
+	dictionary.parse = { func = parse }
+	dictionary.parsematch = { func = parsematch }
+	dictionary['>ts'] = { func = ungettoken }
+	dictionary.push = { func = push }
+	dictionary.define = { func = define }
+	dictionary.compilebuf = { func = compilebuf }
+	dictionary.buildfunc = { func = buildfunc }
+	dictionary.bindfunc = { func = bindfunc }
+	dictionary.immediate = { func = immediate }
+	dictionary.char = { func = char, immediate = true }
+	dictionary.call = { func = call }
+
+	dictionary.dump = { func = dump }
+	dictionary['dumpword:'] = { func = dumpword, immediate = true }
+	dictionary.trace = { func = trace }
+	dictionary.notrace = { func = notrace }
+	dictionary['trace?'] = { func = tracing }
+	dictionary['calls:'] = { func = calls, immediate = true }
+	dictionary['calledby:'] = { func = calledby, immediate = true }
+	dictionary.tstart = { func = tstart }
+	dictionary.tend = { func = tend }
+
+	if b then
+		dictionary["&"] = { func = band }
+		dictionary["|"] = { func = bor }
+		dictionary["^"] = { func = bxor }
+		dictionary["~"] = { func = bnot }
+	end
+
+	buildentries(dictionary)
 end
 
-function prims.initialize()
-	return buildentries{
-		dup = { func = prims.dup },
-		over = { func = prims.over },
-		drop = { func = prims.drop },
-		swap = { func = prims.swap },
-		rot = { func = prims.rot },
-		['-rot'] = { func = prims.revrot },
-		pick = { func = prims.pick },
 
-		['if'] = { func = prims.ifstmt, immediate = true },
-		['else'] = { func = prims.elsestmt, immediate = true },
-		['loops'] = { func = prims.loopsstmt, immediate = true },
-		['do'] = { func = prims.dostmt, immediate = true },
-		['end'] = { func = prims.endstmt, immediate = true },
-
-		binop = { func = prims.binop },
-
-		['true'] = { func = prims.pushtrue, immediate = true },
-		['false'] = { func = prims.pushfalse, immediate = true },
-		['not'] = { func = prims.pushnot, immediate = true },
-
-		['.raw'] = { func = prims.rawprint },
-		['.'] = { func = prims.dotprint },
-		['.x'] = { func = prims.dotprinthex },
-		['..'] = { func = prims.dotprintstack },
-
-		loadfile = { func = prims.loadfile },
-		exit = { func = prims.exit, immediate = true },
-		compile  = { func = prims.compile },
-		interpret = { func = prims.interpret, immediate = true },
-		['compiling?'] = { func = prims.compiling },
-		parse = { func = prims.parse },
-		parsematch = { func = prims.parsematch },
-		['>ts'] = { func = prims.ungettoken },
-		push = { func = prims.push },
-		define = { func = prims.define },
-		compilebuf = { func = prims.compilebuf },
-		buildfunc = { func = prims.buildfunc },
-		bindfunc = { func = prims.bindfunc },
-		immediate = { func = prims.immediate },
-		char = { func = prims.char, immediate = true },
-		call = { func = prims.call },
-
-		dump = { func = prims.dump },
-		['dumpword:'] = { func = prims.dumpword, immediate = true },
-		trace = { func = prims.trace },
-		notrace = { func = prims.notrace },
-		['trace?'] = { func = prims.tracing },
-		['calls:'] = { func = prims.calls, immediate = true },
-		['calledby:'] = { func = prims.calledby, immediate = true },
-	}
-end
-
-
-return prims
+return exports
