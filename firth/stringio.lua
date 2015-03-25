@@ -189,14 +189,29 @@ function stringio.printline(...)
 	stringio.print('\n')
 end
 
+--! @private
+local function printitem(item)
+	if type(item) == "string" then
+		stringio.print(string.format("%q", item))
+	elseif item.height then 
+		stringio.printstack(item)
+	elseif type(item) == "table" then
+		stringio.print('{', table.concathash(item, ', '), '}')
+	else
+		stringio.print(tostring(item))
+	end
+end
+
 function stringio.printstack(stack)
 	local success, err = pcall(function()
 		local height = stack.height
 		stringio.print "stack: ["
 		for i = 1, height-1 do
-			stringio.print(stack[i], ' ')
+			local item = stack[i]
+			printitem(item)
+			stringio.print ' '
 		end
-		if height > 0 then stringio.print(stack[height]) end
+		if height > 0 then printitem(stack[height]) end
 		stringio.printline ']'
 	end)
 	if not success then
