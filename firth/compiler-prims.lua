@@ -28,16 +28,14 @@ local function buildentries(dict)
 		entry.calls = {}
 		entry.calledby = {}
 		assert(type(entry.func) == "function", name.." improperly initialized")
-		entry[name] = entry.func
-		entry.func = nil
 	end
 end
 --! @endcond
 
 function exports.initialize(compiler)
 	assert(compiler, "INVALID COMPILER REF")
-	local dictionary, stack = compiler.dictionary, compiler.stack
-	
+	local dictionary, stack, cstack = compiler.dictionary, compiler.stack, compiler.cstack
+
 	-- stack ops --
 
 	local function dup()
@@ -177,17 +175,33 @@ function exports.initialize(compiler)
 		compiler.running = false
 	end
 
-	local function compile()
-		if not compiler.compiling then
-			compiler:interpretpending()
-		end
+	--! ( entry -- C: entry )
+	local function interpretpending()
+		print("EXEC WORD interpretpending")
+		compiler:interpretpending()
+	end
+
+	--! ( entry -- C: entry )
+	local function setcompile()
+		local target = stack:pop()
+		local typ = type(target)
+		assert(typ == "table", "INVALID TARGET TYPE "..tostring(typ))
+		assert(target.compilebuf, "MISSING COMPILEBUF")
+		print("POPPING/PUSHING STACK> {"..target.name.."} >CSTACK")
+
 		compiler.compiling = true
+		cstack:push(target)
 	end
 
 	local function interpret()
+		local interp = cstack:top()
+		if (type(interp) ~= "table") or (interp.name ~= "[INTERP_BUF]") then
+			compiler:newentry()
+		end
 		compiler.compiling = false
 	end
 
+	--! ( -- bool )
 	local function compiling()
 		stack:push(compiler.compiling)
 	end
@@ -200,6 +214,7 @@ function exports.initialize(compiler)
 		stack:push(token)
 	end
 
+	--! ( pattern -- tok )
 	local function parsematch()
 		local pattern = stack:pop()
 		local success, token, line = pcall(stringio.matchtoken, compiler.line, pattern)
@@ -208,10 +223,12 @@ function exports.initialize(compiler)
 		compiler.line = line
 	end
 
+	--! ( str -- )
 	local function ungettoken()
 		compiler.line = tostring(stack:pop())..compiler.line
 	end
 
+	--! ( C: entry -- C: entry' )
 	local function push()
 		local val = stack:pop()
 		if type(val) == "string" then
@@ -221,35 +238,26 @@ function exports.initialize(compiler)
 		end
 	end
 
-	local function define()
-		compiler:newentry(stack:pop())
+	--! ( name -- entry )
+	local function newentry()
+		compiler:newentry(stack:pop(), stack)
 	end
 
-	--! ( -- name, buf )
-	local function compilebuf()
-		local name, buf = compiler:currentbuf()
-		stack:push(name)
-		stack:push(buf)
-	end
-
-	--! ( name, buf -- name, func )
+	--! ( C: entry -- C: entry' )
 	local function buildfunc()
-		local buf = stack:pop()
-		local _, func = compiler:buildfunc(stack:top(), buf)
-		stack:push(func)
+		compiler:buildfunc()
 	end
 
-	--! ( name, func -- )
+	--! ( C: entry -- )
 	local function bindfunc()
-		local func = stack:pop()
-		local name = stack:pop()
-		compiler:bindfunc(name, func)
+		compiler:bindfunc()
 	end
 
 	local function immediate()
 		compiler:immediate()
 	end
 
+	--! ( C: entry -- C: entry' )
 	local function char()
 		local str = compiler:nexttoken()
 		local char = str:sub(1, 1)
@@ -257,22 +265,23 @@ function exports.initialize(compiler)
 		compiler:pushstring(char)
 	end
 
+	--! ( C: entry -- C: entry' )
 	local function call()
 		compiler:call(stack:pop())
 	end
 
 	-- reflection, debugging, internal compiler state, etc. --
 
-	local function dumpword()
-		local word = compiler:nexttoken()
-		local entry = dictionary[word]
-		if not entry then compiler:lookuperror(word) end
-		stack:push(table.concat(entry.compilebuf, '\n'))
-	end
-
-	local function dump()
-		stack:push(table.concat(compiler.last.compilebuf, '\n'))
-	end
+--	local function dumpword()
+--		local word = compiler:nexttoken()
+--		local entry = dictionary[word]
+--		if not entry then compiler:lookuperror(word) end
+--		stack:push(table.concat(entry.compilebuf, '\n'))
+--	end
+--
+--	local function dump()
+--		stack:push(table.concat(compiler.last.compilebuf, '\n'))
+--	end
 
 	local function trace()
 		compiler.trace = true
@@ -337,23 +346,23 @@ function exports.initialize(compiler)
 
 	dictionary.loadfile = { func = loadfile }
 	dictionary.exit = { func = exit, immediate = true }
-	dictionary.compile  = { func = compile }
+	dictionary.setcompile  = { func = setcompile }
+	dictionary.interpretpending = { func = interpretpending }
 	dictionary.interpret = { func = interpret, immediate = true }
 	dictionary['compiling?'] = { func = compiling }
 	dictionary.parse = { func = parse }
 	dictionary.parsematch = { func = parsematch }
 	dictionary['>ts'] = { func = ungettoken }
 	dictionary.push = { func = push }
-	dictionary.define = { func = define }
-	dictionary.compilebuf = { func = compilebuf }
+	dictionary.newentry = { func = newentry }
 	dictionary.buildfunc = { func = buildfunc }
 	dictionary.bindfunc = { func = bindfunc }
 	dictionary.immediate = { func = immediate }
 	dictionary.char = { func = char, immediate = true }
 	dictionary.call = { func = call }
 
-	dictionary.dump = { func = dump }
-	dictionary['dumpword:'] = { func = dumpword, immediate = true }
+--	dictionary.dump = { func = dump }
+--	dictionary['dumpword:'] = { func = dumpword, immediate = true }
 	dictionary.trace = { func = trace }
 	dictionary.notrace = { func = notrace }
 	dictionary['trace?'] = { func = tracing }

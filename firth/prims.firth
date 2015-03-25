@@ -1,18 +1,18 @@
 char prims.firth drop
 char see_comment_block_below_for_copyright_notice drop
 
-char : define compile
-	char %s parse define compile
-interpret compilebuf buildfunc bindfunc immediate
+char : newentry setcompile
+	interpretpending char %s parse newentry setcompile
+interpret buildfunc bindfunc immediate
 : nextword
 	char %s parse
-interpret compilebuf buildfunc bindfunc
+interpret buildfunc bindfunc
 : postpone
 	nextword call
-interpret compilebuf buildfunc bindfunc immediate
+interpret buildfunc bindfunc immediate
 : ;
-	compilebuf buildfunc bindfunc postpone interpret
-interpret compilebuf buildfunc bindfunc immediate
+	buildfunc bindfunc postpone interpret
+interpret buildfunc bindfunc immediate
 : ;immed postpone ; postpone immediate ; immediate
 
 : // char \n parse drop ;immed // There, now we can comment our code!
@@ -28,8 +28,9 @@ interpret compilebuf buildfunc bindfunc immediate
 : ( char ( >ts " %b()" parsematch drop ;immed ( inline (nestable) single-line comments)
 
 // a few parser/interpreter/compiler control words
+: compile ( entry -- C: entry ) interpretpending setcompile ;
 : [ ( -- ) postpone interpret ;immed
-: ] ( -- ) compile ;
+: ] ( entry -- C: entry ) compile ; // TODO: alias
 : eval ( -- ... )
 	postpone [ // TODO: preserve previous value on cstack?
 	nextword call

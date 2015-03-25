@@ -31,8 +31,24 @@ end
 function compiler:interpretline(line, num)
 	self.line = line
 	self.running = type(line) == "string"
+
+	-- make sure we have a compile target
+	local cstack = self.cstack
+	if not self.compiling then
+		if cstack.height == 0 then
+			self:newentry()
+		else
+			local target = cstack:top()
+			if type(target) ~= "table" and target.name ~= "[INTERP_BUF]" then
+				self:newentry()
+			end
+		end
+	end
+
+	-- interpret/compile each token in line
 	while self.line and #self.line > 0 and self.running do
 		local tok = self:nexttoken()
+		print("TOKEN "..tostring(tok))
 		local val = self.dictionary[tok]
 		if val then
 			self:execword(val)
@@ -46,8 +62,9 @@ function compiler:interpretline(line, num)
 			end
 		end
 	end
+
 	-- automatic function closing at EOL
-	if #self.scratch > 0 and not self.compiling then self:interpretpending() end
+	self:interpretpending(true)
 end
 
 function compiler:loadfile(path)
@@ -68,10 +85,37 @@ function compiler:execword(entry)
 	-- TODO: compile mode-specific vocabulary?
 	local name = entry.name
 	if entry.immediate then
---		print("IMMEDIATE "..name..'{'..table.concathash(entry, ' ')..'}')
-		self:execfunc(name, entry[name])
+		print("INVOKE IMMEDIATE "..name)
+		self:execfunc(entry)
 	else
 		self:call(name)
+	end
+end
+
+function compiler:interpretpending(eol)
+	print("interpretpending("..tostring(eol)..')')
+	local cstack = self.cstack
+	if cstack.height > 0 then
+		local interp = cstack:top()
+		if (type(interp) == "table") and (interp.name == "[INTERP_BUF]") then
+			self:buildfunc()
+			self:execfunc()
+
+			-- if this was triggered by something other than END-OF-LINE,
+			-- then make sure we leave a ready interpret buffer on the cstack.
+			if not eol then
+				print("REPLACING [INTERP_BUF]")
+				self:newentry()
+			end
+		else
+			if eol then
+				print("EOL: NOT COMPILING, HAVE CSTACK, BUT NO INTERP_BUF?")
+				stringio.print 'c'
+				stringio.printstack(cstack)
+			else
+				print("SKIPPING INTERPRETING "..(interp and interp.name or "nil"))
+			end
+		end
 	end
 end
 
@@ -84,43 +128,58 @@ return function()
 	]]}
 end
 
-function compiler:newentry(name)
-	self.last = { name = name, compilebuf = newcompilebuf(), calls = {}, calledby = {} }
+function compiler:newentry(name, stack)
+	name = name or "[INTERP_BUF]"
+	stack = stack or self.cstack
+	local c = stack == self.cstack and 'c' or ''
+
+	stringio.print("PUSHING NEW ENTRY FOR "..name.." onto "..c)
+	stack:push{ name = name, compilebuf = newcompilebuf(), calls = {}, calledby = {} }
+	stringio.printstack(stack)
+--	stringio.printline(self:stacktrace())
 end
 
 function compiler:call(word)
 	if self.compiling then
-		self.last.calls[word] = true
-		self.dictionary[word].calledby[self.last.name] = true
+		local target = self.cstack:top()
+		target.calls[word] = true
+		self.dictionary[word].calledby[target.name] = true
 	end
-	self:append("dictionary[%q][%q]()", word, word)
-end
-
-function compiler:currentbuf()
-	return self.last.name, self.last.compilebuf
+	self:append("dictionary[%q].func()",word)
 end
 
 --! @private
 local function NOP() end
 
-function compiler:buildfunc(name, compilebuf)
+function compiler:buildfunc()
 	self.nexttmp = 0 -- TODO: cstack?
 
+	local target = self.cstack:top()
+	local name, compilebuf = target.name, target.compilebuf
+	local buflen = #compilebuf
+
 	-- don't bother compiling empty buffers (i.e. blank lines)
-	if #compilebuf == 1 then
-		if not self.compiling then return nil, nil end
-		return name, NOP
+	if buflen == 1 then
+		print("DUMPING "..name..".compilebuf")
+		if not self.compiling then
+			target.func = nil
+		else
+			target.func = NOP
+		end
+		target.compilebuf = nil
+		return
 	end
 
-	table.insert(compilebuf, "end")
+	compilebuf[buflen + 1] = "end"
 	local luasrc = table.concat(compilebuf, "\n")
 	if self.trace then stringio.printline(luasrc, '\n') end
 	local func, err = loadstring(luasrc, "__FIRTH__ "..name)
 	if func then
-		-- exec returned function to the the actual function we want
+		-- exec loaded function to get the actual function we want
 		local success, res = pcall(func, self)
 		if success then
-			return name, res
+			target.func = res
+			return
 		else
 			stringio.printline("Compile Error (buildfunc):")
 			stringio.printline(res)
@@ -131,30 +190,36 @@ function compiler:buildfunc(name, compilebuf)
 		stringio.printline(err)
 		stringio.printline(luasrc)
 	end
-	return nil, nil
+
+	-- didn't hit the success path; clean up target
+	target.func = nil
+	target.calls, target.calledby = nil
 end
 
-function compiler:bindfunc(name, func)
+function compiler:bindfunc()
+	local target = self.cstack:pop()
+	local name, func = target.name, target.func
 	if func then
-		self.last[name] = func
-		self.dictionary[name] = self.last
+		print("ADDING "..name.." TO DICTIONARY")
+		self.dictionary[name] = target
+		self.last = target
 	else
-		self:runtimeerror("bindfunc", "NIL FUNCTION REF")
+		self:runtimeerror("bindfunc", "NIL FUNCTION REF for "..tostring(name))
 	end
 end
 
-function compiler:execfunc(name, func)
+function compiler:execfunc(target)
+	target = target or self.cstack:pop()
+	local name = target.name
+	local func = target.func
 	if func then
+		print("EXECUTING "..name)
 		xpcall(func, self.xperrhandler, self)
-	elseif name then -- func == nil, but we have a name
-		self:runtimeerror("execfunc", "NIL FUNCTION REF")
+	elseif name ~= "[INTERP_BUF]" then -- func == nil, but we have a name for an expected func
+		self:runtimeerror("execfunc", "NIL FUNCTION REF for "..tostring(name))
+	else
+		print("SKIPPING EMPTY [INTERP_BUF]")
 	end
-end
-
-function compiler:interpretpending()
-	local scratch = self.scratch
-	self.scratch = newcompilebuf()
-	self:execfunc(self:buildfunc("[INTERP_BUFFER]", scratch))
 end
 
 local function sortmatches(buckets, tok)
@@ -231,7 +296,7 @@ function compiler:traceframe(frame, level)
 	local name, kind
 	if source[1] == "__FIRTH__" then
 		name = source[2]
-		kind = (name == "[INTERP_BUFFER]") and "    <anon>" or "    <word>"
+		kind = (name == "[INTERP_BUF]") and "  <interp>" or "    <word>"
 	else
 		local fname = frame.name
 		if fname then
@@ -239,7 +304,7 @@ function compiler:traceframe(frame, level)
 		else
 			local func = frame.func
 			if func == self.interpretline then
-				name = "interpretline"
+				name = "interpretline" -- special case; why doesn't this have a name?
 			else
 				name = tostring(func)
 			end
@@ -250,7 +315,7 @@ function compiler:traceframe(frame, level)
 	return '\t'..kind..": "..tostring(name)
 end
 
-function compiler:stacktrace(msg)
+function compiler:stacktrace()
 	local __FIRTH_DUMPTRACE__ = true
 
 	local stackframes = {}
@@ -268,6 +333,10 @@ end
 
 function compiler:immediate(word)
 	local entry = (word and self.dictionary[word] or self.last)
+	if not entry then
+		self:runtimeerror("immediate", "NO WORD TO SET IMMEDIATE")
+	end
+	print("SETTING "..entry.name.." IMMEDIATE")
 	entry.immediate = true
 end
 
@@ -305,11 +374,10 @@ end
 
 function compiler:append(...)
 	local code = string.format(...)
-	if self.compiling then
-		table.insert(self.last.compilebuf, code)
-	else
-		table.insert(self.scratch, code)
-	end
+	local target = self.cstack:top()
+	print("APPENDING LINE "..code.." TO "..target.name)
+	if type(target) ~= "table" or (not target.compilebuf) then self:runtimeerror("append", "INVALID COMPILE TARGET ("..tostring(target)..')') end
+	table.insert(target.compilebuf, code)
 end
 
 
@@ -330,15 +398,14 @@ function compiler.new()
 		cstack = stack.new(),
 		compiling = false,
 		trace = false,
-		scratch = newcompilebuf(),
 		nexttmp = 0,
 		running = true,
 		path = "stdin";
 
 		xperrhandler = function(msg)
-			stringio.printline(string.format("ERROR: %s, stack: [%s]",
-					msg, table.concat(c.stack, ' ')))
-			stringio.printline(c:stacktrace(msg))
+			stringio.print(string.format("ERROR: %s, ", msg))
+			stringio.printstack(c.stack)
+			stringio.printline(c:stacktrace())
 		end
 	}
 	setmetatable(c, mt)

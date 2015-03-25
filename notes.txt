@@ -95,7 +95,7 @@ new compiler/machinery words
 	constant ( x name -- )
 	defined? ( name -- b )
 refactor scratch/last scheme
-	instead of scratch or last, push onto cstack
+	precache as self.target, push onto cstack when starting a new def
 	make this more flexible and controllable from firth land?
 	should set us up for nested functions/lambdas
 access lua tables form firth land
@@ -124,7 +124,7 @@ multiline control structures and comments
 		if, loops, etc.
 			push self.compiling onto cstack
 			self.compiling = true
-			set compile target to a scratch buffer (need to rework scratch/last scheme)
+			set compile target to a scratch buffer
 			append lua keyword
 		end
 			append "end"
