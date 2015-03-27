@@ -30,6 +30,7 @@ return {
 	function()
 		st = stack.new() -- ()
 		assert(st, "Error creating new stack")
+		assert(st.height == 0, "Error creating new stack")
 	end,
 
 	function()
@@ -130,5 +131,17 @@ return {
 	function()
 		st:clear() -- ()
 		assert(st.height == 0, "clear() did not empty stack")
+	end,
+
+	function()
+		st:push(nil)
+		st:push(123.456)
+		st:push(nil)
+		assert(st.height == 3, "didn't push nils")
+
+		-- we can't use assertstack() because it will count nils wrong
+		assert(st:pop() == nil, "didn't push nil correctly")
+		assert(st:pop() == 123.456, "didn't push nil correctly")
+		assert(st:pop() == nil, "didn't push nil correctly")
 	end,
 }
