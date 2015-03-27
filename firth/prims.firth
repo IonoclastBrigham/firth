@@ -1,8 +1,8 @@
 char prims.firth drop
 char see_comment_block_below_for_copyright_notice drop
 
-char : newentry setcompile
-	interpretpending char %s parse newentry setcompile
+char : newentry setcompiling settarget
+	interpretpending char %s parse newentry setcompiling settarget
 interpret buildfunc bindfunc immediate
 : nextword
 	char %s parse
@@ -28,7 +28,7 @@ interpret buildfunc bindfunc immediate
 : ( char ( >ts " %b()" parsematch drop ;immed ( inline (nestable) single-line comments)
 
 // a few parser/interpreter/compiler control words
-: compile ( entry -- C: entry ) interpretpending setcompile ;
+: compile ( entry -- C: entry ) interpretpending setcompiling settarget ;
 : [ ( -- ) postpone interpret ;immed
 : ] ( entry -- C: entry ) compile ; // TODO: alias
 : eval ( -- ... )

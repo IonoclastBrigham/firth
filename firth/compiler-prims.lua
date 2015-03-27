@@ -177,28 +177,38 @@ function exports.initialize(compiler)
 
 	--! ( entry -- C: entry )
 	local function interpretpending()
-		print("EXEC WORD interpretpending")
+--		print("EXEC WORD interpretpending")
 		compiler:interpretpending()
 	end
 
-	--! ( entry -- C: entry )
-	local function setcompile()
-		local target = stack:pop()
-		local typ = type(target)
-		assert(typ == "table", "INVALID TARGET TYPE "..tostring(typ))
-		assert(target.compilebuf, "MISSING COMPILEBUF")
-		print("POPPING/PUSHING STACK> {"..target.name.."} >CSTACK")
-
+	--! ( -- )
+	local function setcompiling()
 		compiler.compiling = true
-		cstack:push(target)
+	end
+
+	--! ( name -- entry )
+	local function newentry()
+		compiler:newentry(stack:pop(), true)
+	end
+
+	--! ( entry -- C: oldentry? )
+	local function settarget()
+		compiler:settarget(stack:pop())
 	end
 
 	local function interpret()
-		local interp = cstack:top()
-		if (type(interp) ~= "table") or (interp.name ~= "[INTERP_BUF]") then
-			compiler:newentry()
+--		stringio.printstack(cstack)
+		if compiler.compiling then
+			compiler.compiling = false
+
+			local target = compiler.target
+			compiler:restoretarget()
+			cstack:push(target)
+			if not compiler.target then
+				compiler:newentry()
+			end
 		end
-		compiler.compiling = false
+--		stringio.printstack(cstack)
 	end
 
 	--! ( -- bool )
@@ -236,11 +246,6 @@ function exports.initialize(compiler)
 		else
 			compiler:push(val)
 		end
-	end
-
-	--! ( name -- entry )
-	local function newentry()
-		compiler:newentry(stack:pop(), stack)
 	end
 
 	--! ( C: entry -- C: entry' )
@@ -346,7 +351,8 @@ function exports.initialize(compiler)
 
 	dictionary.loadfile = { func = loadfile }
 	dictionary.exit = { func = exit, immediate = true }
-	dictionary.setcompile  = { func = setcompile }
+	dictionary.setcompiling  = { func = setcompiling }
+	dictionary.settarget  = { func = settarget }
 	dictionary.interpretpending = { func = interpretpending }
 	dictionary.interpret = { func = interpret, immediate = true }
 	dictionary['compiling?'] = { func = compiling }

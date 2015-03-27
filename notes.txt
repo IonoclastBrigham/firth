@@ -33,6 +33,13 @@ experimental optimization branch
 	precache table lookups as closed-over locals in compiled code, where possible
 		track which methods, structures, word funcs, and fields are accessed
 		implies we get the forthy redefinition behavior (original always called)
+	checks and cleanup tasks
+		rename compiler.trace -> tracing, to match compiling
+		new compiler:trace(str) method, only prints if self.tracing == true
+		Remove trace dump of compiled words; redundant.
+		Fix dump and dumpword:.
+		Make sure [ and ] work, since compile looks for target on stack
+		back up compiling? on cstack in eval, and restore at end
 	two parallel dictionaries
 		one stores the thing that we care about
 			compiled function -> call it
@@ -94,11 +101,7 @@ new compiler/machinery words
 	variable ( x name -- )
 	constant ( x name -- )
 	defined? ( name -- b )
-refactor scratch/last scheme
-	precache as self.target, push onto cstack when starting a new def
-	make this more flexible and controllable from firth land?
-	should set us up for nested functions/lambdas
-access lua tables form firth land
+access lua tables from firth land
 	table.field ( t k -- v )
 		pop fieldname from stack
 		pop table from stack
@@ -120,7 +123,8 @@ access lua tables form firth land
 		: ' ( -- ) dictionary nextword table.field push ;immed
 multiline control structures and comments
 	flow control in interpret mode
-		call interpretpending() whenever we hit an immediate
+		call interpretpending() whenever we hit an immediate?
+		use a "pending" flag instead of setting compiling?
 		if, loops, etc.
 			push self.compiling onto cstack
 			self.compiling = true
@@ -137,8 +141,6 @@ multiline control structures and comments
 		version of parse that returns whether the delimiter was found
 			we can keep looping if not found
 			regular parse uses this and drops the result?
-compilebuf dump
-	break into more primitive words and implement in firth
 param pattern matching
 	core compiler/language feature?
 	implemented through metaprogramming?
