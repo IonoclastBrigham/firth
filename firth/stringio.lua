@@ -193,10 +193,12 @@ end
 local function printitem(item)
 	if type(item) == "string" then
 		stringio.print(string.format("%q", item))
-	elseif item.height then 
-		stringio.printstack(item)
 	elseif type(item) == "table" then
-		stringio.print('{', table.concathash(item, ', '), '}')
+		if item.height then 
+			stringio.printstack(item)
+		else
+			stringio.print('{', table.concathash(item, ', '), '}')
+		end
 	else
 		stringio.print(tostring(item))
 	end
