@@ -31,7 +31,9 @@ local function pop(tbl)
 	return table.remove(tbl)
 end
 
-local stringio = {}
+local stringio = {
+	__FIRTH_INTERNAL__ = "<stringio>" -- used for stacktraces
+}
 --! @endcond
 
 

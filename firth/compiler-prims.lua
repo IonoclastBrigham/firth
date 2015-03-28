@@ -97,10 +97,9 @@ function exports.initialize(compiler)
 		local op = stack:pop()
 
 		local roperand = compiler:poptmp()
-		local loperand = compiler:poptmp()
-		local lval = compiler:newtmp()
-		compiler:append("%s = %s %s %s", lval, loperand, op, roperand)
-		compiler:pushtmp(lval)
+		local loperand = compiler:toptmp()
+		local lval = compiler:newtmp(string.format("%s %s %s", loperand, op, roperand))
+		compiler:append("rawset(stack, stack.height, %s)", lval)
 	end
 
 	-- boolean stuff --
@@ -121,10 +120,10 @@ function exports.initialize(compiler)
 	-- bitwise boolean ops --
 
 	-- only available in LuaJIT 2.0+ or Lua 5.2+
-	local b = bit or bit32
+	local bit = bit or bit32
 	local band, bor, bxor, bnot
-	if b then
-		local bitand, bitor, bitxor, bitnot = b.band, b.bor, b.bxor, b.bnot
+	if bit then
+		local bitand, bitor, bitxor, bitnot = bit.band, bit.bor, bit.bxor, bit.bnot
 
 		function band()
 			stack:push(bitand(stack:pop(), stack:pop()))
@@ -321,7 +320,7 @@ function exports.initialize(compiler)
 	local function tend()
 		local fin = clock()
 		local diff = fin - stack:pop()
-		stringio.printline(diff)
+		stringio.printline('(', diff, " seconds)")
 	end
 
 	dictionary.dup = { func = dup }
@@ -377,7 +376,7 @@ function exports.initialize(compiler)
 	dictionary.tstart = { func = tstart }
 	dictionary.tend = { func = tend }
 
-	if b then
+	if bit then
 		dictionary["&"] = { func = band }
 		dictionary["|"] = { func = bor }
 		dictionary["^"] = { func = bxor }

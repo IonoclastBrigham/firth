@@ -18,7 +18,9 @@ local stringio = require "firth.stringio"
 local stack = require "firth.stack"
 local prims = require "firth.compiler-prims" -- TODO: "compiler.prims"?
 
-local compiler = {}
+local compiler = {
+	__FIRTH_INTERNAL__ = "<compiler>" -- used for stacktraces
+}
 --! @endcond
 
 
@@ -103,10 +105,11 @@ end
 --! @private
 local function newcompilebuf()
 	return {[[
+local __FIRTH_WORD_NAME__ = %q
 local compiler = ...
-local dictionary, stack = compiler.dictionary, compiler.stack
-return function()
-	]]}
+local dictionary, stack, cstack = compiler.dictionary, compiler.stack, compiler.cstack
+%s
+return function()]]}
 end
 
 function compiler:settarget(newtarget)
@@ -136,7 +139,10 @@ function compiler:newentry(name, dopush)
 
 --	local c = stack == self.cstack and 'c' or ''
 --	stringio.print("PUSHING NEW ENTRY FOR "..name.." onto "..c)
-	local entry = { name = name, compilebuf = newcompilebuf(), calls = {}, calledby = {} }
+	local entry = {
+		name = name, compilebuf = newcompilebuf(),
+		calls = { nextidx = 1 }, calledby = {},
+	}
 	if dopush then
 		self.stack:push(entry)
 	else
@@ -147,16 +153,36 @@ function compiler:newentry(name, dopush)
 end
 
 function compiler:call(word)
-	if self.compiling then
-		local target = self.target
-		target.calls[word] = true
-		self.dictionary[word].calledby[target.name] = true
+	local dictionary = self.dictionary
+	local target = self.target
+	local calls = target.calls
+	local callee = dictionary[word]
+
+	local mappedname = calls[word]
+	if not mappedname then
+		local index = calls.nextidx
+		calls.nextidx = index + 1
+		mappedname = 'f'..tostring(index)
+		calls[word] = mappedname
+		if self.compiling then
+			callee.calledby[target.name] = true
+		end
 	end
-	self:append("dictionary[%q].func()",word)
+	self:append("%s()", mappedname)
 end
 
 --! @private
 local function NOP() end
+
+--! @private
+local function cachedcalls(calls)
+	calls.nextidx = nil
+	local callbuf = {}
+	for word,tmp in pairs(calls) do
+		callbuf[#callbuf + 1] = string.format("local %s = dictionary[%q].func", tmp, word)
+	end
+	return table.concat(callbuf, '\n')
+end
 
 function compiler:buildfunc()
 	self.nexttmp = 0 -- TODO: cstack?
@@ -177,9 +203,10 @@ function compiler:buildfunc()
 		return
 	end
 
+	compilebuf[1] = compilebuf[1]:format(name, cachedcalls(target.calls))
 	compilebuf[buflen + 1] = "end"
-	local luasrc = table.concat(compilebuf, "\n")
---	if self.trace then stringio.printline(luasrc, '\n') end
+	local luasrc = table.concat(compilebuf, '\n')
+--	stringio.printline(luasrc, '\n')
 	local func, err = loadstring(luasrc, "__FIRTH__ "..name)
 	if func then
 		-- exec loaded function to get the actual function we want
@@ -284,11 +311,11 @@ function compiler:runtimeerror(name, msg)
 	error(" in "..name..': '..msg, 2)
 end
 
--- returns a stack frame iterator
+-- returns a callstack frame iterator
 local function frames(start)
 	local i = start or 0
 	return function()
-		local frame = debug.getinfo(i, "Snf") -- source, name, function ref
+		local frame = debug.getinfo(i, "Snf") -- source (file), name, function ref
 		i = i + 1
 		return frame
 	end
@@ -307,12 +334,25 @@ local function dumptrace(frameidx)
 end
 
 function compiler:traceframe(frame, level)
-	local source = stringio.split(frame.source, ' ')
 	local name, kind
+
+	-- is it a firth-defined word or the interpret buf?
+	local source = stringio.split(frame.source, ' ')
 	if source[1] == "__FIRTH__" then
 		name = source[2]
 		kind = (name == "[INTERP_BUF]") and "  <interp>" or "    <word>"
 	else
+		-- is it a firth internal component?
+		for i = 1, math.huge do -- "counted forever"
+			local lname, lvalue = debug.getlocal(level, i)
+			if not lname then break end
+			if lname == "self" and type(lvalue) == "table" then
+				kind = lvalue.__FIRTH_INTERNAL__
+				break
+			end
+		end
+
+		-- try to find a reasonable name
 		local fname = frame.name
 		if fname then
 			name = fname
@@ -324,8 +364,9 @@ function compiler:traceframe(frame, level)
 				name = tostring(func)
 			end
 		end
+
 		name = '<'..name..'>'
-		kind = "<internal>"
+		kind = kind or "<internal>"
 	end
 	return '\t'..kind..": "..tostring(name)
 end
@@ -358,8 +399,7 @@ end
 --! Either compiles push code, or directly pushes value.
 --! @see pushstring()
 function compiler:push(val)
-	-- TODO: redundant, now?
-	self:pushtmp(val)
+	self:append("stack:push(%s)", val)
 end
 
 --! Either compiles push code for quoted value, or directly pushes value.
@@ -383,12 +423,13 @@ function compiler:poptmp()
 	return var
 end
 
-function compiler:pushtmp(var)
-	self:append("stack:push(%s)", var)
+function compiler:toptmp()
+	local var = self:newtmp("stack:top()")
+	return var
 end
 
 function compiler:append(...)
-	local code = string.format(...)
+	local code = '\t'..string.format(...)
 	local target = self.target
 --	print("APPENDING LINE "..code.." TO "..target.name)
 	if type(target) ~= "table" or (not target.compilebuf) then

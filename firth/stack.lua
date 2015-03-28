@@ -16,12 +16,14 @@
 local table = require "table"
 
 local mt
-local stack = {}
+local stack = {
+	__FIRTH_INTERNAL__ = "   <stack>" -- used for stacktraces
+}
 
 -- throw if stack is too short for operation
 local function assertsize(st, min, msg)
-	local __FIRTH_DUMPTRACE__ = true
-	assert(min <= st.height, msg) -- TODO: use st.height when implemented
+	local __FIRTH_DUMPTRACE__ = true -- used for stacktraces
+	assert(min <= st.height, msg)
 end
 --! @endcond
 

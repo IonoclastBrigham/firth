@@ -30,9 +30,6 @@ Broke down lua "newfunc/define" functionality into more basic primitives
 Ideas / TODOs
 -------------
 experimental optimization branch
-	precache table lookups as closed-over locals in compiled code, where possible
-		track which methods, structures, word funcs, and fields are accessed
-		implies we get the forthy redefinition behavior (original always called)
 	checks and cleanup tasks
 		rename compiler.trace -> tracing, to match compiling
 		new compiler:trace(str) method, only prints if self.tracing == true
