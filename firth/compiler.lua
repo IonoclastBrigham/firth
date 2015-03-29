@@ -16,7 +16,7 @@
 --! @cond
 local stringio = require "firth.stringio"
 local stack = require "firth.stack"
-local prims = require "firth.compiler-prims" -- TODO: "compiler.prims"?
+local prims = require "firth.compiler+prims"
 
 local compiler = {
 	__FIRTH_INTERNAL__ = "<compiler>" -- used for stacktraces
@@ -472,7 +472,7 @@ function compiler.new()
 
 	-- initialize dictionary with core words
 	prims.initialize(c)
-	c:loadfile "firth/prims.firth"
+	c:loadfile "firth/core.firth"
 
 	-- cleanup memory
 	collectgarbage()
