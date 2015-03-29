@@ -182,7 +182,7 @@ end
 function prims.parse(compiler)
 	local delim = compiler.stack:pop()
 	local success, token = pcall(compiler.nexttoken, compiler, delim)
-	if not success then compiler:runtimeerror("parse", "UNABLE TO RETRIEVE TOKEN") end
+	if not success then compiler:runtimeerror("parse", "UNABLE TO RETRIEVE TOKEN ("..delim..')') end
 	compiler.stack:push(token)
 end
 
@@ -230,6 +230,12 @@ function prims.bindfunc(compiler)
 	local func = compiler.stack:pop()
 	local name = compiler.stack:pop()
 	compiler:bindfunc(name, func)
+end
+
+--! ( name -- entry )
+function prims.dict(compiler)
+	local word = compiler.stack:pop()
+	compiler.stack:push(compiler.dictionary[word])
 end
 
 function prims.immediate(compiler)
@@ -350,6 +356,7 @@ function prims.initialize()
 		compilebuf = { func = prims.compilebuf },
 		buildfunc = { func = prims.buildfunc },
 		bindfunc = { func = prims.bindfunc },
+		dict = { func = prims.dict },
 		immediate = { func = prims.immediate },
 		char = { func = prims.char, immediate = true },
 		call = { func = prims.call },
