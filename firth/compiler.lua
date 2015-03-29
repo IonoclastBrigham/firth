@@ -77,6 +77,12 @@ function compiler:loadfile(path)
 		num = num + 1
 		if not self.running then break end
 	end
+	local tos = cstack:top()
+	if type(tos) == "table"
+		and tos.compilebuf and #tos.compilebuf == 1
+		and tos.name == "[INTERP_BUF]" then
+		cstack:drop()
+	end
 	self.path = cstack:pop()
 end
 
