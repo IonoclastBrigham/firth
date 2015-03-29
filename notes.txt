@@ -36,15 +36,37 @@ stack data type
 	stack 1 >s 2 >s 3 >s s> s> s> .S 
 better error debug messagges (xpcall and debug lib)
 	if "debug mode", compile in a local var that counts firth source line
-new compiler/machinery words
-	does>
-		defines action for value type words
-	@ ( xt -- x )
-		"load" (push onto stack)
-	! ( x xt -- )
-		"store" (pop from stack and store in dec entry's data area)
-	variable ( x name -- )
-	constant ( x name -- )
+rename
+	compiler-prims.lua -> compiler+prims.lua
+	prims.firth ->core.firth
+recurse
+	start all defs with -> "local function word()"
+	compile as append "word()"
+	end all defs with -> "end \n return word"
+dict ( word -- entry )
+	stack:push(dictionary[stack:pop()])
+' ( -- entry )
+	nextword dict	
+variables
+	a variable is a word
+		by default, pushes its own dict entry
+		has no compilebuf
+		once initialized, has a .data field
+	does> ( entry -- )
+		compiles and binds a func
+			pushes the variable's entry
+			calls the supplied word
+		expects a dict entry on stack for a variable
+		grabs the next token, extracts entry's func field
+		sets var.func = word.func
+	variable ( name -- entry )
+		: variable ( ) newentry dup does> nop dup bindfunc ; // pushes, doesn't touch entry
+	var: ( x -- )
+		: var: ( ) nextword variable ! ;
+	@ ( entry -- x )
+		pushes value of var.data
+	! ( x entry -- )
+		sets var.data
 	defined? ( name -- b )
 refactor scratch/last scheme
 	instead of scratch or last, push onto cstack
@@ -71,6 +93,8 @@ access lua tables form firth land
 		for this to work, push has to assign tables to a local tmp, and compile to push that name?
 		: ' ( -- ) dictionary nextword table.field push ;immed
 multiline control structures and comments
+	pending parse callback if parsing unsatisfied at end of line?
+		char ) parse => if didn't actually find it, run parse again on next line
 	flow control in interpret mode
 		call interpretpending() whenever we hit an immediate
 		if, loops, etc.
@@ -106,6 +130,15 @@ runtime documentation
 	attach preceding comments to words, in a specific form?
 		append string to EOL, to internal buffer
 		: checks this buffer, and attaches to dict entry, if it exists
+syntax highlighting
+	tokens can set self format and next-parsed format
+	parse finds begin and end span for currently-set formatting
+	found word can alway override its own formatting when "executed"
+	variables to set
+		wordstyle // default for any word
+		numberstyle // default for numbers
+		selfstyle // override for how to style this word (local?)
+		wordstyle @ gray var: compilerstyle // wordstyle but gray; useful for styling compiler words
 create a vocabulary for writing executable grammars for parsing DSLs
 whittle the lua codebase down to
 	generic io and string handling
