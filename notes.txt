@@ -36,9 +36,6 @@ stack data type
 	stack 1 >s 2 >s 3 >s s> s> s> .S 
 better error debug messagges (xpcall and debug lib)
 	if "debug mode", compile in a local var that counts firth source line
-rename
-	compiler-prims.lua -> compiler+prims.lua
-	prims.firth ->core.firth
 recurse
 	start all defs with -> "local function word()"
 	compile as append "word()"

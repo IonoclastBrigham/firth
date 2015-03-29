@@ -16,7 +16,7 @@
 --! @cond
 local stringio = require "firth.stringio"
 local stack = require "firth.stack"
-local prims = require "firth.compiler-prims" -- TODO: "compiler.prims"?
+local prims = require "firth.compiler+prims"
 
 local compiler = {}
 --! @endcond
@@ -333,7 +333,7 @@ function compiler.new()
 		end
 	}
 	setmetatable(c, mt)
-	c:loadfile "firth/prims.firth"
+	c:loadfile "firth/core.firth"
 	return c
 end
 
