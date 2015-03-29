@@ -44,6 +44,7 @@ interpret buildfunc bindfunc immediate
 // values and variables
 : const: ( val -- ) postpone : push postpone ; ;immed
 // : var: ( val -- ) ;
+: ' ( -- entry ) nextword dict ;immed
 
 0.1 const: version
 : copyright ." Firth ver." version . ." Copyright © 2015 Brigham Toskin." ;

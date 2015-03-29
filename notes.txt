@@ -92,10 +92,6 @@ recurse
 	start all defs with -> "local function word()"
 	compile as append "word()"
 	end all defs with -> "end \n return word"
-dict ( word -- entry )
-	stack:push(dictionary[stack:pop()])
-' ( -- entry )
-	nextword dict	
 variables
 	a variable is a word
 		by default, pushes its own dict entry

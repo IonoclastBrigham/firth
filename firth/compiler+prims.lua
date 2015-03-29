@@ -257,6 +257,15 @@ function exports.initialize(compiler)
 		compiler:bindfunc()
 	end
 
+	--! ( name -- entry )
+	local function dict()
+		local word = stack:pop()
+		local entry = dictionary[word]
+		if not entry then compiler:lookuperror(word) end
+		stack:push(entry)
+	end
+
+
 	local function immediate()
 		compiler:immediate()
 	end
@@ -362,6 +371,7 @@ function exports.initialize(compiler)
 	dictionary.newentry = { func = newentry }
 	dictionary.buildfunc = { func = buildfunc }
 	dictionary.bindfunc = { func = bindfunc }
+	dictionary.dict = { func = dict }
 	dictionary.immediate = { func = immediate }
 	dictionary.char = { func = char, immediate = true }
 	dictionary.call = { func = call }
