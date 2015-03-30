@@ -199,6 +199,13 @@ function exports.initialize(compiler)
 		compiler:newentry(stack:pop(), true)
 	end
 
+	--! ( entry -- )
+	local function alias()
+		local entry = stack:pop()
+		local newname = compiler:nexttoken()
+		dictionary[newname] =  entry
+	end
+
 	--! ( entry -- C: oldentry? )
 	local function settarget()
 		compiler:settarget(stack:pop())
@@ -379,6 +386,7 @@ function exports.initialize(compiler)
 	dictionary['>ts'] = { func = ungettoken }
 	dictionary.push = { func = push }
 	dictionary.newentry = { func = newentry }
+	dictionary['alias:'] = { func = alias, immediate = true }
 	dictionary.buildfunc = { func = buildfunc }
 	dictionary.bindfunc = { func = bindfunc }
 	dictionary.dict = { func = dict }

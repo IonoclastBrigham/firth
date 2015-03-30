@@ -28,10 +28,11 @@ interpret buildfunc bindfunc immediate
 : ( char ( >ts " %b()" parsematch drop ;immed ( inline (nestable) single-line comments)
 
 // a few parser/interpreter/compiler control words
+: ' ( -- entry ) nextword dict ;immed
 : compile ( entry -- C: entry ) interpretpending setcompiling settarget ;
-: [ ( -- ) postpone interpret ;immed
-: ] ( entry -- C: entry ) compile ; // TODO: alias
-: eval ( -- ... )
+' interpret alias: [
+' compile alias: ]
+: eval: ( -- ... )
 	postpone [ // TODO: preserve previous value on cstack?
 	nextword call
 	]
@@ -44,11 +45,10 @@ interpret buildfunc bindfunc immediate
 // values and variables
 : const: ( val -- ) postpone : push postpone ; ;immed
 // : var: ( val -- ) ;
-: ' ( -- entry ) nextword dict ;immed
 
 0.1 const: version
 : copyright ." Firth ver." version . ." Copyright © 2015 Brigham Toskin." ;
-: © copyright ; // TODO: alias
+' copyright alias: ©
 
 // some basic arithmetic operators and shortcuts
 : + ( a b -- a+b ) char + binop ;immed
@@ -59,16 +59,18 @@ interpret buildfunc bindfunc immediate
 : ** ( a b -- a^b ) char ^ binop ;immed
 
 : 1+ ( n -- n+1 ) 1 char + binopconst ;immed
-: inc ( n -- n+1 ) 1+ ; // TODO: alias
+' 1+ alias: inc
 : 1- ( n -- n-1 ) 1 char - binopconst ;immed
-: dec ( n -- n-1 ) 1- ; // TODO: alias
+' 1- alias: dec
 : -1* ( n -- -n ) -1 char * binopconst ;immed
-: neg ( n -- -n ) -1* ; // TODO: alias
+' -1* alias: neg
 
 : 2+ ( n -- n+2 ) 2 char + binopconst ;immed
 : 2- ( n -- n-2 ) 2 char - binopconst ;immed
 : 2* ( n -- 2n ) 2 char * binopconst ;immed
+' 2* alias: double
 : 2/ ( n -- n/2 ) 2 char / binopconst ;immed
+' 2/ alias: halve
 
 : 5+ ( n -- n+5 ) 5 char + binopconst ;immed
 : 5- ( n -- n-5 ) 5 char - binopconst ;immed
