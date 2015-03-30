@@ -250,7 +250,7 @@ function exports.initialize(compiler)
 
 	--! ( str -- )
 	local function ungettoken()
-		compiler.line = tostring(stack:pop())..compiler.line
+		compiler.line = tostring(stack:pop())..' '..compiler.line
 	end
 
 	--! ( C: entry -- C: entry' )

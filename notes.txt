@@ -53,11 +53,6 @@ experimental optimization branch
 		automatic?
 			fewer than x words in def?
 			fewer than y lines of generate lua in compilebuf?
-	aliases
-		simply adds a second key that points to the same value
-		eliminates an additional call overhead for convenience words
-		: [ ( -- ) postpone interpret ;immed	// current way
-		' interpret alias: [					// new way
 	pre-cache used lua library functions as locals and close over them
 		string
 		io
