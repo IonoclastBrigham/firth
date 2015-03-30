@@ -102,6 +102,15 @@ function exports.initialize(compiler)
 		compiler:append("rawset(stack, stack.height, %s)", lval)
 	end
 
+	local function binopconst()
+		local op = stack:pop()
+		local cval = stack:pop()
+
+		local val = compiler:toptmp()
+		local newval = compiler:newtmp(string.format("%s %s %s", val, op, cval))
+		compiler:append("rawset(stack, stack.height, %s)", newval)
+	end
+
 	-- boolean stuff --
 
 	local function pushtrue()
@@ -347,6 +356,7 @@ function exports.initialize(compiler)
 	dictionary['end'] = { func = endstmt, immediate = true }
 
 	dictionary.binop = { func = binop }
+	dictionary.binopconst = { func = binopconst }
 
 	dictionary['true'] = { func = pushtrue, immediate = true }
 	dictionary['false'] = { func = pushfalse, immediate = true }

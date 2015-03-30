@@ -57,15 +57,35 @@ interpret buildfunc bindfunc immediate
 : / ( a b -- a/b ) char / binop ;immed
 : % ( a b -- a%b ) char % binop ;immed
 : ** ( a b -- a^b ) char ^ binop ;immed
-// TODO: alias or inline these instead of calling
-: 1+ ( n -- n+1 ) 1 + ;
-: inc ( n -- n+1 ) 1+ ;
-: 1- ( n -- n-1 ) 1 - ;
-: dec ( n -- n-1 ) 1- ;
-: -1* ( n -- -n ) -1 * ;
-: neg ( n -- -n ) -1* ;
-: 2* ( n -- 2n ) 2 * ;
-: 2/ ( n -- n/2 ) 2 / ;
+
+: 1+ ( n -- n+1 ) 1 char + binopconst ;immed
+: inc ( n -- n+1 ) 1+ ; // TODO: alias
+: 1- ( n -- n-1 ) 1 char - binopconst ;immed
+: dec ( n -- n-1 ) 1- ; // TODO: alias
+: -1* ( n -- -n ) -1 char * binopconst ;immed
+: neg ( n -- -n ) -1* ; // TODO: alias
+
+: 2+ ( n -- n+2 ) 2 char + binopconst ;immed
+: 2- ( n -- n-2 ) 2 char - binopconst ;immed
+: 2* ( n -- 2n ) 2 char * binopconst ;immed
+: 2/ ( n -- n/2 ) 2 char / binopconst ;immed
+
+: 5+ ( n -- n+5 ) 5 char + binopconst ;immed
+: 5- ( n -- n-5 ) 5 char - binopconst ;immed
+: 5* ( n -- 5n ) 5 char * binopconst ;immed
+: 5/ ( n -- n/5 ) 5 char / binopconst ;immed
+
+: 10+ ( n -- n+10 ) 10 char + binopconst ;immed
+: 10- ( n -- n-10 ) 10 char - binopconst ;immed
+: 10* ( n -- 10n ) 10 char * binopconst ;immed
+: 10/ ( n -- n/10 ) 10 char / binopconst ;immed
+
+: 100+ ( n -- n+100 ) 100 char + binopconst ;immed
+: 100- ( n -- n-100 ) 100 char - binopconst ;immed
+: 100* ( n -- 100n ) 100 char * binopconst ;immed
+: 100/ ( n -- n/100 ) 100 char / binopconst ;immed
+
+
 
 // some higher level stack manipulations
 : 2dup ( a b -- a b a b ) over over ;
