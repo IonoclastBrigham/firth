@@ -68,7 +68,16 @@ function exports.initialize(compiler)
 
 	-- flow control --
 
+	local function beginblock()
+		local compiling = compiler.compiling
+		compiler:interpretpending()
+		if not compiling then compiler:newentry() end
+		compiler.compiling = true
+		cstack:push(compiling)
+	end
+
 	local function ifstmt()
+		beginblock()
 		local cond = compiler:poptmp()
 		compiler:append("if %s then", cond)
 	end
@@ -78,16 +87,24 @@ function exports.initialize(compiler)
 	end
 
 	local function loopsstmt()
+		beginblock()
 		local count = compiler:poptmp()
 		compiler:append("for _ = 1, %s do", count)
 	end
 
 	local function dostmt()
+		beginblock()
 		compiler:append("do")
 	end
 
 	local function endstmt()
 		compiler:append("end")
+		local compiling = cstack:pop()
+		compiler.compiling = compiling
+		if not compiling then
+			compiler:interpretpending()
+			compiler:newentry()
+		end
 	end
 
 	-- inline operations --
@@ -196,7 +213,7 @@ function exports.initialize(compiler)
 
 	--! ( name -- entry )
 	local function newentry()
-		compiler:newentry(stack:pop(), true)
+		compiler:newentry(stack:pop())
 	end
 
 	--! ( entry -- )

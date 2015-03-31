@@ -98,6 +98,7 @@ function compiler:execword(entry)
 end
 
 function compiler:interpretpending()
+	if self.compiling then return end
 	local interp = self.target
 	if interp and interp.name == "[INTERP_BUF]" then
 --		print("INTERPRETING PENDING")
@@ -140,8 +141,15 @@ function compiler:restoretarget()
 	self.target = nil
 end
 
-function compiler:newentry(name, dopush)
-	name = name or "[INTERP_BUF]"
+function compiler:newentry(name)
+	local dopush = (name ~= nil)
+	if not name then
+		if self.target and self.target.name == "[INTERP_BUF]" then
+			return
+		else
+			name = "[INTERP_BUF]"
+		end
+	end
 
 --	local c = stack == self.cstack and 'c' or ''
 --	stringio.print("PUSHING NEW ENTRY FOR "..name.." onto "..c)

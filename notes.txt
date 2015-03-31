@@ -125,26 +125,10 @@ access lua tables from firth land
 		function prims.compiler(compiler) compiler.stack:push(compiler) end
 	dictionary
 		: dictionary ( -- dict ) compiler .field: dictionary ;
-	'
-		for this to work, push has to assign tables to a local tmp, and compile to push that name?
-		: ' ( -- ) dictionary nextword table.field push ;immed
-multiline control structures and comments
+multiline comments
 	pending parse callback if parsing unsatisfied at end of line?
 		char ) parse => if didn't actually find it, run parse again on next line
-	flow control in interpret mode
-		call interpretpending() whenever we hit an immediate?
-		use a "pending" flag instead of setting compiling?
-		if, loops, etc.
-			push self.compiling onto cstack
-			self.compiling = true
-			set compile target to a scratch buffer
-			append lua keyword
-		end
-			append "end"
-			pop self.compiling from cstack
-			if not compiling anymore, build and execute
-	multiline comments
-		in a loop, read and throw away lines from input device until close comment
+	in a loop, read and throw away lines from input device until close comment?
 		need to rework compiler input scheme
 			lines(file) returns an iterator function; useful?
 		version of parse that returns whether the delimiter was found
