@@ -1,6 +1,6 @@
 --------------------------------------------------------------------------------
 --! @file firth.lua
---! @brief Minimal REPL for Firth language.
+--! @brief Minimal frontend for Firth language.
 --! @author btoskin - <brigham@ionoclast.com>
 --! @copyright © 2015 Brigham Toskin
 --! 
@@ -14,34 +14,34 @@
 
 
 --! @cond
-local _, stringio = assert(pcall(require, 'firth.stringio'))
-local _, compiler = assert(pcall(require, 'firth.compiler'))
-
-local c
+local stringio = require "firth.stringio"
+local compiler = require "firth.compiler"
 --! @endcond
 
 
 --! The Firth repl and such.
 --! This is rather shoddy code, atm.
+local firth
 firth = {
 	instance = function()
-		if not c then
-			c = compiler.new()
+		if not firth.c then
+			firth.c = compiler.new()
 		else
-			c.running = true
+			firth.c.running = true
 		end
-		return c
+		return firth.c
 	end,
 
 	doline = function(c, line)
 		local success, msg = pcall(c.interpretline, c, line, 1)
 		if not success then stringio.printline(msg) end
+		return success
 	end,
 
 	--! @fn repl()
 	--! @brief Executes the Firth Read-Eval-Print Loop.
 	repl = function()
-		c = firth.instance()
+		local c = firth.instance()
 		firth.doline(c, 'copyright CR')
 		while c.running do
 			stringio.print(c.compiling and '>>\t' or 'ok ')
@@ -53,20 +53,15 @@ firth = {
 	--! @fn cli()
 	--! @brief runs each argument as a line of firth code.
 	cli = function(args)
-		c = firth.instance()
-		for _, code in ipairs(args) do
-			firth.doline(c, code)
+		local c = firth.instance()
+		for i, code in ipairs(args) do
+			if not firth.doline(c, code) then
+				stringio.printline("Error at argument "..i)
+				break
+			end
 		end
 		if c.stack.height > 0 then stringio.printstack(c.stack) end
 	end,
-
-	--! @fn reload()
-	--! @brief Reloads the firth compiler code.
-	--! This is probably broken.
-	reload = function()
-		package.loaded['firth.compiler'] = nil
-		_, compiler = assert(pcall(require, 'firth.compiler'))
-	end
 }
 
 local args = {...}
