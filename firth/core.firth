@@ -87,8 +87,6 @@ interpret buildfunc bindfunc immediate
 : 100* ( n -- 100n ) 100 char * binopconst ;immed
 : 100/ ( n -- n/100 ) 100 char / binopconst ;immed
 
-
-
 // some higher level stack manipulations
 : 2dup ( a b -- a b a b ) over over ;
 : 3dup ( a b c -- a b c a b c ) 2 pick 2 pick 2 pick ;
@@ -97,11 +95,18 @@ interpret buildfunc bindfunc immediate
 
 // some basic boolean operators
 : > ( a b -- a>b ) char > binop ;immed
+' > alias: greater?
 : < ( a b -- a<b ) char < binop ;immed
+' < alias: less?
 : = ( a b -- a==b ) " ==" binop ;immed
+' = alias: equal?
 : <= ( a b -- a<=b ) " <=" binop ;immed
+' <= alias: lesseq?
 : >= ( a b -- a>=b ) " >=" binop ;immed
+' >= alias: greatereq?
 : ~= ( a b -- a!=b ) " ~=" binop ;immed
+' ~= alias: noteq?
+
 : and ( a b -- a&&b ) " and" binop ;immed
 : or ( a b -- a||b ) " or" binop ;immed
 : nand ( a b -- !a&&b ) postpone and postpone not ;immed
