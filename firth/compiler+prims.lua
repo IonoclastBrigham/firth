@@ -282,6 +282,10 @@ function prims.tracing(compiler)
 	compiler.stack:push(compiler.trace)
 end
 
+function prims.path(compiler)
+	compiler.stack:push(compiler.path)
+end
+
 function prims.calls(compiler)
 	local word = compiler:nexttoken()
 	for callee, _ in pairs(compiler.dictionary[word].calledby) do
@@ -366,6 +370,7 @@ function prims.initialize()
 		trace = { func = prims.trace },
 		notrace = { func = prims.notrace },
 		['trace?'] = { func = prims.tracing },
+		path = { func = prims.path },
 		['calls:'] = { func = prims.calls, immediate = true },
 		['calledby:'] = { func = prims.calledby, immediate = true },
 	}
