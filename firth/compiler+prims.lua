@@ -271,15 +271,15 @@ function prims.dumpword(compiler)
 end
 
 function prims.trace(compiler)
-	compiler.trace = true
+	compiler.tracing = true
 end
 
 function prims.notrace(compiler)
-	compiler.trace = false
+	compiler.tracing = false
 end
 
 function prims.tracing(compiler)
-	compiler.stack:push(compiler.trace)
+	compiler.stack:push(compiler.tracing)
 end
 
 function prims.path(compiler)
@@ -369,7 +369,7 @@ function prims.initialize()
 		['dumpword:'] = { func = prims.dumpword, immediate = true },
 		trace = { func = prims.trace },
 		notrace = { func = prims.notrace },
-		['trace?'] = { func = prims.tracing },
+		['tracing?'] = { func = prims.tracing },
 		path = { func = prims.path },
 		['calls:'] = { func = prims.calls, immediate = true },
 		['calledby:'] = { func = prims.calledby, immediate = true },

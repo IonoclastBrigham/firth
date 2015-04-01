@@ -320,7 +320,7 @@ function compiler.new()
 		cstack = stack.new(),
 		dictionary = prims.initialize(),
 		compiling = false,
-		trace = false,
+		tracing = false,
 		scratch = {"return function(compiler)"},
 		nexttmp = 0,
 		running = true,
