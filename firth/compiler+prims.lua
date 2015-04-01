@@ -318,16 +318,16 @@ function exports.initialize(compiler)
 
 	-- reflection, debugging, internal compiler state, etc. --
 
---	local function dumpword()
---		local word = compiler:nexttoken()
---		local entry = dictionary[word]
---		if not entry then compiler:lookuperror(word) end
---		stack:push(table.concat(entry.compilebuf, '\n'))
---	end
---
---	local function dump()
---		stack:push(table.concat(compiler.last.compilebuf, '\n'))
---	end
+	local function dumpword()
+		local word = compiler:nexttoken()
+		local entry = dictionary[word]
+		if not entry then compiler:lookuperror(word) end
+		stack:push(table.concat(entry.compilebuf, '\n'))
+	end
+
+	local function dump()
+		stack:push(table.concat(compiler.last.compilebuf, '\n'))
+	end
 
 	local function trace()
 		compiler.tracing = true
@@ -415,8 +415,8 @@ function exports.initialize(compiler)
 	dictionary.char = { func = char, immediate = true }
 	dictionary.call = { func = call }
 
---	dictionary.dump = { func = dump }
---	dictionary['dumpword:'] = { func = dumpword, immediate = true }
+	dictionary.dump = { func = dump }
+	dictionary['dumpword:'] = { func = dumpword, immediate = true }
 	dictionary.trace = { func = trace }
 	dictionary.notrace = { func = notrace }
 	dictionary['tracing?'] = { func = tracing }

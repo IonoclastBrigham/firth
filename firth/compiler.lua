@@ -220,7 +220,6 @@ function compiler:buildfunc()
 	compilebuf[1] = compilebuf[1]:format(name, cachedcalls(target.calls))
 	compilebuf[buflen + 1] = "end"
 	local luasrc = table.concat(compilebuf, '\n')
---	stringio.printline(luasrc, '\n')
 	local func, err = loadstring(luasrc, "__FIRTH__ "..name)
 	if func then
 		-- exec loaded function to get the actual function we want
