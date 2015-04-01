@@ -31,7 +31,6 @@ Ideas / TODOs
 -------------
 experimental optimization branch
 	checks and cleanup tasks
-		rename compiler.trace -> tracing, to match compiling
 		new compiler:trace(str) method, only prints if self.tracing == true
 		Remove trace dump of compiled words; redundant.
 		Fix dump and dumpword:.

@@ -330,15 +330,19 @@ function exports.initialize(compiler)
 --	end
 
 	local function trace()
-		compiler.trace = true
+		compiler.tracing = true
 	end
 
 	local function notrace()
-		compiler.trace = false
+		compiler.tracing = false
 	end
 
 	local function tracing()
-		stack:push(compiler.trace)
+		stack:push(compiler.tracing)
+	end
+
+	local function path()
+		stack:push(compiler.path)
 	end
 
 	local function calls()
@@ -415,7 +419,8 @@ function exports.initialize(compiler)
 --	dictionary['dumpword:'] = { func = dumpword, immediate = true }
 	dictionary.trace = { func = trace }
 	dictionary.notrace = { func = notrace }
-	dictionary['trace?'] = { func = tracing }
+	dictionary['tracing?'] = { func = tracing }
+	dictionary.path = { func = path }
 	dictionary['calls:'] = { func = calls, immediate = true }
 	dictionary['calledby:'] = { func = calledby, immediate = true }
 	dictionary.tstart = { func = tstart }

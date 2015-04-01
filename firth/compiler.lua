@@ -471,7 +471,7 @@ function compiler.new()
 		cstack = stack.new(),
 		compiling = false,
 		target = nil,
-		trace = false,
+		tracing = false,
 		nexttmp = 0,
 		running = true,
 		path = "stdin";
