@@ -51,6 +51,40 @@ function prims.pick(compiler)
 	return compiler.stack:pick(compiler.stack:pop())
 end
 
+function prims.c_from(compiler)
+	compiler.stack:push(compiler.cstack:pop())
+end
+
+function prims.to_c(compiler)
+	compiler.cstack:push(compiler.stack:pop())
+end
+
+function prims.c_fetch(compiler)
+	compiler.stack:push(compiler.cstack:top())
+end
+
+function prims.two_c_from(compiler)
+	local stack, cstack = compiler.stack, compiler.cstack
+	local height = #stack -- stack.height
+	stack[height + 2], stack[height + 1] = cstack:pop(), cstack:pop()
+--	stack.height = height + 1
+end
+
+function prims.two_to_c(compiler)
+	local stack, cstack = compiler.stack, compiler.cstack
+	local height = #cstack -- cstack.height
+	cstack[height + 2], cstack[height + 1] = stack:pop(), stack:pop()
+--	cstack.height = height + 2
+end
+
+function prims.two_c_fetch(compiler)
+	local stack, cstack = compiler.stack, compiler.cstack
+	local height, cheight = #stack, #cstack -- stack.height, cstack.height
+	assert(cheight >= 2, "CSTACK UNDERFLOW")
+	stack[height + 2], stack[height + 1] = cstack[cheight + 2], cstack[cheight + 1]
+	cstack.height = height + 2
+end
+
 -- flow control --
 
 function prims.ifstmt(compiler)
@@ -146,6 +180,15 @@ end
 
 function prims.dotprintstack(compiler)
 	stringio.stacktrace(compiler.stack)
+end
+
+function prims.dotprints(compiler)
+	stringio.printstack(compiler.stack)
+end
+
+function prims.dotprintc(compiler)
+	stringio.print('c')
+	stringio.printstack(compiler.cstack)
 end
 
 function prims.dotprinthex(compiler)
@@ -329,6 +372,13 @@ function prims.initialize()
 		rot = { func = prims.rot },
 		['-rot'] = { func = prims.revrot },
 		pick = { func = prims.pick },
+		['C>'] = { func = prims.c_from },
+		['>C'] = { func = prims.to_c },
+		['C@'] = { func = prims.c_fetch },
+		['2C>'] = { func = prims.two_c_from },
+		['2>C'] = { func = prims.two_to_c },
+		['2C@'] = { func = prims.two_c_fetch },
+
 
 		['if'] = { func = prims.ifstmt, immediate = true },
 		['else'] = { func = prims.elsestmt, immediate = true },
@@ -346,6 +396,8 @@ function prims.initialize()
 		['.'] = { func = prims.dotprint },
 		['.x'] = { func = prims.dotprinthex },
 		['..'] = { func = prims.dotprintstack },
+		['.S'] = { func = prims.dotprints },
+		['.C'] =  { func = prims.dotprintc },
 
 		loadfile = { func = prims.loadfile },
 		exit = { func = prims.exit, immediate = true },
