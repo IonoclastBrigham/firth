@@ -22,19 +22,23 @@ local clock = os.clock
 
 local exports = {}
 
-local function buildentries(dict)
+local function buildentries(dict, map)
 	for name, entry in pairs(dict) do
+		local func = entry.func
+		assert(type(func) == "function", "INIT ERROR: "..name)
+
+		map[func] = name
 		entry.name = name
 		entry.calls = {}
 		entry.calledby = {}
-		assert(type(entry.func) == "function", name.." improperly initialized")
 	end
 end
 --! @endcond
 
 function exports.initialize(compiler)
-	assert(compiler, "INVALID COMPILER REF")
-	local dictionary, stack, cstack = compiler.dictionary, compiler.stack, compiler.cstack
+	assert(type(compiler) == "table", "INVALID COMPILER REF")
+	local dictionary, funcmap = compiler.dictionary, compiler.funcmap
+	local stack, cstack = compiler.stack, compiler.cstack
 
 	-- stack ops --
 
@@ -484,7 +488,7 @@ function exports.initialize(compiler)
 		dictionary["~"] = { func = bnot }
 	end
 
-	buildentries(dictionary)
+	buildentries(dictionary, funcmap)
 end
 
 

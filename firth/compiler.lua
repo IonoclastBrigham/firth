@@ -220,7 +220,7 @@ function compiler:buildfunc()
 	compilebuf[1] = compilebuf[1]:format(name, cachedcalls(target.calls))
 	compilebuf[buflen + 1] = "end"
 	local luasrc = table.concat(compilebuf, '\n')
-	local func, err = loadstring(luasrc, "__FIRTH__ "..name)
+	local func, err = loadstring(luasrc, "__FIRTH_WORD__ "..name)
 	if func then
 		-- exec loaded function to get the actual function we want
 		local success, res = pcall(func, self)
@@ -249,6 +249,7 @@ function compiler:bindfunc()
 	if func then
 --		print("ADDING "..name.." TO DICTIONARY")
 		self.dictionary[name] = target
+		self.funcmap[func] = name
 		self.last = target
 	else
 		self:runtimeerror("bindfunc", "NIL FUNCTION REF for "..tostring(name))
@@ -351,34 +352,41 @@ function compiler:traceframe(frame, level)
 
 	-- is it a firth-defined word or the interpret buf?
 	local source = stringio.split(frame.source, ' ')
-	if source[1] == "__FIRTH__" then
+	if source[1] == "__FIRTH_WORD__" then
 		name = source[2]
 		kind = (name == "[INTERP_BUF]") and "  <interp>" or "    <word>"
 	else
-		-- is it a firth internal component?
-		for i = 1, math.huge do -- "counted forever"
-			local lname, lvalue = debug.getlocal(level, i)
-			if not lname then break end
-			if lname == "self" and type(lvalue) == "table" then
-				kind = lvalue.__FIRTH_INTERNAL__
-				break
-			end
-		end
-
 		-- try to find a reasonable name
-		local fname = frame.name
-		if fname then
-			name = fname
+		local func = frame.func
+		name = self.funcmap[func]
+		if name then
+			-- in dict/map; this is a prim word
+			kind = "    <prim>"
 		else
-			local func = frame.func
-			if func == self.interpretline then
-				name = "interpretline" -- special case; why doesn't this have a name?
+			-- not defined in dict/map; try to extract from callstack
+			local fname = frame.name
+			if fname then
+				name = fname
 			else
-				name = tostring(func)
+				if func == self.interpretline then
+					name = "interpretline" -- special case; why doesn't this have a name?
+				else
+					name = tostring(func)
+				end
+			end
+
+			-- is it a firth internal component?
+			for i = 1, math.huge do -- "counted forever"
+				local lname, lvalue = debug.getlocal(level, i)
+				if not lname then break end
+				if lname == "self" and type(lvalue) == "table" then
+					kind = lvalue.__FIRTH_INTERNAL__
+					break
+				end
 			end
 		end
 
-		name = '<'..name..'>'
+		-- didn't find a specific type, mark it as "internal"
 		kind = kind or "<internal>"
 	end
 	return '\t'..kind..": "..tostring(name)
@@ -466,6 +474,7 @@ function compiler.new()
 	local c
 	c = {
 		dictionary = {},
+		funcmap = {},
 		stack = stack.new(),
 		cstack = stack.new(),
 		compiling = false,
