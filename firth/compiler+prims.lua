@@ -66,6 +66,39 @@ function exports.initialize(compiler)
 		return stack:pick(stack:pop())
 	end
 
+	local function c_from()
+		stack:push(cstack:pop())
+	end
+
+	local function to_c()
+		cstack:push(stack:pop())
+	end
+
+	local function c_fetch()
+		stack:push(cstack:top())
+	end
+
+	local function two_c_from()
+		if cstack.height < 2 then compiler:runtimeerror("2C>", "CSTACK UNDERFLOW") end
+		local height = stack.height
+		stack[height + 2], stack[height + 1] = cstack:pop(), cstack:pop()
+		stack.height = height + 2
+	end
+
+	local function two_to_c()
+		if stack.height < 2 then compiler:runtimeerror("2>C", "UNDERFLOW") end
+		local height = cstack.height
+		cstack[height + 2], cstack[height + 1] = stack:pop(), stack:pop()
+		cstack.height = height + 2
+	end
+
+	local function two_c_fetch()
+		local height, cheight = stack.height, cstack.height
+		if cheight < 2 then compiler:runtimeerror("2C@", "CSTACK UNDERFLOW") end
+		stack[height + 2], stack[height + 1] = cstack[cheight], cstack[cheight - 1]
+		stack.height = height + 2
+	end
+
 	-- flow control --
 
 	local function beginblock()
@@ -188,6 +221,15 @@ function exports.initialize(compiler)
 	local function dotprinthex()
 		local tos = stack:pop()
 		stringio.print(string.format("0x%X", tonumber(tos)), ' ')
+	end
+
+	local function dotprints()
+		stringio.printstack(stack)
+	end
+
+	local function dotprintc()
+		stringio.print('c')
+		stringio.printstack(cstack)
 	end
 
 	-- parser/compiler control words --
@@ -376,6 +418,12 @@ function exports.initialize(compiler)
 	dictionary.rot = { func = rot }
 	dictionary['-rot'] = { func = revrot }
 	dictionary.pick = { func = pick }
+	dictionary['C>'] = { func = c_from }
+	dictionary['>C'] = { func = to_c }
+	dictionary['C@'] = { func = c_fetch }
+	dictionary['2C>'] = { func = two_c_from }
+	dictionary['2>C'] = { func = two_to_c }
+	dictionary['2C@'] = { func = two_c_fetch }
 
 	dictionary['if'] = { func = ifstmt, immediate = true }
 	dictionary['else'] = { func = elsestmt, immediate = true }
@@ -394,6 +442,9 @@ function exports.initialize(compiler)
 	dictionary['.'] = { func = dotprint }
 	dictionary['.x'] = { func = dotprinthex }
 	dictionary['..'] = { func = dotprintstack }
+	dictionary['.S'] = { func = dotprints }
+	dictionary['.C'] =  { func = dotprintc }
+
 
 	dictionary.loadfile = { func = loadfile }
 	dictionary.exit = { func = exit, immediate = true }
