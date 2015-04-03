@@ -111,6 +111,4 @@ interpret buildfunc bindfunc immediate
 : or ( a b -- a||b ) " or" binop ;immed
 : nand ( a b -- !a&&b ) postpone and postpone not ;immed
 : nor ( a b -- !a||b ) postpone or postpone not ;immed
-: xor ( a b -- aXORb ) 2dup or -rot nand and ;
-// I think this is kinda cool—if obtuse—so I'm gonna leave it here as a comment:
-// : xor 2dup nand dup rot nand -rot nand nand ;
+: xor ( a b -- aXORb ) postpone 2not postpone ~= ;immed

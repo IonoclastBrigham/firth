@@ -34,14 +34,6 @@ experimental optimization branch
 		new compiler:trace(str) method, only prints if self.tracing == true
 		Make sure [ and ] work, since compile looks for target on stack
 		back up compiling? on cstack in eval, and restore at end
-	two parallel dictionaries
-		one stores the thing that we care about
-			compiled function -> call it
-			anything else -> push it?
-		one stores all the metadata
-			compilebuf
-			calls and calledby
-			whatever else
 	inline functions
 		compiles to an immediate that compiles the firth code in the body inline
 		implies immediate
