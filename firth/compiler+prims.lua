@@ -189,6 +189,10 @@ function exports.initialize(compiler)
 			height, prev, height, prev)
 	end
 
+	local function pushnil()
+		compiler:push(nil)
+	end
+
 	-- bitwise boolean ops --
 
 	-- only available in LuaJIT 2.0+ or Lua 5.2+
@@ -451,6 +455,7 @@ function exports.initialize(compiler)
 	dictionary['false'] = { func = pushfalse, immediate = true }
 	dictionary['not'] = { func = pushnot, immediate = true }
 	dictionary['2not'] = { func = push2not, immediate = true }
+	dictionary['nil'] = { func = pushnil, immediate = true }
 
 	dictionary['.raw'] = { func = rawprint }
 	dictionary['.'] = { func = dotprint }
