@@ -83,14 +83,14 @@ function exports.initialize(compiler)
 	end
 
 	local function two_c_from()
-		if cstack.height < 2 then compiler:runtimeerror("2C>", "CSTACK UNDERFLOW") end
+		compiler:assert(cstack.height >= 2, "2C>", "CSTACK UNDERFLOW")
 		local height = stack.height
 		stack[height + 2], stack[height + 1] = cstack:pop(), cstack:pop()
 		stack.height = height + 2
 	end
 
 	local function two_to_c()
-		if stack.height < 2 then compiler:runtimeerror("2>C", "UNDERFLOW") end
+		compiler:assert(stack.height >= 2, "2>C", "UNDERFLOW")
 		local height = cstack.height
 		cstack[height + 2], cstack[height + 1] = stack:pop(), stack:pop()
 		cstack.height = height + 2
@@ -98,7 +98,7 @@ function exports.initialize(compiler)
 
 	local function two_c_fetch()
 		local height, cheight = stack.height, cstack.height
-		if cheight < 2 then compiler:runtimeerror("2C@", "CSTACK UNDERFLOW") end
+		compiler:assert(cheight >= 2, "2C@", "CSTACK UNDERFLOW")
 		stack[height + 2], stack[height + 1] = cstack[cheight], cstack[cheight - 1]
 		stack.height = height + 2
 	end
@@ -177,7 +177,16 @@ function exports.initialize(compiler)
 
 	local function pushnot()
 		local height = compiler:newtmp("stack.height")
+		compiler:cassert(height.." > 0", "UNDERFLOW")
 		compiler:append("stack[%s] = not stack[%s]", height, height)
+	end
+
+	local function push2not()
+		local height = compiler:newtmp("stack.height")
+		compiler:cassert(height.." > 1", "UNDERFLOW")
+		local prev = compiler:newtmp(height.." - 1")
+		compiler:append("stack[%s], stack[%s] = not stack[%s], not stack[%s]",
+			height, prev, height, prev)
 	end
 
 	-- bitwise boolean ops --
@@ -209,7 +218,7 @@ function exports.initialize(compiler)
 
 	local function rawprint()
 		local tos = stack:pop()
-		if type(tos) ~= "string" then compiler:runtimeerror(".raw", "NOT A STRING") end
+		compiler:assert(type(tos) == "string", ".raw", "NOT A STRING")
 		stringio.print(tos)
 	end
 
@@ -298,7 +307,7 @@ function exports.initialize(compiler)
 	local function parse()
 		local delim = stack:pop()
 		local success, token = pcall(compiler.nexttoken, compiler, delim)
-		if not success then compiler:runtimeerror("parse", "UNABLE TO RETRIEVE TOKEN") end
+		compiler:assert(success, "parse", "UNABLE TO RETRIEVE TOKEN")
 		stack:push(token)
 	end
 
@@ -306,7 +315,7 @@ function exports.initialize(compiler)
 	local function parsematch()
 		local pattern = stack:pop()
 		local success, token, line = pcall(stringio.matchtoken, compiler.line, pattern)
-		if not success then compiler:runtimeerror("parsematch", "UNABLE TO RETRIEVE TOKEN") end
+		compiler:assert(success, "parsematch", "UNABLE TO RETRIEVE TOKEN")
 		stack:push(token)
 		compiler.line = line
 	end
@@ -441,6 +450,7 @@ function exports.initialize(compiler)
 	dictionary['true'] = { func = pushtrue, immediate = true }
 	dictionary['false'] = { func = pushfalse, immediate = true }
 	dictionary['not'] = { func = pushnot, immediate = true }
+	dictionary['2not'] = { func = push2not, immediate = true }
 
 	dictionary['.raw'] = { func = rawprint }
 	dictionary['.'] = { func = dotprint }

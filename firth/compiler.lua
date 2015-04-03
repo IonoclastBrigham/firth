@@ -32,6 +32,8 @@ end
 
 function compiler:interpretline(line, num)
 	self.line = line
+	num =  self.compiling and (self.linenum + 1) or num
+	self.linenum = num
 	self.running = type(line) == "string"
 
 	-- make sure we have a compile target
@@ -55,7 +57,8 @@ function compiler:interpretline(line, num)
 			if val then
 				self:push(val)
 			else
-				self:lookuperror(tok, num)
+				-- xpcall, so we get the stacktrace
+				xpcall(self.lookuperror, self.xperrhandler, self, tok, num)
 				break
 			end
 		end
@@ -71,19 +74,23 @@ function compiler:loadfile(path)
 	local num = 1
 	self.running = true
 	cstack:push(self.path)
+	cstack:push(self.linenum)
 	self.path = path
 	for line in assert(io.lines(path)) do
 		self:interpretline(line, num)
 		num = num + 1
 		if not self.running then break end
 	end
-	local tos = cstack:top()
-	if type(tos) == "table"
-		and tos.compilebuf and #tos.compilebuf == 1
-		and tos.name == "[INTERP_BUF]" then
-		cstack:drop()
+	if self.running and self.cstack.height > 0 then
+		local tos = cstack:top()
+		if type(tos) == "table"
+			and tos.compilebuf and #tos.compilebuf == 1
+			and tos.name == "[INTERP_BUF]" then
+			cstack:drop()
+		end
+		self.linenum = cstack:pop()
+		self.path = cstack:pop()
 	end
-	self.path = cstack:pop()
 end
 
 function compiler:execword(entry)
@@ -171,6 +178,7 @@ function compiler:call(word)
 	local target = self.target
 	local calls = target.calls
 	local callee = dictionary[word]
+	if not callee then self:lookuperror(word) end
 
 	local mappedname = calls[word]
 	if not mappedname then
@@ -299,12 +307,20 @@ local function sortmatches(buckets, tok)
 	return result
 end
 
-function compiler:lookuperror(tok, num)
+function compiler:clearcompilestate()
+	self.linenum = nil
 	self.line = nil
 	self.compiling = false
+	self.target = nil
+	self.cstack:clear()
+end
 
-	local prefix = "in "..self.path..':'
-	if num then prefix = prefix..num..':' end
+function compiler:lookuperror(tok, num)
+	local __FIRTH_DUMPTRACE__ = true
+
+	num = num or self.linenum
+	local prefix = self.path
+	if num then prefix = prefix..':'..num end
 	local buckets = {}
 	for k,v in pairs(self.dictionary) do
 		for i = 1, #tok do
@@ -317,12 +333,14 @@ function compiler:lookuperror(tok, num)
 		end
 	end
 	local suffix = "Did You Mean..?\n\t"..table.concat(sortmatches(buckets, tok), "\n\t")
-	self:runtimeerror("interpretline", "UNKNOWN WORD '"..tok.."'\n"..suffix)
+	self:runtimeerror(prefix, "UNKNOWN WORD '"..tok.."'\n"..suffix, 3)
 end
 
-function compiler:runtimeerror(name, msg)
+function compiler:runtimeerror(name, msg, level)
 	local __FIRTH_DUMPTRACE__ = true
-	error(" in "..name..': '..msg, 2)
+
+	self:clearcompilestate()
+	error("in "..name..': '..msg, level or 2)
 end
 
 -- returns a callstack frame iterator
@@ -405,13 +423,27 @@ function compiler:stacktrace()
 		end
 		i = i + 1
 	end
-	return "Call Trace:\n"..table.concat(stackframes, '\n')
+	return "call trace:\n"..table.concat(stackframes, '\n')
+end
+
+function compiler:assert(cond, name, msg)
+	local __FIRTH_DUMPTRACE__ = true
+
+	if not cond then self:runtimeerror(name, msg) end
+end
+
+function compiler:cassert(tmpcond, msg)
+	self:append("compiler:assert(%s, __FIRTH_WORD_NAME__, %q)", tmpcond, msg)
 end
 
 function compiler:immediate(word)
-	local entry = (word and self.dictionary[word] or self.last)
-	if not entry then
-		self:runtimeerror("immediate", "NO WORD TO SET IMMEDIATE")
+	local entry
+	if word then
+		entry = self.dictionary[word]
+		if not entry then self:lookuperror(word) end
+	else
+		entry = self.last
+		self:assert(entry, "immediate", "NO ENTRY TO SET IMMEDIATE")
 	end
 --	print("SETTING "..entry.name.." IMMEDIATE")
 	entry.immediate = true
@@ -485,8 +517,11 @@ function compiler.new()
 		path = "stdin";
 
 		xperrhandler = function(msg)
-			stringio.print(string.format("ERROR: %s, ", msg))
+			stringio.printline(string.format("ERROR: %s", msg))
+			stringio.print ' '
 			stringio.printstack(c.stack)
+			stringio.print 'c'
+			stringio.printstack(c.cstack)
 			stringio.printline(c:stacktrace())
 		end
 	}
