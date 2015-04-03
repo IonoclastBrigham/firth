@@ -31,7 +31,9 @@ local function pop(tbl)
 	return table.remove(tbl)
 end
 
-local stringio = {}
+local stringio = {
+	__FIRTH_INTERNAL__ = "<stringio>" -- used for stacktraces
+}
 --! @endcond
 
 
@@ -189,17 +191,35 @@ function stringio.printline(...)
 	stringio.print('\n')
 end
 
+--! @private
+local function printitem(item)
+	if type(item) == "string" then
+		stringio.print(string.format("%q", item))
+	elseif type(item) == "table" then
+		if item.height then 
+			stringio.printstack(item)
+		else
+			stringio.print('{', table.concathash(item, ', '), '}')
+		end
+	else
+		stringio.print(tostring(item))
+	end
+end
+
 function stringio.printstack(stack)
 	local success, err = pcall(function()
+		local height = stack.height
 		stringio.print "stack: ["
-		for i = 1, #stack-1 do
-			stringio.print(stack[i], ' ')
+		for i = 1, height-1 do
+			local item = stack[i]
+			printitem(item)
+			stringio.print ' '
 		end
-		if #stack > 0 then stringio.print(stack[#stack]) end
+		if height > 0 then printitem(stack[height]) end
 		stringio.printline ']'
 	end)
 	if not success then
-		print('\n'..err)
+		stringio.print('\n'..err)
 	end
 end
 
@@ -208,8 +228,8 @@ end
 --! with a negative index from the top.
 --! @param stack an array or stack object.
 function stringio.stacktrace(stack)
-	for i = -1, -(#stack), -1 do
-		stringio.printline('[', i, '] = ', tostring(stack[#stack + i + 1]))
+	for i = -1, -(stack.height), -1 do
+		stringio.printline('[', i, '] = ', tostring(stack[stack.height + i + 1]))
 	end
 end
 

@@ -16,12 +16,14 @@
 local table = require "table"
 
 local mt
-local stack = {}
+local stack = {
+	__FIRTH_INTERNAL__ = "   <stack>" -- used for stacktraces
+}
 
 -- throw if stack is too short for operation
 local function assertsize(st, min, msg)
-	local __FIRTH_DUMPTRACE__ = true
-	assert(min <= #st, msg) -- TODO: use st.height when implemented
+	local __FIRTH_DUMPTRACE__ = true -- used for stacktraces
+	assert(min <= st.height, msg)
 end
 --! @endcond
 
@@ -29,73 +31,86 @@ end
 --! Pushes an item onto the stack.
 --! @param val value to push onto the stack
 function stack:push(val)
-	table.insert(self, val)
+	local top = self.height + 1
+	rawset(self, top, val)
+	self.height = top
 end
 
 --! Pops an item off the stack
 --! @return the former top stack item.
 function stack:pop()
 	assertsize(self, 1, "UNDERFLOW")
-	return table.remove(self)
+	local val = rawget(self, self.height)
+	self:drop()
+	return val
 end
 
 --! Peeks at the top item, non-destructively.
 --! @return a copy of the top of the stack, without popping it.
 function stack:top()
 	assertsize(self, 1, "STACK EMPTY")
-	return self[#self]
+	return rawget(self, self.height)
 end
 
 --! Pushes a copy of the top stack entry.
 function stack:dup()
 	assertsize(self, 1, "STACK EMPTY")
-	self:push(self[#self])
+	self:push(self:top())
 end
 
 --! Removes the top stack item.
 function stack:drop()
 	assertsize(self, 1, "UNDERFLOW")
-	self[#self] = nil
+	local top = self.height
+	rawset(self, top, 0)
+	self.height = top - 1
 end
 
 --! Removes all items from the stack.
 function stack:clear()
-	for i in next, self do rawset(self, i, nil) end
+	local top = self.height
+	for i = top, 1, -1 do rawset(self, i, 0) end
+	self.height = 0
 end
 
 --! Swaps the location of the two top items.
 function stack:swap()
 	assertsize(self, 2, "INSUFFICIENT HEIGHT")
-	local top = #self
-	self[top], self[top-1] = self[top-1], self[top]
+	local top = self.height
+	local prev = top - 1
+	self[top], self[prev] = self[prev], self[top]
 end
 
 --! Pushes a copy of the second item from the top.
 function stack:over()
 	assertsize(self, 2, "INSUFFICIENT HEIGHT")
-	local top = #self
-	self:push(self[top-1])
+	local top = self.height
+	self:push(rawget(self, top-1))
 end
 
 --! Rotates the top 3 stack elements downward.
 function stack:rot()
 	assertsize(self, 3, "INSUFFICIENT HEIGHT")
-	local top = #self
-	self[top-2], self[top-1], self[top] = self[top-1], self[top], self[top-2]
+	local top = self.height
+	local prev, second = top - 1, top - 2
+	self[second], self[prev], self[top] = self[prev], self[top], self[second]
 end
 
 --! Rotates the top 3 stack elements upward.
 function stack:revrot()
 	assertsize(self, 3, "INSUFFICIENT HEIGHT")
-	local top = #self
-	self[top-2], self[top-1], self[top] = self[top], self[top-2], self[top-1]
+	local top = self.height
+	local prev, second = top - 1, top - 2
+	self[second], self[prev], self[top] = self[top], self[second], self[prev]
 end
 
 --! Removes the second item from the top.
 function stack:nip()
 	assertsize(self, 2, "INSUFFICIENT HEIGHT")
-	local top = #self
-	table.remove(self, top-1)
+	local top = self.height
+	local prev = top - 1
+	rawset(self, prev, rawget(self, top))
+	self:drop()
 end
 
 --! Swaps the top two items, and pushes a copy of the former top item.
@@ -108,14 +123,20 @@ end
 --! @param idx zero-based offset from the top of the stack of item to duplicate.
 function stack:pick(idx)
 	assertsize(self, idx + 1, "INSUFFICIENT HEIGHT")
-	self:push(self[#self - idx])
+	local top = self.height
+	self:push(rawget(self, top - idx))
 end
 
 --! Removes the item at the given index and pushes it back onto the stack.
 --! @param idx offset of item to duplicate from the top of the stack.
 function stack:roll(idx)
 	assertsize(self, idx + 1, "INSUFFICIENT HEIGHT")
-	self:push(table.remove(self, idx))
+	local top = self.height
+	local tmp = rawget(self, top - idx)
+	for i = top-idx, top-1 do
+		rawset(self, i, rawget(self, i+1))
+	end
+	rawset(self, top, tmp)
 end
 
 
@@ -139,8 +160,9 @@ stack = {}
 --! </pre>
 --! @return a newly initialized stack object.
 function stack.new()
-	local s = {}
-	return setmetatable(s, mt)
+	local s = setmetatable({ height = 0 }, mt)
+	for i = 32,1,-1 do s[i] = 0 end -- poke in some null data to pre-reserve array 
+	return s
 end
 
 return stack

@@ -55,12 +55,13 @@ firth = {
 	cli = function(args)
 		local c = firth.instance()
 		for i, code in ipairs(args) do
+			c.path = "Argument"..i
 			if not firth.doline(c, code) then
-				stringio.printline("Error at argument "..i)
 				break
 			end
 		end
-		if #c.stack > 0 then stringio.printstack(c.stack) end
+		if c.stack.height > 0 then stringio.printstack(c.stack) end
+		c.path = "stdin"
 	end,
 }
 
