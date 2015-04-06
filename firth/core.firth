@@ -112,3 +112,7 @@ interpret buildfunc bindfunc immediate
 : nand ( a b -- !a&&b ) postpone and postpone not ;immed
 : nor ( a b -- !a||b ) postpone or postpone not ;immed
 : xor ( a b -- aXORb ) postpone 2not postpone ~= ;immed
+
+// miscellaneous util words and stuff
+: NOP ( -- ) ;
+' NOP alias: NOOP
