@@ -352,8 +352,7 @@ function exports.initialize(compiler)
 	--! ( name -- entry )
 	local function dict()
 		local word = stack:pop()
-		local entry = dictionary[word]
-		if not entry then compiler:lookuperror(word) end
+		local entry = compiler:lookup(word)
 		stack:push(entry)
 	end
 
@@ -379,8 +378,7 @@ function exports.initialize(compiler)
 
 	local function dumpword()
 		local word = compiler:nexttoken()
-		local entry = dictionary[word]
-		if not entry then compiler:lookuperror(word) end
+		local entry = compiler:lookup(word)
 		stack:push(table.concat(entry.compilebuf, '\n'))
 	end
 

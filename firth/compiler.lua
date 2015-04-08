@@ -49,15 +49,17 @@ function compiler:interpretline(line, num)
 	while self.line and #self.line > 0 and self.running do
 		local tok = self:nexttoken()
 --		print("TOKEN "..tostring(tok))
+		-- try dictionary lookup
 		local val = self.dictionary[tok]
 		if val then
 			self:execword(val)
 		else
+			-- try to parse it as a number
 			val = stringio.tonumber(tok)
 			if val then
 				self:push(val)
 			else
-				-- xpcall, so we get the stacktrace
+				-- error; use xpcall, so we get the stacktrace
 				xpcall(self.lookuperror, self.xperrhandler, self, tok, num)
 				break
 			end
@@ -91,6 +93,12 @@ function compiler:loadfile(path)
 		self.linenum = cstack:pop()
 		self.path = cstack:pop()
 	end
+end
+
+function compiler:lookup(name)
+	local entry = self.dictionary[name]
+	if not entry then self:lookuperror(name) end
+	return entry
 end
 
 function compiler:execword(entry)
@@ -177,8 +185,7 @@ function compiler:call(word)
 	local dictionary = self.dictionary
 	local target = self.target
 	local calls = target.calls
-	local callee = dictionary[word]
-	if not callee then self:lookuperror(word) end
+	local callee = self:lookup(word)
 
 	local mappedname = calls[word]
 	if not mappedname then
@@ -439,8 +446,7 @@ end
 function compiler:immediate(word)
 	local entry
 	if word then
-		entry = self.dictionary[word]
-		if not entry then self:lookuperror(word) end
+		entry = self:lookup(word)
 	else
 		entry = self.last
 		self:assert(entry, "immediate", "NO ENTRY TO SET IMMEDIATE")
