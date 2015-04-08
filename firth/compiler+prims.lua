@@ -108,7 +108,7 @@ function exports.initialize(compiler)
 	local function beginblock()
 		local compiling = compiler.compiling
 		compiler:interpretpending()
-		if not compiling then compiler:newentry() end
+		if not compiling then compiler:create() end
 		compiler.compiling = true
 		cstack:push(compiling)
 	end
@@ -140,7 +140,7 @@ function exports.initialize(compiler)
 		compiler.compiling = compiling
 		if not compiling then
 			compiler:interpretpending()
-			compiler:newentry()
+			compiler:create()
 		end
 	end
 
@@ -271,8 +271,8 @@ function exports.initialize(compiler)
 	end
 
 	--! ( name -- entry )
-	local function newentry()
-		compiler:newentry(stack:pop())
+	local function create()
+		compiler:create(stack:pop())
 	end
 
 	--! ( entry -- )
@@ -296,7 +296,7 @@ function exports.initialize(compiler)
 			compiler:restoretarget()
 			cstack:push(target)
 			if not compiler.target then
-				compiler:newentry()
+				compiler:create()
 			end
 		end
 --		stringio.printstack(cstack)
@@ -474,7 +474,7 @@ function exports.initialize(compiler)
 	dictionary.parsematch = { func = parsematch }
 	dictionary['>ts'] = { func = ungettoken }
 	dictionary.push = { func = push }
-	dictionary.newentry = { func = newentry }
+	dictionary.create = { func = create }
 	dictionary['alias:'] = { func = alias, immediate = true }
 	dictionary.buildfunc = { func = buildfunc }
 	dictionary.bindfunc = { func = bindfunc }

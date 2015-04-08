@@ -1,8 +1,8 @@
 char prims.firth drop
 char see_comment_block_below_for_copyright_notice drop
 
-char : newentry setcompiling settarget
-	interpretpending char %s parse newentry setcompiling settarget
+char : create setcompiling settarget
+	interpretpending char %s parse create setcompiling settarget
 interpret buildfunc bindfunc immediate
 : nextword
 	char %s parse

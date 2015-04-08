@@ -41,7 +41,7 @@ function compiler:interpretline(line, num)
 		local target = self.target
 		if not target or target.name ~= "[INTERP_BUF]" then
 --			print("NEW ENTRY FOR [INTERP_BUF]")
-			self:newentry()
+			self:create()
 		end
 	end
 
@@ -156,7 +156,7 @@ function compiler:restoretarget()
 	self.target = nil
 end
 
-function compiler:newentry(name)
+function compiler:create(name)
 	local dopush = (name ~= nil)
 	if not name then
 		if self.target and self.target.name == "[INTERP_BUF]" then
