@@ -100,15 +100,19 @@
 		<key>Comment Pattern</key>
 		<string><![CDATA[
 		(?x:
-			(\s*//.*?$) |		(?# Line comment)
-			(?s:\(.*?\))	(?# Block comment)
+			(?:^//\s.*$)		|	(?# Line comment, start of line)
+			(?:\s//\s.*$)		|	(?# Line comment, after other code)
+			(?:^\(\s.*?\))		|	(?# Delimited or Stack comment, start of line)
+			(?:\s\(\s.*?\))			(?# Delimited or Stack comment, between other code)
 		)
 		]]></string>
 
 		<key>String Pattern</key>
 		<string><![CDATA[
 		(?x:
-			("(\\"|[^"\r]|\\\r)*") | (?# Double-quote)
+			(?:(?<=^char\s)[^\s]+)							|	(?# Parsed-char string, start of line)
+			(?:(?<!postpone\schar\s)(?<=\schar\s)[^\s]+)	|	(?# Parsed-char string, after code)
+			(?:"\s(\\"|[^"\r]|\\\r)*")							(?# Double-quote string)
 		)
 		]]></string>
 
@@ -122,7 +126,7 @@
 					[!$%&*+-./:<=>?!@^_~\[\]\\{}|'"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz]+
 				)
 				(?s:.+?)
-				(\s+)(;|;immed)\b
+				(?:;|;immed)
 			)
 		)
 		]]></string>
