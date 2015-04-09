@@ -18,8 +18,8 @@ interpret buildfunc bindfunc immediate
 : // char \n parse drop ;immed // There, now we can comment our code!
 
 // /////////////////////////////////////////////////////////////////////////////
-// prims.firth
-// Basic primitives for low level code and compiler manipulation
+// core.firth
+// Core library for low level code and compiler manipulation
 // Copyright © 2015 Brigham Toskin
 // <https://github.com/IonoclastBrigham/firth/blob/master/LICENSE>
 // /////////////////////////////////////////////////////////////////////////////
@@ -63,7 +63,7 @@ interpret buildfunc bindfunc immediate
 : * ( a b -- a*b ) char * binop ;immed
 : / ( a b -- a/b ) char / binop ;immed
 : % ( a b -- a%b ) char % binop ;immed
-: ** ( a b -- a^b ) char ^ binop ;immed
+: ** ( a b -- a^b ) char ^ binop ;immed // ^ is used for bit-wise xor, as in C
 
 : 1+ ( n -- n+1 ) 1 char + binopconst ;immed
 ' 1+ alias: inc
