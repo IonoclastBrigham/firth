@@ -193,6 +193,10 @@ function exports.initialize(compiler)
 		compiler:push(nil)
 	end
 
+	local function pushtable()
+		compiler:push("{}")
+	end
+
 	-- bitwise boolean ops --
 
 	-- only available in LuaJIT 2.0+ or Lua 5.2+
@@ -277,9 +281,9 @@ function exports.initialize(compiler)
 
 	--! ( entry -- )
 	local function alias()
-		local entry = stack:pop()
-		local newname = compiler:nexttoken()
-		dictionary[newname] =  entry
+		local entry = compiler:poptmp()
+		local newname = compiler:newtmpstring(compiler:nexttoken())
+		compiler:append("dictionary[%s] =  %s", newname, entry)
 	end
 
 	--! ( entry -- C: oldentry? )
@@ -332,7 +336,10 @@ function exports.initialize(compiler)
 	--! ( C: entry -- C: entry' )
 	local function push()
 		local val = stack:pop()
-		if type(val) == "string" then
+		local typ = type(val)
+		if typ == "function" or typ == "table" then
+			compiler:pushupval(val)
+		elseif type(val) == "string" then
 			compiler:pushstring(val)
 		else
 			compiler:push(val)
@@ -349,6 +356,25 @@ function exports.initialize(compiler)
 		compiler:bindfunc()
 	end
 
+	--! ( entry -- )
+	local function does()
+		local varentry = compiler:poptmp()
+		local doesname = compiler:newtmpstring(compiler:nexttoken())
+		local doesentry = compiler:newtmpformat("compiler:lookup(%s)", doesname)
+		local doesfunc = compiler:newtmpformat("%s.func", doesentry)
+		local closure = [[
+			varentry.func = function()
+				local __FIRTH_WORD_NAME__ = varentry.name
+				stack:push(varentry)
+				doesfunc()
+			end]]
+		closure = closure:gsub("varentry", varentry):gsub("doesfunc", doesfunc)
+		compiler:append(closure)
+		compiler:append("compiler:settarget(%s)", varentry)
+		compiler:append("compiler:bindfunc()")
+		compiler:append("%s.compilebuf = {%q}", varentry, closure)
+	end
+
 	--! ( name -- entry )
 	local function dict()
 		local word = stack:pop()
@@ -356,12 +382,38 @@ function exports.initialize(compiler)
 		stack:push(entry)
 	end
 
+	--! ( -- entry )
+	local function last()
+		stack:push(compiler.last)
+	end
 
+	--! ( -- b ) TS: word
+	local function defined()
+		local name = compiler:nexttoken()
+		compiler:push(dictionary[name] ~= nil)
+	end
+
+	--! @@ ( t k -- x )
+	local function fetchfield()
+		local idx = stack:pop()
+		local tab = stack:pop()
+		stack:push(tab[idx])
+	end
+
+	--! !! ( x t k -- )
+	local function storefield()
+		local idx = stack:pop()
+		local tab = stack:pop()
+		local val = stack:pop()
+		tab[idx] = val
+	end
+
+	--! ( -- )
 	local function immediate()
 		compiler:immediate()
 	end
 
-	--! ( C: entry -- C: entry' )
+	--! ( -- c )
 	local function char()
 		local str = compiler:nexttoken()
 		local char = str:sub(1, 1)
@@ -369,7 +421,7 @@ function exports.initialize(compiler)
 		compiler:pushstring(char)
 	end
 
-	--! ( C: entry -- C: entry' )
+	--! ( name -- )
 	local function call()
 		compiler:call(stack:pop())
 	end
@@ -454,6 +506,7 @@ function exports.initialize(compiler)
 	dictionary['not'] = { func = pushnot, immediate = true }
 	dictionary['2not'] = { func = push2not, immediate = true }
 	dictionary['nil'] = { func = pushnil, immediate = true }
+	dictionary['{}'] = { func = pushtable, immediate = true }
 
 	dictionary['.raw'] = { func = rawprint }
 	dictionary['.'] = { func = dotprint }
@@ -478,7 +531,12 @@ function exports.initialize(compiler)
 	dictionary['alias:'] = { func = alias, immediate = true }
 	dictionary.buildfunc = { func = buildfunc }
 	dictionary.bindfunc = { func = bindfunc }
+	dictionary['does>'] = { func = does, immediate = true }
 	dictionary.dict = { func = dict }
+	dictionary.last = { func = last }
+	dictionary["defined?"] = { func = defined, immediate = true }
+	dictionary['@@'] = { func = fetchfield }
+	dictionary['!!'] = { func = storefield }
 	dictionary.immediate = { func = immediate }
 	dictionary.char = { func = char, immediate = true }
 	dictionary.call = { func = call }
@@ -500,6 +558,8 @@ function exports.initialize(compiler)
 		dictionary["^"] = { func = bxor }
 		dictionary["~"] = { func = bnot }
 	end
+
+	dictionary.NOP = { func = compiler.NOP }
 
 	buildentries(dictionary, funcmap)
 end

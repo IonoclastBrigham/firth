@@ -28,23 +28,30 @@ interpret buildfunc bindfunc immediate
 : ( char ( >ts " %b()" parsematch drop ;immed ( inline (nestable) single-line comments)
 
 // a few parser/interpreter/compiler control words
-: ' ( -- entry ) nextword dict ;immed
+: ' ( -- entry ) nextword dict push ;immed
 : compile ( entry -- C: entry ) interpretpending setcompiling settarget ;
 ' interpret alias: [
 ' compile alias: ]
-: eval: ( -- ... )
-	postpone [ // TODO: preserve previous value on cstack?
-	nextword call
-	]
-;immed
+// : eval: ( -- ... )
+// 	postpone [ // TODO: preserve previous value on cstack?
+// 	nextword call
+// 	postpone ]
+// ;immed
+
+// miscellaneous util words and stuff
+' NOP alias: NOOP
 
 // strings and such
 : ." ( -- ) postpone " char . call ;immed
 : CR ( -- ) char \n .raw ;
 
 // values and variables
-: const: ( val -- ) postpone : push postpone ; ;immed
-// : var: ( val -- ) ;
+: @ ( entry -- x ) " data" @@ ;
+: ! ( x entry -- ) " data" !! ;
+: variable ( name -- entry ) create dup does> NOP ;
+: var: ( x -- ) interpretpending nextword variable ! ;immed
+: val: ( x -- ) interpretpending nextword variable ! last does> @ ;immed
+: const: ( x -- ) postpone : push postpone ; ;immed
 
 0.1 const: version
 : copyright ." Firth ver." version . ." Copyright © 2015 Brigham Toskin." ;
@@ -112,7 +119,3 @@ interpret buildfunc bindfunc immediate
 : nand ( a b -- !a&&b ) postpone and postpone not ;immed
 : nor ( a b -- !a||b ) postpone or postpone not ;immed
 : xor ( a b -- aXORb ) postpone 2not postpone ~= ;immed
-
-// miscellaneous util words and stuff
-: NOP ( -- ) ;
-' NOP alias: NOOP

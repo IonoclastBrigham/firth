@@ -76,127 +76,78 @@ recurse
 	start all defs with -> "local function word()"
 	compile as append "word()"
 	end all defs with -> "end \n return word"
-variables
-	global, forth-style variables
-		a variable is a word
-			by default, pushes its own dict entry
-			has no compilebuf
-			once initialized, has a .data field
-		does> ( entry -- )
-			new prim word
-			expects a dict entry on stack for a variable
-			grabs the next token, extracts that word's func field
-			set's the entry's func field
-				creates a closure over var entry ref, action func ref
-					pushes the variable's entry
-					calls the supplied word
-						if word is nop, use alternative version with no call
-		variable ( name -- entry )
-			use of does> pushes variable entry by default
-			sets "do this" to nop, since by default we just want the push
-			: variable ( ) newentry dup dup does> nop bindfunc ;
-		var: ( x -- )
-			shortcut creates and initializes a variable
-			e.g. 100 var: blerg_count
-			: var: ( ) nextword variable ! ;immed
-		val: ( x -- )
-			defines and initializes a word halfway between a variable and a constant
-			by default pushes the set value
-			can be updated by utilizing the tick operator
-			e.g...
-				22 7 / val: PI
-				: circarea ( r -- a ) ** PI * ;
-				// ...oh, we decided we need more accuracy...
-				245850922 78256779 / ' PI ! // use tick to push "address"
-			: val: ( ) nextword variable dup does> @ ! ;immed
-		@ ( entry -- x )
-			pushes value of entry.data
-			: @ ( ) " data" @@ ;
-		! ( x entry -- )
-			sets entry.data to x
-			: ! ( ) " data" !! ;
-		defined? ( name -- b )
-		@@ ( t idx -- x )
-			new prim word
-			a table, possibly loaded by @, can be indexed with this word
-			grab table and key, push result of hash lookup onto stack
-			e.g. foo @ 100 @@ // pushes foo[100]
-		!! ( x t idx -- )
-			new prim word
-			a table can indexed and modified with this word
-			e.g. 25 foo @ 100 !! // sets foo[100] = 25
-	locals
-		given name mapped to new temp variable
-		in nested situations, should we be pushing the locals map?
-		local ( name -- )
-			new primitive word, analogue to variable
-			must only be used from an immediate because it alters compile state
-			local function newlocal()
-				local name = stack:pop()
-				compiler:newlocal(name, nil)
+local variables
+	given name mapped to new temp variable
+	in nested situations, should we be pushing the locals map?
+	local ( name -- )
+		new primitive word, analogue to variable
+		must only be used from an immediate because it alters compile state
+		local function newlocal()
+			local name = stack:pop()
+			compiler:newlocal(name, nil)
+		end
+		function compiler:newlocal(name, initialval)
+			self.target.locals[name] = compiler:newtmp(initialval)
+		end
+	local? ( name -- b )
+		new immediate prim word
+		compiler:push(target.locals[name] ~= nil)
+	setl ( x name -- )
+		new prim, analogue to !
+		must only be used from an immediate because it alters compile state
+		local function setlocal()
+			local name = stack:pop()
+			local val = stack:pop()
+			compiler:setlocal(name, val)
+		end
+		function compiler:setlocal(tmpname, value)
+			self:append(tmpname..'='..tostring(value))
+		end
+	local: ( x -- ) // TS: name
+		new primitive word, analogue to var:
+		must be immediate because it alters compile state, reads input token
+		: local: ( ) nextword dup local setl ;immed
+	locals: ( -- ) // TS: names...
+		allocates a list of local variables
+		probably most useful at the top of a word def
+		every space-delimited token following on the line is a new var name?
+		: locals: ( ) char \n parse char %s split each local end ;immed
+	setl: ( x -- ) // TS: name
+		new prim, no analogue with global variables
+		unlike !, this must be immediate to read tokens
+		updates (but does not define) a local variable
+		: setl: ( ) nextword setl ;immed
+	=: (x -- ) // TS: name
+		defines or updates a local, like go?
+		immediate; checks at compile time which action to compile?
+		: =: ( )
+			nextword dup local? if
+				setl
+			else
+				dup local setl
 			end
-			function compiler:newlocal(name, initialval)
-				self.target.locals[name] = compiler:newtmp(initialval)
+		;immed
+	e.g...
+		// uses a local to keep the stack cleaner
+		0 =: width
+		100 loops
+			nextfield dup printcontent widefield? if
+				50 setl: width	// will print a wide break
+			else
+				25 setl: width	// will print a narrower break
 			end
-		local? ( name -- b )
-			new immediate prim word
-			compiler:push(target.locals[name] ~= nil)
-		setl ( x name -- )
-			new prim, analogue to !
-			must only be used from an immediate because it alters compile state
-			local function setlocal()
-				local name = stack:pop()
-				local val = stack:pop()
-				compiler:setlocal(name, val)
-			end
-			function compiler:setlocal(tmpname, value)
-				self:append(tmpname..'='..tostring(value))
-			end
-		local: ( x -- ) // TS: name
-			new primitive word, analogue to var:
-			must be immediate because it alters compile state, reads input token
-			: local: ( ) nextword dup local setl ;immed
-		locals: ( -- ) // TS: names...
-			allocates a list of local variables
-			probably most useful at the top of a word def
-			every space-delimited token following on the line is a new var name?
-			: locals: ( ) char \n parse char %s split each local end ;immed
-		setl: ( x -- ) // TS: name
-			new prim, no analogue with global variables
-			unlike !, this must be immediate to read tokens
-			updates (but does not define) a local variable
-			: setl: ( ) nextword setl ;immed
-		=: (x -- ) // TS: name
-			defines or updates a local, like go?
-			immediate; checks at compile time which action to compile?
-			: =: ( )
-				nextword dup local? if
-					setl
-				else
-					dup local setl
-				end
-			;immed
-		e.g...
-			// uses a local to keep the stack cleaner
-			0 =: width
-			100 loops
-				nextfield dup printcontent widefield? if
-					50 setl: width	// will print a wide break
-				else
-					25 setl: width	// will print a narrower break
-				end
-				// ...doing who knows what with the stack...
-				width loops char . .raw end CR 
-			end
-		process for compiling a token becomes
-			1. check target.locals[token]
-			2. if not found, check dictionary
-			3. if not found, attempt numeric conversion
-			4. if fails, lookup error
-		print user's locals in stack traces?
-			at top level, or first after dumptrace
-			reverse lookup on func 
-			pull locals map from entry
+			// ...doing who knows what with the stack...
+			width loops char . .raw end CR 
+		end
+	process for compiling a token becomes
+		1. check target.locals[token]
+		2. if not found, check dictionary
+		3. if not found, attempt numeric conversion
+		4. if fails, lookup error
+	print user's locals in stack traces?
+		at top level, or first after dumptrace
+		reverse lookup on func 
+		pull locals map from entry
 access lua tables form firth land
 	compiler
 		new prim word

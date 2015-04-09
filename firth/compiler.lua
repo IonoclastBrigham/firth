@@ -52,7 +52,7 @@ function compiler:interpretline(line, num)
 		-- try dictionary lookup
 		local val = self.dictionary[tok]
 		if val then
-			self:execword(val)
+			xpcall(self.execword, self.xperrhandler, self, val)
 		else
 			-- try to parse it as a number
 			val = stringio.tonumber(tok)
@@ -131,6 +131,7 @@ local __FIRTH_WORD_NAME__ = %q
 local compiler = ...
 local dictionary, stack, cstack = compiler.dictionary, compiler.stack, compiler.cstack
 %s
+%s
 return function()]]}
 end
 
@@ -170,7 +171,7 @@ function compiler:create(name)
 --	stringio.print("PUSHING NEW ENTRY FOR "..name.." onto "..c)
 	local entry = {
 		name = name, compilebuf = newcompilebuf(),
-		calls = { nextidx = 1 }, calledby = {},
+		calls = { nextidx = 1 }, calledby = {}, upvals = { nextidx = 1 }
 	}
 	if dopush then
 		self.stack:push(entry)
@@ -191,7 +192,7 @@ function compiler:call(word)
 	if not mappedname then
 		local index = calls.nextidx
 		calls.nextidx = index + 1
-		mappedname = 'f'..tostring(index)
+		mappedname = "__f"..tostring(index).."__"
 		calls[word] = mappedname
 		if self.compiling then
 			callee.calledby[target.name] = true
@@ -201,7 +202,7 @@ function compiler:call(word)
 end
 
 --! @private
-local function NOP() end
+function compiler.NOP() end
 
 --! @private
 local function cachedcalls(calls)
@@ -211,6 +212,16 @@ local function cachedcalls(calls)
 		callbuf[#callbuf + 1] = string.format("local %s = dictionary[%q].func", tmp, word)
 	end
 	return table.concat(callbuf, '\n')
+end
+
+local function upvalues(upvals)
+	upvals.nextidx = nil
+	local buf = { "local upvals = compiler.target.upvals" }
+	for tmp,val in pairs(upvals) do
+		buf[#buf + 1] = string.format("local %s = upvals[%q]", tmp, tmp)
+	end
+	local compiledupvals = (#buf > 1) and table.concat(buf, '\n') or ""
+	return compiledupvals
 end
 
 function compiler:buildfunc()
@@ -226,13 +237,15 @@ function compiler:buildfunc()
 		if not self.compiling then
 			target.func = nil
 		else
-			target.func = NOP
+			target.func = self.NOP
 			target.compilebuf = nil
 		end
 		return
 	end
 
-	compilebuf[1] = compilebuf[1]:format(name, cachedcalls(target.calls))
+	compilebuf[1] = compilebuf[1]:format(name,
+						cachedcalls(target.calls),
+						upvalues(target.upvals))
 	compilebuf[buflen + 1] = "end"
 	local luasrc = table.concat(compilebuf, '\n')
 	local func, err = loadstring(luasrc, "__FIRTH_WORD__ "..name)
@@ -455,17 +468,27 @@ function compiler:immediate(word)
 	entry.immediate = true
 end
 
---! Either compiles push code, or directly pushes value.
+--! Compiles code to push value.
 --! @see pushstring()
 function compiler:push(val)
 	self:append("stack:push(%s)", val)
 end
 
---! Either compiles push code for quoted value, or directly pushes value.
+--! Compiles code to push correctly quoted string value.
 --! @see push()
 function compiler:pushstring(str)
 	str = string.format("%q", str):gsub("\\\\", "\\") -- restore backslashes
 	self:push(str)
+end
+
+--! Compiles code to push a non-stringifiable value, which must be closed over.
+function compiler:pushupval(val)
+	local upvals = self.target.upvals
+	local idx = upvals.nextidx
+	upvals.nextidx = idx + 1
+	local name = "__uv"..tostring(idx).."__"
+	upvals[name] = val
+	self:push(name)
 end
 
 function compiler:newtmp(initialval)
@@ -475,6 +498,15 @@ function compiler:newtmp(initialval)
 	self:append("local %s = %s", var, tostring(initialval))
 
 	return var
+end
+
+function compiler:newtmpformat(str, ...)
+	return self:newtmp(str:format(...))
+end
+
+function compiler:newtmpstring(str)
+	str = string.format("%q", str):gsub("\\\\", "\\") -- restore backslashes
+	return self:newtmp(str)
 end
 
 function compiler:poptmp()
