@@ -1,9 +1,9 @@
-#Firth
+#: Firth
 
-Firth is a Forth-like language designed for DSL creation, implemented in Lua.
+: Firth (firth) is a Forth-like language designed for DSL creation, implemented in Lua.
 
 ----
-## Prototype Warning!
+## Alpha Warning!
 This code is the result of me getting bored and messing around. It is incomplete,
 broken in places, and generally not ready for prime time. I decided to make it
 available on Github because, why not?
@@ -37,10 +37,10 @@ to do with it as it develops.
 
 ----
 ## Building and Running
-Currently, it is implemented completely in the Lua 5.1 dialect. It doesn't
-depend on any 3rd party libraries or C extensions, nor on any particular
-implementation of Lua. That said, it is recommended to use [LuaJIT](http://luajit.org/),
-version 2.0.2 or later, for optimal performance.
+Currently, it is implemented completely in the LuaJIT dialect of Lua 5.1. This
+means it has a few Lua 5.2-isms, and should generally run on PUC-Rio 5.2 as well.
+It doesn't depend on any 3rd party libraries or C extensions. That said, it is
+recommended to use [LuaJIT](http://luajit.org/), version 2.0.2 or later, for optimal performance.
 
 You can require the libraries from Lua code, run the REPL from the command line,
 or load the whole thing at runtime from the Lua API. Details to follow.
