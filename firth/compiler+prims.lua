@@ -54,6 +54,10 @@ function exports.initialize(compiler)
 		stack:drop()
 	end
 
+	local function clear()
+		stack:clear()
+	end
+
 	local function swap()
 		stack:swap()
 	end
@@ -281,9 +285,9 @@ function exports.initialize(compiler)
 
 	--! ( entry -- )
 	local function alias()
-		local entry = compiler:poptmp()
-		local newname = compiler:newtmpstring(compiler:nexttoken())
-		compiler:append("dictionary[%s] =  %s", newname, entry)
+		local entry = stack:pop()
+		local newname = compiler:nexttoken()
+		dictionary[newname] = entry
 	end
 
 	--! ( entry -- C: oldentry? )
@@ -481,6 +485,7 @@ function exports.initialize(compiler)
 	dictionary.dup = { func = dup }
 	dictionary.over = { func = over }
 	dictionary.drop = { func = drop }
+	dictionary.clear = { func = clear }
 	dictionary.swap = { func = swap }
 	dictionary.rot = { func = rot }
 	dictionary['-rot'] = { func = revrot }

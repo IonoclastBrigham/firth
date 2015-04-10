@@ -106,6 +106,7 @@ function compiler:execword(entry)
 	local name = entry.name
 	if entry.immediate then
 --		print("INVOKE IMMEDIATE "..name)
+		self:interpretpending()
 		self:execfunc(entry)
 	else
 		self:call(name)
@@ -115,10 +116,11 @@ end
 function compiler:interpretpending()
 	if self.compiling then return end
 	local interp = self.target
-	if interp and interp.name == "[INTERP_BUF]" then
+	if interp and interp.name == "[INTERP_BUF]" and (#interp.compilebuf > 1) then
 --		print("INTERPRETING PENDING")
 		self:buildfunc()
 		self:execfunc()
+		if not self.compiling then self:create() end
 --	else
 --		print("SKIPPING INTERPRETING PENDING")
 	end
@@ -406,8 +408,12 @@ function compiler:traceframe(frame, level)
 			if fname then
 				name = fname
 			else
+				-- handle special cases; why don't these have a name?
+				-- TODO: if one more of these crops up, do search in a for loop
 				if func == self.interpretline then
-					name = "interpretline" -- special case; why doesn't this have a name?
+					name = "interpretline"
+				elseif func == self.execword then
+					name = "execword"
 				else
 					name = tostring(func)
 				end

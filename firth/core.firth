@@ -49,8 +49,8 @@ interpret buildfunc bindfunc immediate
 : @ ( entry -- x ) " data" @@ ;
 : ! ( x entry -- ) " data" !! ;
 : variable ( name -- entry ) create dup does> NOP ;
-: var: ( x -- ) interpretpending nextword variable ! ;immed
-: val: ( x -- ) interpretpending nextword variable ! last does> @ ;immed
+: var: ( x -- ) nextword variable ! ;immed
+: val: ( x -- ) nextword variable ! last does> @ ;immed
 : const: ( x -- ) postpone : push postpone ; ;immed
 
 0.1 const: version
