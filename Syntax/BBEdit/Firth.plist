@@ -27,54 +27,35 @@
 
 	<key>BBLMKeywordList</key>
 	<array>
-		<string>true</string>
-		<string>false</string>
-		<string>nil</string>
-
 		<string>:</string>
 		<string>;</string>
-		<string>alias:</string>
-		<string>{}</string>
-		<string>parse</string>
-		<string>&gt;ts</string>
-		<string>create</string>
-		<string>setcompiling</string>
-		<string>settarget</string>
-		<string>interpret</string>
-		<string>dict</string>
-		<string>defined?</string>
-		<string>last</string>
-		<string>buildfunc</string>
-		<string>bindfunc</string>
-		<string>execfunc</string>
-		<string>interpretpending</string>
-		<string>@@</string>
-		<string>!!</string>
-		<string>does&gt;</string>
-		<string>immediate</string>
-		<string>char</string>
-		<string>call</string>
-		<string>postpone</string>
 
-		<string>loadfile</string>
-
-		<string>if</string>
-		<string>then</string>
-		<string>else</string>
-		<string>loops</string>
-		<string>end</string>
-		<string>not</string>
-		<string>2not</string>
-
-		<string>push</string>
 		<string>dup</string>
-		<string>drop</string>
-		<string>swap</string>
 		<string>over</string>
+		<string>drop</string>
+		<string>clear</string>
+		<string>swap</string>
+		<string>rot</string>
+		<string>-rot</string>
 		<string>pick</string>
+
+		<string>C&gt;</string>
+		<string>&gt;C</string>
+		<string>C@</string>
+		<string>2C&gt;</string>
+		<string>2&gt;C</string>
+		<string>2C@</string>
 
 		<string>binop</string>
 		<string>binopconst</string>
+
+		<string>true</string>
+		<string>false</string>
+		<string>not</string>
+		<string>2not</string>
+		<string>true</string>
+		<string>nil</string>
+		<string>{}</string>
 
 		<string>.raw</string>
 		<string>.</string>
@@ -82,6 +63,47 @@
 		<string>..</string>
 		<string>.S</string>
 		<string>.C</string>
+
+		<string>loadfile</string>
+		<string>exit</string>
+		<string>setcompiling </string>
+		<string>settarget </string>
+		<string>interpretpending</string>
+		<string>interpret</string>
+		<string>compiling?</string>
+		<string>parse</string>
+		<string>parsematch</string>
+		<string>&gt;ts</string>
+		<string>push</string>
+		<string>create</string>
+		<string>alias:</string>
+		<string>buildfunc</string>
+		<string>bindfunc</string>
+		<string>does&gt;</string>
+		<string>dict</string>
+		<string>last</string>
+		<string>defined?</string>
+		<string>@@</string>
+		<string>!!</string>
+		<string>immediate</string>
+		<string>char</string>
+		<string>call</string>
+
+		<string>dump</string>
+		<string>dumpword:</string>
+		<string>trace</string>
+		<string>notrace</string>
+		<string>tracing?</string>
+		<string>path</string>
+		<string>calls:</string>
+		<string>calledby:</string>
+		<string>tstart</string>
+		<string>tend</string>
+
+		<string>&amp;</string>
+		<string>|</string>
+		<string>^</string>
+		<string>~</string>
 
 		<string>NOP</string>
 	</array>
