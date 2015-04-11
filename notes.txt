@@ -47,6 +47,11 @@ experimental optimization branch
 		io
 		stringio
 		table
+	stack cache?
+		use closed-over locals for quick-access to top stack elements?
+		what kind of bookkeeping and calculations are needed to make this work?
+		does the overhead dominate the possible savings?
+		where do these values live? the compiler? the prims file?
 	compile time optimization module
 		likely to be complicated
 			load as a separate, optional module
@@ -66,22 +71,42 @@ experimental optimization branch
 			commit stack changes lazily
 			pre-calculate results when literals are arguments?
 stack data type
-	: stack ( -- stack ) compiler.stack:push(stack.new()) ;
-	: >s ( stack x -- stack ) stack:push(x) ;
-	: s> ( stack -- stack x ) compiler.stack:push(compiler.stack:top():pop())
-	stack 1 >s 2 >s 3 >s s> s> s> .S 
+	: [] ( -- s ) compiler.stack:push(stack.new()) ;
+	: >s ( x s -- ) s:push(x) ;
+		2>s, 3>s, 4>s, n>s ( n*x s n -- )
+	: s> ( s -- x ) compiler.stack:push(compiler.stack:pop():pop())
+		2s>, 3s>, 4s, ns> ( s n -- n*x )
+	: s@ ( s -- x ) 
+		2s@, 3s@, 4s@, ns@ ( s n -- n*x )
+	: [ ( -- s ) // TS: i*x ']'
+		immediate
+		allocates new stack
+		executes each following word
+			pulls tokens in a loop
+			executes or num converts, pushes onto stack object
+		] breaks the loop and pushes the resulting stack object onto sys stack
+	e.g.
+		[] val: st
+		1 2 3 st 3>s st 3s> .S clear // prints [ 1 2 3 ]
+compiletime macros?
+	precalculate the value as it's compiled
+	most useful for showing the calculation in a func, but speeding it up at runtime
+	lispy macros
+		(+ 1 12 foo ) // compiles to push(13+compiletimevalueof(foo))
+	forthy macros
+		[ 1 12 foo +] // compiles to the same
 better error debug messagges (xpcall and debug lib)
 	if "debug mode", compile in a local var that counts firth source line
 recurse
-	start all defs with -> "local function word()"
-	compile as append "word()"
-	end all defs with -> "end \n return word"
+	start all defs with -> " local function word()"
+	compile as append " word()"
+	end all defs with -> " end \n return word"
 local variables
 	given name mapped to new temp variable
-	in nested situations, should we be pushing the locals map?
+		in nested situations, should we be pushing the locals map?
 	local ( name -- )
 		new primitive word, analogue to variable
-		must only be used from an immediate because it alters compile state
+		must only be used from an immediate because it compiles a new local decl
 		local function newlocal()
 			local name = stack:pop()
 			compiler:newlocal(name, nil)
