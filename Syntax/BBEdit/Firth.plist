@@ -49,11 +49,16 @@
 		<string>binop</string>
 		<string>binopconst</string>
 
+		<string>if</string>
+		<string>else</string>
+		<string>loops</string>
+		<string>do</string>
+		<string>end</string>
+
 		<string>true</string>
 		<string>false</string>
 		<string>not</string>
 		<string>2not</string>
-		<string>true</string>
 		<string>nil</string>
 		<string>{}</string>
 
