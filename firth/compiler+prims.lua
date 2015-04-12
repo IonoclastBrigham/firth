@@ -482,6 +482,8 @@ function exports.initialize(compiler)
 		stringio.printline('(', diff, " seconds)")
 	end
 
+	-- load up the dictionary --
+
 	dictionary.dup = { func = dup }
 	dictionary.over = { func = over }
 	dictionary.drop = { func = drop }
@@ -519,7 +521,6 @@ function exports.initialize(compiler)
 	dictionary['..'] = { func = dotprintstack }
 	dictionary['.S'] = { func = dotprints }
 	dictionary['.C'] =  { func = dotprintc }
-
 
 	dictionary.loadfile = { func = loadfile }
 	dictionary.exit = { func = exit, immediate = true }
