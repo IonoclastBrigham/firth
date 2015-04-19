@@ -31,88 +31,185 @@
   :group 'font-lock-faces)
 (defvar firth-defining-words 'firth-defining-words)
 
+(defface firth-word-def-name
+  '((t (:inherit font-lock-function-name-face :weight bold)))
+  ": Firth new word definition name."
+  :group 'font-lock-faces)
+(defvar firth-word-def-name 'firth-word-def-name)
+
+(defface firth-ticked-word
+  '((t (:inherit font-lock-keyword-face :slant oblique)))
+  "Ticked : Firth words."
+  :group 'font-lock-faces)
+(defvar firth-ticked-word 'firth-ticked-word)
+
 (defface firth-core-words
-  '((t (:inherit font-lock-function-name-face)))
+  '((t (:inherit font-lock-keyword-face)))
   ": Firth word def names."
   :group 'font-lock-faces)
 (defvar firth-core-words 'firth-core-words)
 
-(defconst firth-font-lock-prims-pattern
+(defconst firth-prims-pattern
   (list
    `(,(regexp-opt
     '("dup" "over" "drop" "clear" "swap" "rot" "-rot" "pick"
-      "C\\>" "\\>C" "C@" "2C\\>" "2\\>C" "2C@"
+      "C>" ">C" "C@" "2C>" "2>C" "2C@"
       "binop" "binopconst"
       "if" "else" "loops" "do" "end"
       "not" "2not"
-      "\\.raw" "\\." "\\.x" "\\.\\." "\\.S" "\\.C"
-      "loadfile" "exit" "setcompiling" "settarget" "iterpretpending"
-      "compiling\\?" "parse" "parsematch" "\\>ts" "push" "create"
-      "buildfunc" "bindfunc" "does\\>" "dict" "last" "defined?"
+      ".raw" "." ".x" ".." ".S" ".C"
+      "loadfile" "exit"
+      "setcompiling" "settarget" "interpret" "interpretpending"
+      "compiling?" "parse" "parsematch" ">ts" "push" "create"
+      "buildfunc" "bindfunc" "dict" "last" "defined?"
       "@@" "!!" "char" "call"
-      "dump" "dumpword:" "trace" "notrace" "tracing\\?" "path"
+      "dump" "dumpword:" "trace" "notrace" "tracing?" "path"
       "calls:" "calledby:" "tstart" "tend"
-      "&" "\\|" "^" "-"
+      "&" "|" "^"
       "NOP") 'words) (1 firth-prims)))
   "Minimal Highlighting for : Firth")
 
-(defconst firth-font-lock-consts-pattern
- (append
-  firth-font-lock-prims-pattern
+(defconst firth-consts-pattern
   (list
-   `(,(regexp-opt '("true" "false" "nil") 'words)
-     (1 firth-consts))))
+   ;; strings and chars
+   '("\\<\"\\s-.*?\"\\>" .  font-lock-string-face)
+   '("\\<char\\s-+\\([%\\]?\\w\\)" . (1 font-lock-string-face))
+
+   ;; booleans, nil refs
+   `(,(regexp-opt '("true" "false" "nil") 'words) . firth-consts)
+
+   ;; integer and float numbers
+   '("\\<[+-]?[[:digit:]]+\\>" . firth-consts)
+   '("\\<[+-]?[[:digit:]]+\\.[[:digit:]]+\\(?:[Ee][+-]?[[:digit:]]+\\)?\\>" . firth-consts)
+   '("\\<0[Xx][[:xdigit:]]+\\>" . firth-consts))
  "Additional constants for highlighting : Firth Mode")
 
-(defconst firth-font-lock-consts2-pattern
- (append
-  firth-font-lock-consts-pattern
+(defconst firth-comments-pattern
   (list
-   `(,(regexp-opt
-       '("{}"
-         "[]") 'words)
-     . firth-consts)
-   '("char \\([%\]?\\w\\)" . (1 font-lock-string-face))))
+   '("\\<\\(//\\)\\>\\(.*\\)" (1 font-lock-comment-face) (2 font-lock-comment-face))
+   '("\\<(.*)\\>" . font-lock-comment-face))
+  ": Firth standard comments.")
+
+(defconst firth-agregate-literals-pattern
+  (list
+   '("\\<{}\\|\\[\\]\\>" . firth-consts))
  "Additional literals for agregate types for : Firth Mode")
 
-(defconst firth-font-lock-definitions-pattern
-  (append
-   firth-font-lock-consts2-pattern
+(defconst firth-definitions-pattern
    (list
+    ;; new word definition names
+    `(,(concat
+        "\\<\\:"
+        "\\s-+\\(\\w+\\)\\>"
+        "[^;]+?\\s-;\\(?:immed\\)?")	; gobbles up to the first semicolon
+      (1 'firth-word-def-name))
+
+    ;; aliases, variables, etc.
+    `(,(concat
+        "\\<\\(?:alias\\|var\\|val\\|const\\):"
+        "\\s-+\\(\\w+\\)\\>")
+      (1 firth-word-def-name))
+
+    ;; postponed calls and ticked words
+    '("\\<\\(?:postpone\\|'\\|does>\\)\\s-+\\(\\w+\\)\\>" (1 firth-ticked-word))
+
+    ;; the defining words themselves
     `(,(regexp-opt
         '(":" ";" "immediate" ";immed"
-          "variable" "var:" "val:" "const:" "alias:") 'words)
-      . firth-defining-words)
-    `(,(concat
-        ;; (regexp-opt '(":" "alias:" "var:" "val:" "const:") 'words)
-        "\\s-+\\(\\w+\\)\\s-+"
-        );; (regexp-opt '(";" ";immed") 'words))
-      (1 'font-lock-function-name-face))))
-  "Important defining words.")
+          "variable" "var:" "val:" "const:" "alias:" "does>") 'words)
+      . firth-defining-words))
+  "Important defining words from prims and core.")
 
-(defvar firth-font-lock-keywords-pattern firth-font-lock-definitions-pattern
+(defconst firth-core-words-pattern
+  (list
+   `(,(regexp-opt
+       '("nextword" "postpone"
+         "CR"
+         "'" "@" "!"
+         "2dup" "3dup" "2drop" "3drop"
+         "+" "-" "*" "/" "%" "**"
+         "1+" "1-" "-1*" "inc" "dec" "neg"
+         "2+" "2-" "2*" "2/" "double" "halve"
+         "5+" "5-" "5*" "5/"
+         "10+" "10-" "10*" "10/"
+         "100+" "100-" "100*" "100/"
+         ">" "<" "=" ">=" "<=" "~="
+         "greater?" "less?" "equal?" "greatereq?" "lesseq?" "noteq?"
+         "and" "or" "nand" "nor" "xor"
+         "version" "copyright" "©"
+         "NOOP") 'words)
+     . firth-core-words)
+   '("\\<.\"\\s-.*?\"\\>" . font-lock-string-face)) ; print string
+  "Useful words from : Firth core library.")
+
+;; Define some default groupings for syntax highlighting options.
+;; Users of firth-mode may choose one of the below, or set their
+;; own desired mix of highlighting patterns in their .emacs file.
+(defconst firth-min-syntax-pattern
+  (append
+   firth-prims-pattern
+   firth-consts-pattern)
+  "Minimally useful syntax highlighting for : Firth")
+
+(defconst firth-nicer-syntax-pattern
+  (append
+   firth-comments-pattern
+   firth-min-syntax-pattern
+   firth-agregate-literals-pattern)
+  "Nicer syntax highlighting for : Firth with agregates and standard comments.")
+
+(defconst firth-full-syntax-pattern
+  (append
+   firth-comments-pattern
+   firth-consts-pattern
+   firth-definitions-pattern
+   firth-core-words-pattern
+   firth-prims-pattern
+   firth-agregate-literals-pattern)
+  "Full syntax highlighting for : Firth, including defs and core lib.")
+
+(defvar firth-font-lock-keywords-pattern firth-full-syntax-pattern
   "Default Highlighting Expression for : Firth Mode")
 
+;; override how some characters are handled by emacs
 (defvar firth-mode-syntax-table
   (let ((stab (make-syntax-table)))
     ;; mark typical "punctuation" chars as valid parts of words
     (modify-syntax-entry ?_ "w" stab)
     (modify-syntax-entry ?: "w" stab)
     (modify-syntax-entry ?; "w" stab)
+    (modify-syntax-entry ?" "w" stab) ;"
+    (modify-syntax-entry ?' "w" stab)
     (modify-syntax-entry ?. "w" stab)
+    (modify-syntax-entry ?< "w" stab)
     (modify-syntax-entry ?> "w" stab)
+    (modify-syntax-entry ?( "w" stab)
+    (modify-syntax-entry ?) "w" stab)
     (modify-syntax-entry ?[ "w" stab)
     (modify-syntax-entry ?] "w" stab)
     (modify-syntax-entry ?{ "w" stab)
     (modify-syntax-entry ?} "w" stab)
+    (modify-syntax-entry ?\\ "w" stab)
     (modify-syntax-entry ?+ "w" stab)
     (modify-syntax-entry ?- "w" stab)
     (modify-syntax-entry ?* "w" stab)
     (modify-syntax-entry ?/ "w" stab)
+    (modify-syntax-entry ?= "w" stab)
+    (modify-syntax-entry ?~ "w" stab)
+    (modify-syntax-entry ?& "w" stab)
+    (modify-syntax-entry ?| "w" stab)
+    (modify-syntax-entry ?^ "w" stab)
+    (modify-syntax-entry ?! "w" stab)
+    (modify-syntax-entry ?? "w" stab)
+    (modify-syntax-entry ?@ "w" stab)
+    (modify-syntax-entry ?© "w" stab)
 
 	;; define what comments look like
-    (modify-syntax-entry ?/ ". 124b" stab)
-    (modify-syntax-entry ?\n "> b" stab)
+    ;; (modify-syntax-entry ?( "< n" stab)
+    ;; (modify-syntax-entry ?) "> n" stab)
+    ;; (modify-syntax-entry ?/ "< 12" stab)
+    ;; (modify-syntax-entry ?\n "> " stab)
+
     stab)
   "Syntax Table for : Firth Mode")
 
