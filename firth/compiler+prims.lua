@@ -239,22 +239,17 @@ function exports.initialize(compiler)
 		rawprint()
 	end
 
-	local function dotprintstack()
-		stringio.stacktrace(stack)
-	end
-
 	local function dotprinthex()
 		local tos = stack:pop()
 		stringio.print(string.format("0x%X", tonumber(tos)), ' ')
 	end
 
 	local function dotprints()
-		stringio.printstack(stack)
+		stringio.print(tostring(stack))
 	end
 
 	local function dotprintc()
-		stringio.print('c')
-		stringio.printstack(cstack)
+		stringio.print(tostring(cstack))
 	end
 
 	-- parser/compiler control words --
@@ -518,7 +513,6 @@ function exports.initialize(compiler)
 	dictionary['.raw'] = { func = rawprint }
 	dictionary['.'] = { func = dotprint }
 	dictionary['.x'] = { func = dotprinthex }
-	dictionary['..'] = { func = dotprintstack }
 	dictionary['.S'] = { func = dotprints }
 	dictionary['.C'] =  { func = dotprintc }
 

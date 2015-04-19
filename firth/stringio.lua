@@ -192,56 +192,14 @@ function stringio.printline(...)
 end
 
 --! @private
-local function printitem(item)
-	if type(item) == "string" then
-		stringio.print(string.format("%q", item))
-	elseif type(item) == "table" then
-		if item.height then 
-			stringio.printstack(item)
-		else
-			stringio.print('{', table.concathash(item, ', '), '}')
-		end
-	else
-		stringio.print(tostring(item))
-	end
-end
-
-function stringio.printstack(stack)
-	local success, err = pcall(function()
-		local height = stack.height
-		stringio.print "stack: ["
-		for i = 1, height-1 do
-			local item = stack[i]
-			printitem(item)
-			stringio.print ' '
-		end
-		if height > 0 then printitem(stack[height]) end
-		stringio.printline ']'
-	end)
-	if not success then
-		stringio.print('\n'..err)
-	end
-end
-
---! Non destructively prints the contents a stack, from the top down.
---! Prints the contents of the passed stack, one item per line, prepended
---! with a negative index from the top.
---! @param stack an array or stack object.
-function stringio.stacktrace(stack)
-	for i = -1, -(stack.height), -1 do
-		stringio.printline('[', i, '] = ', tostring(stack[stack.height + i + 1]))
-	end
-end
-
---! @private
 local function getquotespec(val)
-	return (type(val) == "string") and "q" or "s"
+	return (type(val) == "string") and "%q" or "%s"
 end
 
 function table.concathash(t, sep)
 	local kvs = {}
 	for k,v in pairs(t) do
-		local fmt = '%'..getquotespec(k)..' = %'..getquotespec(v)
+		local fmt = getquotespec(k)..' = '..getquotespec(v)
 		kvs[#kvs+1] = string.format(fmt, tostring(k), tostring(v))
 	end
 	return table.concat(kvs, sep)

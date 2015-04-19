@@ -139,6 +139,16 @@ function stack:roll(idx)
 	rawset(self, top, tmp)
 end
 
+function stack:__tostring()
+	local height = self.height
+	local buf = {}
+	for i = 1, height do
+		buf[i] = self[i]
+	end
+
+	return "["..table.concat(buf, ' ').."] "
+end
+
 
 -- set up metatable and library table --
 --! @cond
