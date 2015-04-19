@@ -70,14 +70,16 @@ experimental optimization branch
 			use locals wherever possible
 			commit stack changes lazily
 			pre-calculate results when literals are arguments?
+BUG: will error if an input line has more than one trailing linespace.
+Read and parse entire file, rather than line-by-line.
 stack data type
 	: [] ( -- s ) compiler.stack:push(stack.new()) ;
-	: >s ( x s -- ) s:push(x) ;
-		2>s, 3>s, 4>s, n>s ( n*x s n -- )
-	: s> ( s -- x ) compiler.stack:push(compiler.stack:pop():pop())
-		2s>, 3s>, 4s, ns> ( s n -- n*x )
-	: s@ ( s -- x ) 
-		2s@, 3s@, 4s@, ns@ ( s n -- n*x )
+	: >[] ( x s -- ) s:push(x) ;
+		2>[], 3>[], 4>[], n>[] ( n*x s n -- )
+	: []> ( s -- x ) compiler.stack:push(compiler.stack:pop():pop())
+		[2]>, [3]>, [4], [n]> ( s n -- n*x )
+	: []@ ( s -- x )
+		[2]@, [3]@, [4]@, [n]@ ( s n -- n*x )
 	: [ ( -- s ) // TS: i*x ']'
 		immediate
 		allocates new stack
@@ -88,6 +90,39 @@ stack data type
 	e.g.
 		[] val: st
 		1 2 3 st 3>s st 3s> .S clear // prints [ 1 2 3 ]
+loops
+	for
+		iterates over whatever's on TOS
+			function - call it as an iterator
+			stack or array - walk it
+			hashed table - iterate keys
+		current val is on TOS at start of loop body
+	for: i
+		implement with for
+		pop TOS to local i
+		e.g.
+			users @ for: user genpassword user setpass end
+	loops
+		re-implement with for?
+		drop TOS at start of loop body?
+		this could slow us down a lot
+		(A/B test this)
+	while
+		checks TOS as bool at the start of every iterations
+		e.g.
+			havejobs? while nextjob process havejobs? end
+	ranges
+		return an iterator closure
+		1 10 range		// -> 1 2 3 4 5 6 7 8 9 10
+		1 10 range: 2	// -> 1 3 5 7 9
+conversions
+	>string
+	>number
+change parse routines to allow for doubled delimiters
+	// e.g. alternative string syntax, for quoting options
+	: '' ( -- s ) " ''" nextword parse ;immed
+execute
+	call xt on tos
 compiletime macros?
 	precalculate the value as it's compiled
 	most useful for showing the calculation in a func, but speeding it up at runtime
@@ -207,18 +242,53 @@ runtime documentation
 	attach preceding comments to words, in a specific form?
 		append string to EOL, to internal buffer
 		: checks this buffer, and attaches to dict entry, if it exists
-syntax highlighting
-	tokens can set self format and next-parsed format
-	parse finds begin and end span for currently-set formatting
-	found word can alway override its own formatting when "executed"
-	variables to set
-		wordstyle // default for any word
-		numberstyle // default for numbers
-		selfstyle // override for how to style this word (local?)
-		wordstyle @ gray var: compilerstyle // wordstyle but gray; useful for styling compiler words
+interactive emacs mode
+	repl in minibuffer
+		use standard M-: key to jump to repl
+		stay in minibuffer, in repl mode, between executions
+		after minibuffer used for anything else (help, search) revert to repl
+		output to secondary buffer
+	code in main buffer
+		executes code on save
+		i/o redirected to minibuffer/secondary buffer
+	syntax highlighting
+		as words are defined, they are automatically added to font lock pattern list
+		tokens can set self format and next-parsed format
+		parse finds begin and end span for currently-set formatting
+		found word can alway override its own formatting when "executed"
+		variables to set
+			wordstyle // default for any word
+			numberstyle // default for numbers
+			selfstyle // how to style this word, overrides whatever the default would have been
+			nextstyle // how to style following word, overrides default and any self-styling
+			wordstyle @ gray var: compilerstyle // wordstyle but gray; useful for styling compiler words
+	code translation protocol
+		main mechanism for running firth code from emacs
+		translation layer for elisp <-> firth code
+		collects firth code from buffers, sends via pipe to firth
+		firth runs code, and sends back elisp to run
+			could be as simple as display result
+			could add font-lock rules for newly-defined words
 create a vocabulary for writing executable grammars for parsing DSLs
 whittle the lua codebase down to
 	generic io and string handling
 	access table fields
 	compile buffers to lua functions
 	call lua functions
+FirthOS
+	tiny os that will boot directly into interactive emacs firth mode
+	stripped-down linux kernel
+		terminal drivers and maybe framebuffer
+		audio of any sort?
+		simplest/easiest FS support
+		single-user mode
+		needs virtual memory and multitasking
+	minimal set of support utils and libs
+		probably things like ls, rm, mkdir, and such
+		libc
+		ncurses
+		readline?
+	stripped-down emacs
+		remove modes, routines, and elisp libraries that aren't applicable
+	luajit
+	firth
