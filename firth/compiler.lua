@@ -129,6 +129,7 @@ end
 --! @private
 local function newcompilebuf()
 	return {[[
+local stack_new = (require 'firth.stack').new
 local __FIRTH_WORD_NAME__ = %q
 local compiler = ...
 local dictionary, stack, cstack = compiler.dictionary, compiler.stack, compiler.cstack

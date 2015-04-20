@@ -143,10 +143,10 @@ function stack:__tostring()
 	local height = self.height
 	local buf = {}
 	for i = 1, height do
-		buf[i] = self[i]
+		buf[i] = tostring(self[i])
 	end
 
-	return "["..table.concat(buf, ' ').."] "
+	return "["..table.concat(buf, ' ').."]"
 end
 
 

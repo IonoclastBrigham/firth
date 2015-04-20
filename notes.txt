@@ -4,27 +4,6 @@ Switched from direct interpretation to pre-compiling interpret mode lines
 	Facilitates branching /loops, which don't work in a direct-interpreted context
 	Necessitated pre-compiling and executing the current scratch buffer when
 	switching to compile mode, to keep things consistent
-Broke down lua "newfunc/define" functionality into more basic primitives
-	Moved definition of ":" from lua lang to firth land
-	Uncovered compile-mode switch bug
-		If the last word on an interpreted line switch to compile, infinite recursion
-		This is because it calls:
-			compiler:done(), on EOL
-			which compiles, executes scratch buffer
-			which sets compile mode true
-			which triggers state transition logic
-			which calls compiler:end()
-			which compiles, executes scratch buffer...
-		The Fix:
-			clear scratch buffer as soon as it is first compiled
-			bail from done() if compilebuffer is empty or nil
-		New bug:
-			because it bails if buffer is empty...
-			: NOP ( -- ) ; // will never leave compile mode
-		New Fix:
-			just comment out the nil/empty check
-			let it compile and empty function
-	
 
 
 Ideas / TODOs
@@ -73,13 +52,9 @@ experimental optimization branch
 BUG: will error if an input line has more than one trailing linespace.
 Read and parse entire file, rather than line-by-line.
 stack data type
-	: [] ( -- s ) compiler.stack:push(stack.new()) ;
-	: >[] ( x s -- ) s:push(x) ;
-		2>[], 3>[], 4>[], n>[] ( n*x s n -- )
-	: []> ( s -- x ) compiler.stack:push(compiler.stack:pop():pop())
-		[2]>, [3]>, [4], [n]> ( s n -- n*x )
-	: []@ ( s -- x )
-		[2]@, [3]@, [4]@, [n]@ ( s n -- n*x )
+	3>[], 4>[], n>[] ( n*x s n -- s )
+	[3]>, [4], [n]> ( s n -- s n*x )
+	[3]@, [4]@, [n]@ ( s n -- s n*x )
 	: [ ( -- s ) // TS: i*x ']'
 		immediate
 		allocates new stack
@@ -89,7 +64,7 @@ stack data type
 		] breaks the loop and pushes the resulting stack object onto sys stack
 	e.g.
 		[] val: st
-		1 2 3 st 3>s st 3s> .S clear // prints [ 1 2 3 ]
+		1 2 3 st 3>[] [3]> .S clear // prints [1 2 3]
 loops
 	for
 		iterates over whatever's on TOS
@@ -97,7 +72,7 @@ loops
 			stack or array - walk it
 			hashed table - iterate keys
 		current val is on TOS at start of loop body
-	for: i
+	for: i/j/k
 		implement with for
 		pop TOS to local i
 		e.g.
@@ -121,8 +96,25 @@ conversions
 change parse routines to allow for doubled delimiters
 	// e.g. alternative string syntax, for quoting options
 	: '' ( -- s ) " ''" nextword parse ;immed
-execute
-	call xt on tos
+execution, lambdas, functional programming
+	execute
+		call xt (function ref) on tos
+		' foo execute // equivalent to: foo
+	'
+		redefine to push entry's func field
+	`
+		new word to do what ' currently does
+	compiler:pushfunc()
+		pushes self.target and restores
+		throws, if not target or target.name ~= "ANON" or some such?
+	lambdas
+		has no name, or name is ANON or something
+		leaves an xt on tos, using pushfunc()
+		when implemented, closes over locals?
+		possible names/syntax
+			lambda: 5 > ;	// rewrite ; to push based on target.name
+			:( 5 > );		// ); will always do pushfunc()
+			:NONAME 5 > ;
 compiletime macros?
 	precalculate the value as it's compiled
 	most useful for showing the calculation in a func, but speeding it up at runtime

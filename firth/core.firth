@@ -25,13 +25,14 @@ interpret buildfunc bindfunc immediate
 // /////////////////////////////////////////////////////////////////////////////
 
 : " char " parse push ;immed // ( -- s )
-: ( char ( >ts " %b()" parsematch drop ;immed ( inline (nestable) single-line comments)
+: ( char ( >ts " %b()" parsematch drop ;immed // ( (nestable) parentheses)
 
 // a few parser/interpreter/compiler control words
 : ' ( -- entry ) nextword dict push ;immed
-: compile ( entry -- C: entry ) interpretpending setcompiling settarget ;
-' interpret alias: [
-' compile alias: ]
+: compile ( entry -- ) ( C: -- entry )
+     interpretpending setcompiling settarget ;
+// ' interpret alias: [
+// ' compile alias: ]
 // : eval: ( -- ... )
 // 	postpone [ // TODO: preserve previous value on cstack?
 // 	nextword call
@@ -63,7 +64,7 @@ interpret buildfunc bindfunc immediate
 : * ( a b -- a*b ) char * binop ;immed
 : / ( a b -- a/b ) char / binop ;immed
 : % ( a b -- a%b ) char % binop ;immed
-: ** ( a b -- a^b ) char ^ binop ;immed // ^ is used for bit-wise xor, as in C
+: ** ( a b -- a^b ) char ^ binop ;immed // ^ is the name for bit-wise xor
 
 : 1+ ( n -- n+1 ) 1 char + binopconst ;immed
 ' 1+ alias: inc

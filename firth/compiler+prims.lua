@@ -107,8 +107,61 @@ function exports.initialize(compiler)
 		stack.height = height + 2
 	end
 
+	--! ( x s -- s ) ( s: -- x )
+	local function to_s()
+		local s = stack:pop()
+		local val = stack:pop()
+		s:push(val)
+		stack:push(s)
+	end
+
+	--! ( s -- s x ) ( s: x -- )
+	local function s_from()
+		local s = stack:top()
+		local val = s:pop()
+		stack:push(val)
+	end
+
+	--! ( s -- s x ) ( s: x -- x )
+	local function s_fetch()
+		local s = stack:top()
+		local val = s:top()
+		stack:push(val)
+	end
+
+	--! ( x1 x2 s -- s ) ( s: -- x1 x2 )
+	local function two_to_s()
+		compiler:assert(stack.height >= 3, "2>[]", "UNDERFLOW")
+		local s = stack:pop()
+		compiler:assert(type(s) == "table" and s.height, "2>[]", "INVALID TARGET STACK")
+		local height = s.height
+		s[height + 2], s[height + 1] = stack:pop(), stack:pop()
+		s.height = height + 2
+		stack:push(s)
+	end
+
+	--! ( s -- s x1 x2 ) ( s: x1 x2 -- )
+	local function two_s_from()
+		local s = stack:top()
+		compiler:assert(s.height >= 2, "2[]>", "UNDERFLOW")
+		local height = stack.height
+		stack[height + 2], stack[height + 1] = s:pop(), s:pop()
+		stack.height = height + 2
+	end
+
+	--! ( s -- s x1 x2 ) ( s: x1 x2 -- x1 x2 )
+	local function two_s_fetch()
+		local s = stack:top()
+		local height, sheight = stack.height, s.height
+		compiler:assert(sheight >= 2, "2[]@", "UNDERFLOW")
+		stack[height + 2], stack[height + 1] = s[sheight], s[sheight - 1]
+		stack.height = height + 2
+	end
+
 	-- flow control --
 
+	-- this is not meant to be a prim word available to firth code.
+	-- is there a reasonable usecase for doing so?
 	local function beginblock()
 		local compiling = compiler.compiling
 		compiler:interpretpending()
@@ -201,6 +254,10 @@ function exports.initialize(compiler)
 		compiler:push("{}")
 	end
 
+	local function pushstack()
+		compiler:push("stack_new()")
+	end
+
 	-- bitwise boolean ops --
 
 	-- only available in LuaJIT 2.0+ or Lua 5.2+
@@ -235,21 +292,27 @@ function exports.initialize(compiler)
 	end
 
 	local function dotprint()
-		stack[stack.height] = tostring(stack:top())..' '
+		-- have to actually pop, to avoid cycles
+		stack:push(tostring(stack:pop())..' ')
 		rawprint()
 	end
 
 	local function dotprinthex()
-		local tos = stack:pop()
-		stringio.print(string.format("0x%X", tonumber(tos)), ' ')
+		local tos = stack:top()
+		stack[stack.height] = string.format("0x%X", tonumber(tos))
+		dotprint()
 	end
 
 	local function dotprints()
-		stringio.print(tostring(stack))
+		-- stringio.print(tostring(stack), ' ')
+		stack:push(stack)
+		dotprint()
 	end
 
 	local function dotprintc()
-		stringio.print(tostring(cstack))
+		-- stringio.print(tostring(cstack), ' ')
+		stack:push(cstack)
+		dotprint()
 	end
 
 	-- parser/compiler control words --
@@ -493,6 +556,12 @@ function exports.initialize(compiler)
 	dictionary['2C>'] = { func = two_c_from }
 	dictionary['2>C'] = { func = two_to_c }
 	dictionary['2C@'] = { func = two_c_fetch }
+	dictionary['>[]'] = { func = to_s }
+	dictionary['[]>'] = { func = s_from }
+	dictionary['[]@'] = { func = s_fetch }
+	dictionary['2>[]'] = { func = two_to_s }
+	dictionary['[2]>'] = { func = two_s_from }
+	dictionary['[2]@'] = { func = two_s_fetch }
 
 	dictionary['if'] = { func = ifstmt, immediate = true }
 	dictionary['else'] = { func = elsestmt, immediate = true }
@@ -509,6 +578,7 @@ function exports.initialize(compiler)
 	dictionary['2not'] = { func = push2not, immediate = true }
 	dictionary['nil'] = { func = pushnil, immediate = true }
 	dictionary['{}'] = { func = pushtable, immediate = true }
+	dictionary['[]'] = { func = pushstack, immediate = true }
 
 	dictionary['.raw'] = { func = rawprint }
 	dictionary['.'] = { func = dotprint }
