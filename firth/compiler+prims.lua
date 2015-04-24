@@ -15,10 +15,11 @@
 
 --! @cond
 local os = require "os"
-local string = require "string"
-local stringio = require "firth.stringio"
-
 local clock = os.clock
+local string = require "string"
+
+local stringio = require "firth.stringio"
+local stack_new = (require "firth.stack").new
 
 local exports = {}
 
@@ -233,9 +234,11 @@ function exports.initialize(compiler)
 	end
 
 	local function pushnot()
-		local height = compiler:newtmp("stack.height")
-		compiler:cassert(height.." > 0", "UNDERFLOW")
-		compiler:append("stack[%s] = not stack[%s]", height, height)
+		if compiler.compiling then
+			compiler:append("stack[stack.height] = not stack:top()")
+		else
+			stack[stack.height] = not stack:top()
+		end
 	end
 
 	local function push2not()
@@ -251,11 +254,22 @@ function exports.initialize(compiler)
 	end
 
 	local function pushtable()
-		compiler:push("{}")
+		compiler:push({})
 	end
 
 	local function pushstack()
-		compiler:push("stack_new()")
+		compiler:push(stack_new())
+	end
+
+	local function pushtype()
+		local typ
+		if compiler.compiling then
+			local val = compiler:poptmp()
+			typ = compiler:newtmpfmt("type(%s)", val)
+		else
+			typ = type(stack:pop())
+		end
+		compiler:push(typ)
 	end
 
 	-- bitwise boolean ops --
@@ -361,9 +375,9 @@ function exports.initialize(compiler)
 			local target = compiler.target
 			compiler:restoretarget()
 			cstack:push(target)
-			if not compiler.target then
-				compiler:create()
-			end
+--			if not compiler.target then
+--				compiler:create()
+--			end
 		end
 --		stringio.printstack(cstack)
 	end
@@ -384,24 +398,26 @@ function exports.initialize(compiler)
 	--! ( pattern -- tok )
 	local function parsematch()
 		local pattern = stack:pop()
-		local success, token, line = pcall(stringio.matchtoken, compiler.line, pattern)
+		local success, token, src = pcall(stringio.matchtoken, compiler.src, pattern)
 		compiler:assert(success, "parsematch", "UNABLE TO RETRIEVE TOKEN")
 		stack:push(token)
-		compiler.line = line
+		compiler.src = src
 	end
 
 	--! ( str -- )
 	local function ungettoken()
-		compiler.line = tostring(stack:pop())..' '..compiler.line
+		compiler.src = tostring(stack:pop())..' '..compiler.src
 	end
 
 	--! ( C: entry -- C: entry' )
 	local function push()
 		local val = stack:pop()
-		local typ = type(val)
-		if typ == "function" or typ == "table" then
-			compiler:pushupval(val)
-		elseif type(val) == "string" then
+
+		-- compiler:push() can't tell if its arg is a literal string from a
+		-- firth word, or meant to be a compiled expression from a codegen
+		-- function. so, we need to determine that here and choose the right
+		-- version of push.
+		if type(val) == "string" then
 			compiler:pushstring(val)
 		else
 			compiler:push(val)
@@ -421,18 +437,17 @@ function exports.initialize(compiler)
 	--! ( entry -- )
 	local function does()
 		local varentry = compiler:poptmp()
-		local doesname = compiler:newtmpstring(compiler:nexttoken())
-		local doesentry = compiler:newtmpformat("compiler:lookup(%s)", doesname)
-		local doesfunc = compiler:newtmpformat("%s.func", doesentry)
+		local doesname = compiler:newtmpstr(compiler:nexttoken())
+		local doesentry = compiler:newtmpfmt("compiler:lookup(%s)", doesname)
+		local doesfunc = compiler:newtmpfmt("%s.func", doesentry)
 		local closure = [[
 			varentry.func = function()
-				local __FIRTH_WORD_NAME__ = varentry.name
 				stack:push(varentry)
 				doesfunc()
 			end]]
 		closure = closure:gsub("varentry", varentry):gsub("doesfunc", doesfunc)
 		compiler:append(closure)
-		compiler:append("compiler:settarget(%s)", varentry)
+		compiler:append("cstack:push(%s)", varentry)
 		compiler:append("compiler:bindfunc()")
 		compiler:append("%s.compilebuf = {%q}", varentry, closure)
 	end
@@ -485,7 +500,19 @@ function exports.initialize(compiler)
 
 	--! ( name -- )
 	local function call()
-		compiler:call(stack:pop())
+		local name = stack:pop()
+		if compiler.compiling then
+			compiler:call(name)
+		else
+			local entry = compiler:lookup(name)
+			entry.func()
+		end
+	end
+
+	--! ( xt -- i*x )
+	local function execute()
+		local xt = stack:pop()
+		xt()
 	end
 
 	-- reflection, debugging, internal compiler state, etc. --
@@ -579,6 +606,7 @@ function exports.initialize(compiler)
 	dictionary['nil'] = { func = pushnil, immediate = true }
 	dictionary['{}'] = { func = pushtable, immediate = true }
 	dictionary['[]'] = { func = pushstack, immediate = true }
+	dictionary['type'] = { func = pushtype, immediate = true }
 
 	dictionary['.raw'] = { func = rawprint }
 	dictionary['.'] = { func = dotprint }
@@ -610,6 +638,7 @@ function exports.initialize(compiler)
 	dictionary.immediate = { func = immediate }
 	dictionary.char = { func = char, immediate = true }
 	dictionary.call = { func = call }
+	dictionary.execute = { func = execute }
 
 	dictionary.dump = { func = dump }
 	dictionary['dumpword:'] = { func = dumpword, immediate = true }

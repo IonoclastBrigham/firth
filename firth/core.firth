@@ -1,18 +1,21 @@
-char prims.firth drop
-char see_comment_block_below_for_copyright_notice drop
+char @file_prims.firth drop
+char @see_comment_block_below_for_copyright_notice drop
 
-char : create setcompiling settarget
-	interpretpending char %s parse create setcompiling settarget
-interpret buildfunc bindfunc immediate
+char : create settarget setcompiling
+	char %s parse create setcompiling settarget
+	interpret buildfunc bindfunc immediate
+: %s
+	char %s push
+	interpret buildfunc bindfunc immediate
 : nextword
-	char %s parse
-interpret buildfunc bindfunc
+	%s parse
+	interpret buildfunc bindfunc
 : postpone
 	nextword call
-interpret buildfunc bindfunc immediate
+	interpret buildfunc bindfunc immediate
 : ;
-	buildfunc bindfunc postpone interpret
-interpret buildfunc bindfunc immediate
+	postpone interpret buildfunc bindfunc
+	interpret buildfunc bindfunc immediate
 : ;immed postpone ; postpone immediate ; immediate
 
 : // char \n parse drop ;immed // There, now we can comment our code!
@@ -24,99 +27,120 @@ interpret buildfunc bindfunc immediate
 // <https://github.com/IonoclastBrigham/firth/blob/master/LICENSE>
 // /////////////////////////////////////////////////////////////////////////////
 
-: " char " parse push ;immed // ( -- s )
+: " char " parse push ;immed
 : ( char ( >ts " %b()" parsematch drop ;immed // ( (nestable) parentheses)
 
 // a few parser/interpreter/compiler control words
-: ' ( -- entry ) nextword dict push ;immed
-: compile ( entry -- ) ( C: -- entry )
-     interpretpending setcompiling settarget ;
-// ' interpret alias: [
-// ' compile alias: ]
-// : eval: ( -- ... )
-// 	postpone [ // TODO: preserve previous value on cstack?
-// 	nextword call
-// 	postpone ]
-// ;immed
+: call: nextword push " call" call ;immed
+: xt ( name -- xt ) dict " func" @@ ;
+: ?deferred ( -- )
+	last " name" @@ dup dup
+	create settarget setcompiling
+		call: compiling? postpone if
+			call
+		postpone else
+			xt execute
+		postpone end
+	postpone ;immed ;
+: ;defer   postpone ; ?deferred ;immed
+: ' ( -- entry ) nextword xt ;immed
+: eval: ( -- i*x ) ( TS: name ) postpone ' execute ;immed
+: ` ( -- entry ) ( TS: name ) nextword dict push ;immed
 
 // miscellaneous util words and stuff
-' NOP alias: NOOP
-
-// strings and such
-: ." ( -- ) postpone " char . call ;immed
-: CR ( -- ) char \n .raw ;
+` NOP alias: NOOP
+: \n ( -- "\n" ) char \n push ;immed
+: CR ( -- ) \n .raw ;
 
 // values and variables
-: @ ( entry -- x ) " data" @@ ;
-: ! ( x entry -- ) " data" !! ;
+: const: ( x -- ) postpone : push call: push postpone ;immed ;immed
+" data" const: DATA
+: @ ( entry -- x ) DATA @@ ;
+: ! ( x entry -- ) DATA !! ;
 : variable ( name -- entry ) create dup does> NOP ;
 : var: ( x -- ) nextword variable ! ;immed
 : val: ( x -- ) nextword variable ! last does> @ ;immed
-: const: ( x -- ) postpone : push postpone ; ;immed
 
-0.1 const: version
-: copyright ." Firth ver." version . ." Copyright © 2015 Brigham Toskin." ;
-' copyright alias: ©
+0.1 const: VERSION
+: copyright " :Firth ver.". VERSION . " Copyright © 2015 Brigham Toskin.". ;
+` copyright alias: ©
 
 // some basic arithmetic operators and shortcuts
-: + ( a b -- a+b ) char + binop ;immed
-: - ( a b -- a-b ) char - binop ;immed
-: * ( a b -- a*b ) char * binop ;immed
-: / ( a b -- a/b ) char / binop ;immed
-: % ( a b -- a%b ) char % binop ;immed
-: ** ( a b -- a^b ) char ^ binop ;immed // ^ is the name for bit-wise xor
+: + ( a b -- a+b ) char + binop ;defer
+` + alias: add
+: - ( a b -- a-b ) char - binop ;defer
+` - alias: sub
+: * ( a b -- a*b ) char * binop ;defer
+` * alias: mul
+: / ( a b -- a/b ) char / binop ;defer
+` / alias: div
+: % ( a b -- a%b ) char % binop ;defer
+` % alias: mod
+: ** ( a b -- a^b ) char ^ binop ;defer // ^ is the name for bit-wise xor
+` ** alias: pow
 
-: 1+ ( n -- n+1 ) 1 char + binopconst ;immed
-' 1+ alias: inc
-: 1- ( n -- n-1 ) 1 char - binopconst ;immed
-' 1- alias: dec
-: -1* ( n -- -n ) -1 char * binopconst ;immed
-' -1* alias: neg
+: 1+ ( n -- n+1 ) 1 char + binopconst ;defer
+` 1+ alias: inc
+: 1- ( n -- n-1 ) 1 char - binopconst ;defer
+` 1- alias: dec
+: -1* ( n -- -n ) -1 char * binopconst ;defer
+` -1* alias: neg
+: -1** ( n -- 1/n ) 1 swap / ; // division is faster, even with swap
+` -1** alias: inverse
 
-: 2+ ( n -- n+2 ) 2 char + binopconst ;immed
-: 2- ( n -- n-2 ) 2 char - binopconst ;immed
-: 2* ( n -- 2n ) 2 char * binopconst ;immed
-' 2* alias: double
-: 2/ ( n -- n/2 ) 2 char / binopconst ;immed
-' 2/ alias: halve
+: 2+ ( n -- n+2 ) 2 char + binopconst ;defer
+: 2- ( n -- n-2 ) 2 char - binopconst ;defer
+: 2* ( n -- 2n ) 2 char * binopconst ;defer
+` 2* alias: double
+: 2/ ( n -- n/2 ) 2 char / binopconst ;defer
+` 2/ alias: halve
 
-: 5+ ( n -- n+5 ) 5 char + binopconst ;immed
-: 5- ( n -- n-5 ) 5 char - binopconst ;immed
-: 5* ( n -- 5n ) 5 char * binopconst ;immed
-: 5/ ( n -- n/5 ) 5 char / binopconst ;immed
+: 5+ ( n -- n+5 ) 5 char + binopconst ;defer
+: 5- ( n -- n-5 ) 5 char - binopconst ;defer
+: 5* ( n -- 5n ) 5 char * binopconst ;defer
+: 5/ ( n -- n/5 ) 5 char / binopconst ;defer
 
-: 10+ ( n -- n+10 ) 10 char + binopconst ;immed
-: 10- ( n -- n-10 ) 10 char - binopconst ;immed
-: 10* ( n -- 10n ) 10 char * binopconst ;immed
-: 10/ ( n -- n/10 ) 10 char / binopconst ;immed
+: 10+ ( n -- n+10 ) 10 char + binopconst ;defer
+: 10- ( n -- n-10 ) 10 char - binopconst ;defer
+: 10* ( n -- 10n ) 10 char * binopconst ;defer
+: 10/ ( n -- n/10 ) 10 char / binopconst ;defer
 
-: 100+ ( n -- n+100 ) 100 char + binopconst ;immed
-: 100- ( n -- n-100 ) 100 char - binopconst ;immed
-: 100* ( n -- 100n ) 100 char * binopconst ;immed
-: 100/ ( n -- n/100 ) 100 char / binopconst ;immed
+: 100+ ( n -- n+100 ) 100 char + binopconst ;defer
+: 100- ( n -- n-100 ) 100 char - binopconst ;defer
+: 100* ( n -- 100n ) 100 char * binopconst ;defer
+: 100/ ( n -- n/100 ) 100 char / binopconst ;defer
+: percent ( n p -- n*(p/100) ) postpone 100/  postpone * ;immed
 
 // some higher level stack manipulations
 : 2dup ( a b -- a b a b ) over over ;
 : 3dup ( a b c -- a b c a b c ) 2 pick 2 pick 2 pick ;
+: ndup ( n*x -- 2n*x ) dup loops dup pick swap end drop ;
 : 2drop ( a b -- ) drop drop ;
 : 3drop ( a b c -- ) drop drop drop ;
+: ndrop ( n*x -- ) loops drop end ;
 
 // some basic boolean operators
-: > ( a b -- a>b ) char > binop ;immed
-' > alias: greater?
-: < ( a b -- a<b ) char < binop ;immed
-' < alias: less?
-: = ( a b -- a==b ) " ==" binop ;immed
-' = alias: equal?
-: <= ( a b -- a<=b ) " <=" binop ;immed
-' <= alias: lesseq?
-: >= ( a b -- a>=b ) " >=" binop ;immed
-' >= alias: greatereq?
-: ~= ( a b -- a!=b ) " ~=" binop ;immed
-' ~= alias: noteq?
+: > ( a b -- a>b ) char > binop ;defer
+` > alias: greater?
+: < ( a b -- a<b ) char < binop ;defer
+` < alias: less?
+: = ( a b -- a==b ) " ==" binop ;defer
+` = alias: equal?
+: <= ( a b -- a<=b ) " <=" binop ;defer
+` <= alias: lesseq?
+: >= ( a b -- a>=b ) " >=" binop ;defer
+` >= alias: greatereq?
+: ~= ( a b -- a!=b ) " ~=" binop ;defer
+` ~= alias: noteq?
 
-: and ( a b -- a&&b ) " and" binop ;immed
-: or ( a b -- a||b ) " or" binop ;immed
+: and ( a b -- a&&b ) " and" binop ;defer
+: or ( a b -- a||b ) " or" binop ;defer
 : nand ( a b -- !a&&b ) postpone and postpone not ;immed
 : nor ( a b -- !a||b ) postpone or postpone not ;immed
 : xor ( a b -- aXORb ) postpone 2not postpone ~= ;immed
+
+// redefine xt to allow a string name or a backticked word entry.
+// (needs = to be defined, which is deferred, which uses xt.)
+: xt ( word -- xt )
+	dup type " string" = if dict end
+	" func" @@ ;

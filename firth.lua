@@ -32,8 +32,8 @@ firth = {
 		return firth.c
 	end,
 
-	doline = function(c, line)
-		local success, msg = pcall(c.interpretline, c, line, 1)
+	doline = function(c, line, linenum)
+		local success, msg = pcall(c.interpret, c, line, linenum)
 		if not success then stringio.printline(msg) end
 		return success
 	end,
@@ -42,10 +42,19 @@ firth = {
 	--! @brief Executes the Firth Read-Eval-Print Loop.
 	repl = function()
 		local c = firth.instance()
-		firth.doline(c, 'copyright CR')
+		c.path = "REPL::INIT"
+		firth.doline(c, 'copyright CR', 0)
+		c.path = "stdin"
+		local linenum
 		while c.running do
-			stringio.print(c.compiling and '>>\t' or 'ok ')
-			firth.doline(c, stringio.readline())
+			if c.compiling then
+				linenum = linenum + 1
+				stringio.print('>>\t')
+			else
+				linenum = 1
+				stringio.print('ok ')
+			end
+			firth.doline(c, stringio.readline(), linenum)
 		end
 		stringio.printline()
 	end,
@@ -56,7 +65,7 @@ firth = {
 		local c = firth.instance()
 		for i, code in ipairs(args) do
 			c.path = "Argument"..i
-			if not firth.doline(c, code) then
+			if not firth.doline(c, code, i) then
 				break
 			end
 		end

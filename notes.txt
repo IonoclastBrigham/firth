@@ -49,8 +49,21 @@ experimental optimization branch
 			use locals wherever possible
 			commit stack changes lazily
 			pre-calculate results when literals are arguments?
-BUG: will error if an input line has more than one trailing linespace.
-Read and parse entire file, rather than line-by-line.
+pathologically using cstack for compile target, rather than compiler.target.
+improved emacs definition regex
+	"\\<:\\s-+\\(\\w+\\)[[:space:][:word:]]+?\\(?:bindfunc\\|;\\(?:immed\\|defer\\)?\\)\\>"
+refactor input stream tokenization
+	newlines(str)
+		returns an array table of offsets into str where newlines live
+		used in interpret() to set self.linenum in the processing loop
+		e.g. { 0, 35, 71, 123, 151, 200, ... }
+	nexttoken()
+		rather than resizing input string, use token begin/end pointers
+		makes extracting substrings faster and more memory efficient
+		makes >ts faster and more memory efficient
+		so we get: stringio.nexttoken(string, delim, searchstart) -> token, tokstart, tokend
+		if only delims in string (or empty) return "" and start == end
+			FIXES: will error if an input line has more than one trailing whitespace.
 stack data type
 	3>[], 4>[], n>[] ( n*x s n -- s )
 	[3]>, [4], [n]> ( s n -- s n*x )
@@ -90,6 +103,8 @@ loops
 		return an iterator closure
 		1 10 range		// -> 1 2 3 4 5 6 7 8 9 10
 		1 10 range: 2	// -> 1 3 5 7 9
+	each, map, reduce, etc.
+		similar to foreach style loop, but applies an xt to each item
 conversions
 	>string
 	>number
@@ -97,14 +112,8 @@ change parse routines to allow for doubled delimiters
 	// e.g. alternative string syntax, for quoting options
 	: '' ( -- s ) " ''" nextword parse ;immed
 execution, lambdas, functional programming
-	execute
-		call xt (function ref) on tos
-		' foo execute // equivalent to: foo
-	'
-		redefine to push entry's func field
-	`
-		new word to do what ' currently does
 	compiler:pushfunc()
+		in contrast to execfunc()
 		pushes self.target and restores
 		throws, if not target or target.name ~= "ANON" or some such?
 	lambdas
@@ -112,10 +121,12 @@ execution, lambdas, functional programming
 		leaves an xt on tos, using pushfunc()
 		when implemented, closes over locals?
 		possible names/syntax
-			lambda: 5 > ;	// rewrite ; to push based on target.name
+			lambda: 5 > ;	// rewrite ; to push based on target.name?
 			:( 5 > );		// ); will always do pushfunc()
 			:NONAME 5 > ;
-compiletime macros?
+		e.g.
+			:( 1- 2* ); data each
+compiletime macros / constexprs?
 	precalculate the value as it's compiled
 	most useful for showing the calculation in a func, but speeding it up at runtime
 	lispy macros

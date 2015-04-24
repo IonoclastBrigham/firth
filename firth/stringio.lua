@@ -127,6 +127,25 @@ function stringio.tonumber(val)
 	return tonumber(val) or tonumber(tostring(val))
 end
 
+-- file i/o stuff --
+
+function stringio.input(infile)
+	if type(infile) == "string" then
+		return io.input(infile)
+	elseif type(infile) == "userdata" and infile.read then
+		return io.input(infile)
+	elseif infile == nil then
+		return io.input()
+	else
+		error("INVALID ARGUMENT: "..tostring(infile))
+	end
+end
+
+function stringio.read(file)
+	file = file or stringio.input()
+	return file:read("*all")
+end
+
 --! Reads a single line from file.
 --! Reads text from file up to the first end-of-line char it finds.
 --! The newline, if encountered, is discarded.
@@ -135,7 +154,7 @@ end
 --! @return a string containing the next line read from \c file, or \c nil
 --! 		if it encounters EOF.
 function stringio.readline(file)
-	local file = file or io.input()
+	file = file or stringio.input()
 	return file:read("*line")
 end
 
@@ -197,6 +216,7 @@ local function getquotespec(val)
 end
 
 function table.concathash(t, sep)
+	sep = sep or ' '
 	local kvs = {}
 	for k,v in pairs(t) do
 		local fmt = getquotespec(k)..' = '..getquotespec(v)

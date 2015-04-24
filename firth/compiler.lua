@@ -25,28 +25,18 @@ local compiler = {
 
 
 function compiler:nexttoken(delim)
-	local token, rest = stringio.nexttoken(self.line, delim)
-	self.line = rest
+	local token, rest = stringio.nexttoken(self.src, delim)
+	self.src = rest
 	return token
 end
 
-function compiler:interpretline(line, num)
-	self.line = line
-	num =  self.compiling and (self.linenum + 1) or num
-	self.linenum = num
-	self.running = type(line) == "string"
+function compiler:interpret(src, num)
+	self.src = src
+	self.linenum = num or 1
+	self.running = type(src) == "string"
 
-	-- make sure we have a compile target
-	if not self.compiling then
-		local target = self.target
-		if not target or target.name ~= "[INTERP_BUF]" then
---			print("NEW ENTRY FOR [INTERP_BUF]")
-			self:create()
-		end
-	end
-
-	-- interpret/compile each token in line
-	while self.line and #self.line > 0 and self.running do
+	-- interpret/compile each token in src
+	while self.src and #self.src > 0 and self.running do
 		local tok = self:nexttoken()
 --		print("TOKEN "..tostring(tok))
 		-- try dictionary lookup
@@ -61,13 +51,9 @@ function compiler:interpretline(line, num)
 			else
 				-- error; use xpcall, so we get the stacktrace
 				xpcall(self.lookuperror, self.xperrhandler, self, tok, num)
-				break
 			end
 		end
 	end
-
-	-- automatic function closing at EOL
-	self:interpretpending()
 end
 
 function compiler:loadfile(path)
@@ -75,14 +61,14 @@ function compiler:loadfile(path)
 	local cstack = self.cstack
 	local num = 1
 	self.running = true
+	cstack:push(stringio.input())
 	cstack:push(self.path)
 	cstack:push(self.linenum)
 	self.path = path
-	for line in assert(io.lines(path)) do
-		self:interpretline(line, num)
-		num = num + 1
-		if not self.running then break end
-	end
+	stringio.input(path)
+	local src = stringio.read()
+	-- print(src)
+	self:interpret(src, num)
 	if self.running and self.cstack.height > 0 then
 		local tos = cstack:top()
 		if type(tos) == "table"
@@ -92,6 +78,7 @@ function compiler:loadfile(path)
 		end
 		self.linenum = cstack:pop()
 		self.path = cstack:pop()
+		stringio.input(cstack:pop())
 	end
 end
 
@@ -104,8 +91,7 @@ end
 function compiler:execword(entry)
 	-- TODO: compile mode-specific vocabulary?
 	local name = entry.name
-	if entry.immediate then
---		print("INVOKE IMMEDIATE "..name)
+	if (not self.compiling) or entry.immediate then
 		self:interpretpending()
 		self:execfunc(entry)
 	else
@@ -118,6 +104,8 @@ function compiler:interpretpending()
 	local interp = self.target
 	if interp and interp.name == "[INTERP_BUF]" and (#interp.compilebuf > 1) then
 --		print("INTERPRETING PENDING")
+		self:restoretarget()
+		self.cstack:push(interp)
 		self:buildfunc()
 		self:execfunc()
 		if not self.compiling then self:create() end
@@ -125,17 +113,15 @@ function compiler:interpretpending()
 --		print("SKIPPING INTERPRETING PENDING")
 	end
 end
-
 --! @private
 local function newcompilebuf()
-	return {[[
-local stack_new = (require 'firth.stack').new
+	return { [[
 local __FIRTH_WORD_NAME__ = %q
 local compiler = ...
 local dictionary, stack, cstack = compiler.dictionary, compiler.stack, compiler.cstack
 %s
 %s
-return function()]]}
+return function() ]] }
 end
 
 function compiler:settarget(newtarget)
@@ -143,6 +129,7 @@ function compiler:settarget(newtarget)
 	assert(typ == "table", "INVALID TARGET TYPE "..typ)
 	assert(newtarget.compilebuf, "MISSING COMPILEBUF SETTING TARGET "..newtarget.name)
 
+	-- print("COMPILING: "..newtarget.name)
 	if self.target then self.cstack:push(self.target) end
 	self.target = newtarget
 end
@@ -160,6 +147,13 @@ function compiler:restoretarget()
 	self.target = nil
 end
 
+--! @private
+local entrymt = {
+	__tostring = function(t)
+		return string.format("{%q}", t.name)
+	end
+}
+entrymt.__index = entrymt
 function compiler:create(name)
 	local dopush = (name ~= nil)
 	if not name then
@@ -176,6 +170,7 @@ function compiler:create(name)
 		name = name, compilebuf = newcompilebuf(),
 		calls = { nextidx = 1 }, calledby = {}, upvals = { nextidx = 1 }
 	}
+	setmetatable(entry, entrymt)
 	if dopush then
 		self.stack:push(entry)
 	else
@@ -186,6 +181,7 @@ function compiler:create(name)
 end
 
 function compiler:call(word)
+	-- print("CALL TO "..word)
 	local dictionary = self.dictionary
 	local target = self.target
 	local calls = target.calls
@@ -219,7 +215,7 @@ end
 
 local function upvalues(upvals)
 	upvals.nextidx = nil
-	local buf = { "local upvals = compiler.target.upvals" }
+	local buf = { "local upvals = cstack:top().upvals" }
 	for tmp,val in pairs(upvals) do
 		buf[#buf + 1] = string.format("local %s = upvals[%q]", tmp, tmp)
 	end
@@ -230,7 +226,7 @@ end
 function compiler:buildfunc()
 	self.nexttmp = 0 -- TODO: cstack?
 
-	local target = self.target
+	local target = self.cstack:top() --self.target
 	local name, compilebuf = target.name, target.compilebuf
 	local buflen = #compilebuf
 
@@ -275,7 +271,7 @@ function compiler:buildfunc()
 end
 
 function compiler:bindfunc()
-	local target = self.target
+   local target = self.cstack:pop() --self.target
 	local name, func = target.name, target.func
 	if func then
 --		print("ADDING "..name.." TO DICTIONARY")
@@ -291,7 +287,7 @@ end
 function compiler:execfunc(entry)
 	local usecompiletarget = not entry
 	if usecompiletarget then
-		entry = self.target
+	   entry = self.cstack:pop() --self.target
 	end
 
 	local name = entry.name
@@ -332,7 +328,7 @@ end
 
 function compiler:clearcompilestate()
 	self.linenum = nil
-	self.line = nil
+	self.src = nil
 	self.compiling = false
 	self.target = nil
 	self.cstack:clear()
@@ -411,8 +407,8 @@ function compiler:traceframe(frame, level)
 			else
 				-- handle special cases; why don't these have a name?
 				-- TODO: if one more of these crops up, do search in a for loop
-				if func == self.interpretline then
-					name = "interpretline"
+				if func == self.interpret then
+					name = "interpret"
 				elseif func == self.execword then
 					name = "execword"
 				else
@@ -478,14 +474,27 @@ end
 --! Compiles code to push value.
 --! @see pushstring()
 function compiler:push(val)
-	self:append("stack:push(%s)", val)
+	if self.compiling then
+		local typ = type(val)
+		if typ == "function" or typ == "table" or typ == "userdata" then
+			self:pushupval(val)
+		else
+			self:append("stack:push(%s)", val)
+		end
+	else
+		self.stack:push(val)
+	end
 end
 
 --! Compiles code to push correctly quoted string value.
 --! @see push()
 function compiler:pushstring(str)
-	str = string.format("%q", str):gsub("\\\\", "\\") -- restore backslashes
-	self:push(str)
+	if self.compiling then
+		str = string.format("%q", str):gsub("\\\\", "\\") -- restore backslashes
+		self:append("stack:push(%s)", str)
+	else
+		self.stack:push(str)
+	end
 end
 
 --! Compiles code to push a non-stringifiable value, which must be closed over.
@@ -495,7 +504,7 @@ function compiler:pushupval(val)
 	upvals.nextidx = idx + 1
 	local name = "__uv"..tostring(idx).."__"
 	upvals[name] = val
-	self:push(name)
+	self:append("stack:push(%s)", name)
 end
 
 function compiler:newtmp(initialval)
@@ -507,11 +516,11 @@ function compiler:newtmp(initialval)
 	return var
 end
 
-function compiler:newtmpformat(str, ...)
+function compiler:newtmpfmt(str, ...)
 	return self:newtmp(str:format(...))
 end
 
-function compiler:newtmpstring(str)
+function compiler:newtmpstr(str)
 	str = string.format("%q", str):gsub("\\\\", "\\") -- restore backslashes
 	return self:newtmp(str)
 end
@@ -548,8 +557,8 @@ compiler = {}
 --! compiler constructor.
 function compiler.new()
 	-- build compiler object
-	local c
-	c = {
+	local self
+	self = {
 		dictionary = {},
 		funcmap = {},
 		stack = stack.new(),
@@ -564,23 +573,23 @@ function compiler.new()
 		xperrhandler = function(msg)
 			stringio.printline(string.format("ERROR: %s", msg))
 			stringio.print 'stack : '
-			stringio.printline(tostring(c.stack))
+			stringio.printline(tostring(self.stack))
 			stringio.print 'cstack: '
-			stringio.printline(tostring(c.cstack))
-			stringio.printline(c:stacktrace())
+			stringio.printline(tostring(self.cstack))
+			stringio.printline(self:stacktrace())
 		end
 	}
-	setmetatable(c, mt)
+	setmetatable(self, mt)
 
 	-- initialize dictionary with core words
-	prims.initialize(c)
-	c:loadfile "firth/core.firth"
+	prims.initialize(self)
+	self:loadfile "firth/core.firth"
 
 	-- cleanup memory
 	collectgarbage()
 	collectgarbage()
 
-	return c
+	return self
 end
 
 return compiler

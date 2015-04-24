@@ -66,7 +66,7 @@
       "setcompiling" "settarget" "interpret" "interpretpending"
       "compiling?" "parse" "parsematch" ">ts" "push" "create"
       "buildfunc" "bindfunc" "dict" "last" "defined?"
-      "@@" "!!" "char" "call"
+      "@@" "!!" "char" "call" "execute"
       "dump" "dumpword:" "trace" "notrace" "tracing?" "path"
       "calls:" "calledby:" "tstart" "tend"
       "&" "|" "^"
@@ -76,8 +76,9 @@
 (defconst firth-consts-pattern
   (list
    ;; strings and chars
-   '("\\<\"\\s-.*?\"\\>" .  font-lock-string-face)
+   '("\\<\"\\s-.*?\"\\.?\\>" .  font-lock-string-face)
    '("\\<char\\s-+\\([%\\]?\\w\\)" . (1 font-lock-string-face))
+   '("\\<\\(?:\\\\n\\|%s\\)\\>" . font-lock-string-face)
 
    ;; booleans, nil refs
    `(,(regexp-opt '("true" "false" "nil") 'words) . firth-consts)
@@ -96,7 +97,8 @@
 
 (defconst firth-agregate-literals-pattern
   (list
-   '("\\<{}\\|\\[\\]\\>" . firth-consts))
+   '("\\<{}\\|\\[\\]\\>" . firth-consts)
+   '("\\<\\(?:DATA\\|VERSION\\)\\>" . firth-consts))
  "Additional literals for agregate types for :Firth Mode")
 
 (defconst firth-definitions-pattern
@@ -105,7 +107,7 @@
     `(,(concat
         "\\<\\:"
         "\\s-+\\(\\w+\\)\\>"
-        "[^;]+?\\s-;\\(?:immed\\)?")	; gobbles up to the first semicolon
+        "[^;]+?\\s-;\\(?:immed\\|defer\\)?\\>")	; gobbles up to the first semicolon
       (1 'firth-word-def-name))
 
     ;; aliases, variables, etc.
@@ -115,11 +117,12 @@
       (1 firth-word-def-name))
 
     ;; postponed calls and ticked words
-    '("\\<\\(?:postpone\\|'\\|does>\\)\\s-+\\(\\w+\\)\\>" (1 firth-ticked-word))
+    '("\\<\\(?:postpone\\|call:\\|'\\|does>\\|`\\)\\s-+\\(\\w+\\)\\>"
+	  (1 firth-ticked-word))
 
     ;; the defining words themselves
     `(,(regexp-opt
-        '(":" ";" "immediate" ";immed"
+        '(":" ";" "immediate" ";immed" "?deferred" ";defer"
           "variable" "var:" "val:" "const:" "alias:" "does>") 'words)
       . firth-defining-words))
   "Important defining words from prims and core.")
@@ -127,20 +130,20 @@
 (defconst firth-core-words-pattern
   (list
    `(,(regexp-opt
-       '("nextword" "postpone"
+       '("nextword" "postpone" "call:" "xt"
          "CR"
-         "'" "@" "!"
+         "'" "`" "@" "!"
          "2dup" "3dup" "2drop" "3drop"
          "+" "-" "*" "/" "%" "**"
          "1+" "1-" "-1*" "inc" "dec" "neg"
          "2+" "2-" "2*" "2/" "double" "halve"
          "5+" "5-" "5*" "5/"
          "10+" "10-" "10*" "10/"
-         "100+" "100-" "100*" "100/"
+         "100+" "100-" "100*" "100/" "percent"
          ">" "<" "=" ">=" "<=" "~="
          "greater?" "less?" "equal?" "greatereq?" "lesseq?" "noteq?"
          "and" "or" "nand" "nor" "xor"
-         "version" "copyright" "©"
+         "copyright" "©"
          "NOOP") 'words)
      . firth-core-words)
    '("\\<.\"\\s-.*?\"\\>" . font-lock-string-face)) ; print string
@@ -198,6 +201,7 @@
     (modify-syntax-entry ?- "w" stab)
     (modify-syntax-entry ?* "w" stab)
     (modify-syntax-entry ?/ "w" stab)
+    (modify-syntax-entry ?% "w" stab)
     (modify-syntax-entry ?= "w" stab)
     (modify-syntax-entry ?~ "w" stab)
     (modify-syntax-entry ?& "w" stab)
@@ -207,6 +211,7 @@
     (modify-syntax-entry ?? "w" stab)
     (modify-syntax-entry ?@ "w" stab)
     (modify-syntax-entry ?© "w" stab)
+    (modify-syntax-entry ?` "w" stab)
 
 	;; define what comments look like
     ;; (modify-syntax-entry ?( "< n" stab)
