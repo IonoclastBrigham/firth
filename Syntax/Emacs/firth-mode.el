@@ -105,9 +105,10 @@
    (list
     ;; new word definition names
     `(,(concat
-        "\\<\\:"
-        "\\s-+\\(\\w+\\)\\>"
-        "[^;]+?\\s-;\\(?:immed\\|defer\\)?\\>")	; gobbles up to the first semicolon
+        "\\<\\:\\s-+"										; opening colon
+        "\\(\\w+\\)"										; capture name
+        "[[:space:][:word:]]+?"								; def body
+		"\\(?:bindfunc\\|;\\(?:immed\\|defer\\)?\\)\\>")	; matches def close
       (1 'firth-word-def-name))
 
     ;; aliases, variables, etc.
@@ -168,8 +169,8 @@
 (defconst firth-full-syntax-pattern
   (append
    firth-comments-pattern
-   firth-consts-pattern
    firth-definitions-pattern
+   firth-consts-pattern
    firth-core-words-pattern
    firth-prims-pattern
    firth-agregate-literals-pattern)

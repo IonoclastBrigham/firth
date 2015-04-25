@@ -50,8 +50,6 @@ experimental optimization branch
 			commit stack changes lazily
 			pre-calculate results when literals are arguments?
 pathologically using cstack for compile target, rather than compiler.target.
-improved emacs definition regex
-	"\\<:\\s-+\\(\\w+\\)[[:space:][:word:]]+?\\(?:bindfunc\\|;\\(?:immed\\|defer\\)?\\)\\>"
 refactor input stream tokenization
 	newlines(str)
 		returns an array table of offsets into str where newlines live
