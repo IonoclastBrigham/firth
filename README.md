@@ -1,6 +1,6 @@
-#: Firth
+#:Firth
 
-: Firth (firth) is a Forth-like language designed for DSL creation, implemented in Lua.
+:Firth (firth) is a Forth-like language designed for DSL creation, implemented in Lua.
 
 ----
 ## Alpha Warning!
