@@ -411,6 +411,8 @@ function exports.initialize(compiler)
 
 	--! ( C: entry -- C: entry' )
 	local function push()
+		if not compiler.compiling then return end
+
 		local val = stack:pop()
 
 		-- compiler:push() can't tell if its arg is a literal string from a

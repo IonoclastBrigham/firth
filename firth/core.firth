@@ -7,11 +7,11 @@ char : create settarget setcompiling
 : %s
 	char %s push
 	interpret buildfunc bindfunc immediate
-: nextword
+: word
 	%s parse
 	interpret buildfunc bindfunc
 : postpone
-	nextword call
+	word call
 	interpret buildfunc bindfunc immediate
 : ;
 	postpone interpret buildfunc bindfunc
@@ -31,21 +31,21 @@ char : create settarget setcompiling
 : ( char ( >ts " %b()" parsematch drop ;immed // ( (nestable) parentheses)
 
 // a few parser/interpreter/compiler control words
-: call: nextword push " call" call ;immed
-: xt ( name -- xt ) dict " func" @@ ;
+: call: word push " call" call ;immed
+: xt ( entry -- xt ) " func" @@ ;
 : ?deferred ( -- )
-	last " name" @@ dup dup
-	create settarget setcompiling
+	last dup " name" @@ dup
+	create settarget setcompiling // create and start compiling overriding def
 		call: compiling? postpone if
-			call
+			call		// encode a call to compiling word
 		postpone else
-			xt execute
+			xt execute	// exec compiling word, so it can write semantics to def
 		postpone end
 	postpone ;immed ;
 : ;defer   postpone ; ?deferred ;immed
-: ' ( -- entry ) nextword xt ;immed
+: ` ( -- entry ) ( TS: name ) word dict push ;immed
+: ' ( -- xt )    ( TS: name ) postpone ` xt ;immed
 : eval: ( -- i*x ) ( TS: name ) postpone ' execute ;immed
-: ` ( -- entry ) ( TS: name ) nextword dict push ;immed
 
 // miscellaneous util words and stuff
 ` NOP alias: NOOP
@@ -58,8 +58,8 @@ char : create settarget setcompiling
 : @ ( entry -- x ) DATA @@ ;
 : ! ( x entry -- ) DATA !! ;
 : variable ( name -- entry ) create dup does> NOP ;
-: var: ( x -- ) nextword variable ! ;immed
-: val: ( x -- ) nextword variable ! last does> @ ;immed
+: var: ( x -- ) word variable ! ;immed
+: val: ( x -- ) word variable ! last does> @ ;immed
 
 0.1 const: VERSION
 : copyright " :Firth ver.". VERSION . " Copyright © 2015 Brigham Toskin.". ;
@@ -141,6 +141,4 @@ char : create settarget setcompiling
 
 // redefine xt to allow a string name or a backticked word entry.
 // (needs = to be defined, which is deferred, which uses xt.)
-: xt ( word -- xt )
-	dup type " string" = if dict end
-	" func" @@ ;
+: xt ( name | entry -- xt ) dup type " string" = if dict end xt ;
