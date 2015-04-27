@@ -69,7 +69,7 @@ firth = {
 				break
 			end
 		end
-		if c.stack.height > 0 then stringio.printstack(c.stack) end
+		if c.stack.height > 0 then c:interpret(".S") end
 		c.path = "stdin"
 	end,
 }

@@ -218,12 +218,8 @@ function compiler:buildfunc()
 	-- don't bother compiling empty buffers (i.e. blank lines)
 	if buflen == 1 then
 --		print("DUMPING "..name..".compilebuf")
-		if not self.compiling then
-			target.func = nil
-		else
-			target.func = self.NOP
-			target.compilebuf = nil
-		end
+		target.func = self.NOP
+		target.compilebuf = nil
 		return
 	end
 
