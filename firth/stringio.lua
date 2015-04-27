@@ -129,6 +129,10 @@ end
 
 -- file i/o stuff --
 
+function stringio.stdin()
+	return io.stidin
+end
+
 function stringio.input(infile)
 	if type(infile) == "string" then
 		return io.input(infile)

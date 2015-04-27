@@ -318,6 +318,8 @@ function compiler:clearcompilestate()
 	self.src = nil
 	self.compiling = false
 	self.target = nil
+	self.path = "stdin"
+	stringio.input(stringio.stdin())
 	self.cstack:clear()
 end
 
