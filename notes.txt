@@ -49,7 +49,6 @@ experimental optimization branch
 			use locals wherever possible
 			commit stack changes lazily
 			pre-calculate results when literals are arguments?
-pathologically using cstack for compile target, rather than compiler.target.
 refactor input stream tokenization
 	newlines(str)
 		returns an array table of offsets into str where newlines live

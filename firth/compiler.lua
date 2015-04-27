@@ -92,27 +92,12 @@ function compiler:execword(entry)
 	-- TODO: compile mode-specific vocabulary?
 	local name = entry.name
 	if (not self.compiling) or entry.immediate then
-		self:interpretpending()
 		self:execfunc(entry)
 	else
 		self:call(name)
 	end
 end
 
-function compiler:interpretpending()
-	if self.compiling then return end
-	local interp = self.target
-	if interp and interp.name == "[INTERP_BUF]" and (#interp.compilebuf > 1) then
---		print("INTERPRETING PENDING")
-		self:restoretarget()
-		self.cstack:push(interp)
-		self:buildfunc()
-		self:execfunc()
-		if not self.compiling then self:create() end
---	else
---		print("SKIPPING INTERPRETING PENDING")
-	end
-end
 --! @private
 local function newcompilebuf()
 	return { [[
@@ -226,7 +211,7 @@ end
 function compiler:buildfunc()
 	self.nexttmp = 0 -- TODO: cstack?
 
-	local target = self.cstack:top() --self.target
+	local target = self.target
 	local name, compilebuf = target.name, target.compilebuf
 	local buflen = #compilebuf
 
@@ -271,7 +256,8 @@ function compiler:buildfunc()
 end
 
 function compiler:bindfunc()
-   local target = self.cstack:pop() --self.target
+	local target = self.target
+	self:restoretarget()
 	local name, func = target.name, target.func
 	if func then
 --		print("ADDING "..name.." TO DICTIONARY")
@@ -287,7 +273,8 @@ end
 function compiler:execfunc(entry)
 	local usecompiletarget = not entry
 	if usecompiletarget then
-	   entry = self.cstack:pop() --self.target
+		entry = self.target
+		self:restoretarget()
 	end
 
 	local name = entry.name

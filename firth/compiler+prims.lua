@@ -165,7 +165,6 @@ function exports.initialize(compiler)
 	-- is there a reasonable usecase for doing so?
 	local function beginblock()
 		local compiling = compiler.compiling
-		compiler:interpretpending()
 		if not compiling then compiler:create() end
 		compiler.compiling = true
 		cstack:push(compiling)
@@ -197,7 +196,6 @@ function exports.initialize(compiler)
 		local compiling = cstack:pop()
 		compiler.compiling = compiling
 		if not compiling then
-			compiler:interpretpending()
 			compiler:create()
 		end
 	end
@@ -339,12 +337,6 @@ function exports.initialize(compiler)
 		compiler.running = false
 	end
 
-	--! ( entry -- C: entry )
-	local function interpretpending()
---		print("EXEC WORD interpretpending")
-		compiler:interpretpending()
-	end
-
 	--! ( -- )
 	local function setcompiling()
 		compiler.compiling = true
@@ -368,18 +360,9 @@ function exports.initialize(compiler)
 	end
 
 	local function interpret()
---		stringio.printstack(cstack)
 		if compiler.compiling then
 			compiler.compiling = false
-
-			local target = compiler.target
-			compiler:restoretarget()
-			cstack:push(target)
---			if not compiler.target then
---				compiler:create()
---			end
 		end
---		stringio.printstack(cstack)
 	end
 
 	--! ( -- bool )
@@ -620,7 +603,6 @@ function exports.initialize(compiler)
 	dictionary.exit = { func = exit, immediate = true }
 	dictionary.setcompiling  = { func = setcompiling }
 	dictionary.settarget  = { func = settarget }
-	dictionary.interpretpending = { func = interpretpending }
 	dictionary.interpret = { func = interpret, immediate = true }
 	dictionary['compiling?'] = { func = compiling }
 	dictionary.parse = { func = parse }
