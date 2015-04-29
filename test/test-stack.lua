@@ -134,6 +134,12 @@ return {
 	end,
 
 	function()
+		st:pushv(1, 2, 3, 4)
+		assertstack("pushv", 1, 2, 3, 4)
+		st:clear()
+	end,
+
+	function()
 		st:push(nil)
 		st:push(123.456)
 		st:push(nil)

@@ -51,6 +51,11 @@ char : create settarget setcompiling
 ` NOP alias: NOOP
 : \n ( -- "\n" ) char \n push ;immed
 : CR ( -- ) \n .raw ;
+: calls: ( -- ) postpone ` " calledby" @@ foreach drop " \tcalledby". . CR end ;
+: calledby: ( -- ) postpone ` " calls" @@ foreach drop " \tcalls"   . . CR end ;
+
+// loop and iteration
+: loops ( n -- ) 1 push call: swap postpone for call: drop ;immed
 
 // values and variables
 : const: ( x -- ) postpone : push call: push postpone ;immed ;immed
@@ -114,10 +119,10 @@ char : create settarget setcompiling
 // some higher level stack manipulations
 : 2dup ( a b -- a b a b ) over over ;
 : 3dup ( a b c -- a b c a b c ) 2 pick 2 pick 2 pick ;
-: ndup ( n*x -- 2n*x ) dup loops dup pick swap end drop ;
+: ndup ( n*x n -- 2n*x ) dup loops dup pick swap end drop ;
 : 2drop ( a b -- ) drop drop ;
 : 3drop ( a b c -- ) drop drop drop ;
-: ndrop ( n*x -- ) loops drop end ;
+: ndrop ( n*x n -- ) loops drop end ;
 
 // some basic boolean operators
 : > ( a b -- a>b ) char > binop ;defer

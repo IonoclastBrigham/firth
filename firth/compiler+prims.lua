@@ -108,12 +108,11 @@ function exports.initialize(compiler)
 		stack.height = height + 2
 	end
 
-	--! ( x s -- s ) ( s: -- x )
+	--! ( s x -- s ) ( s: -- x )
 	local function to_s()
-		local s = stack:pop()
 		local val = stack:pop()
+		local s = stack:top()
 		s:push(val)
-		stack:push(s)
 	end
 
 	--! ( s -- s x ) ( s: x -- )
@@ -130,23 +129,21 @@ function exports.initialize(compiler)
 		stack:push(val)
 	end
 
-	--! ( x1 x2 s -- s ) ( s: -- x1 x2 )
+	--! ( s x1 x2 -- s ) ( s: -- x1 x2 )
 	local function two_to_s()
-		compiler:assert(stack.height >= 3, "2>[]", "UNDERFLOW")
-		local s = stack:pop()
-		compiler:assert(type(s) == "table" and s.height, "2>[]", "INVALID TARGET STACK")
+		local x2, x1 = stack:pop(), stack:pop()
+		local s = stack:top()
 		local height = s.height
-		s[height + 2], s[height + 1] = stack:pop(), stack:pop()
+		s[height + 1], s[height + 2] = x1, x2
 		s.height = height + 2
-		stack:push(s)
 	end
 
 	--! ( s -- s x1 x2 ) ( s: x1 x2 -- )
 	local function two_s_from()
 		local s = stack:top()
-		compiler:assert(s.height >= 2, "2[]>", "UNDERFLOW")
 		local height = stack.height
-		stack[height + 2], stack[height + 1] = s:pop(), s:pop()
+		local x2, x1 = s:pop(), s:pop()
+		stack[height + 1], stack[height + 2] = x1, x2
 		stack.height = height + 2
 	end
 
@@ -155,7 +152,8 @@ function exports.initialize(compiler)
 		local s = stack:top()
 		local height, sheight = stack.height, s.height
 		compiler:assert(sheight >= 2, "2[]@", "UNDERFLOW")
-		stack[height + 2], stack[height + 1] = s[sheight], s[sheight - 1]
+		local x2, x1 = s[sheight], s[sheight - 1]
+		stack[height + 1], stack[height + 2] = x1, x2
 		stack.height = height + 2
 	end
 
@@ -165,8 +163,10 @@ function exports.initialize(compiler)
 	-- is there a reasonable usecase for doing so?
 	local function beginblock()
 		local compiling = compiler.compiling
-		if not compiling then compiler:create() end
-		compiler.compiling = true
+		if not compiling then
+			compiler:create()
+			compiler.compiling = true
+		end
 		cstack:push(compiling)
 	end
 
@@ -180,10 +180,45 @@ function exports.initialize(compiler)
 		compiler:append("else")
 	end
 
-	local function loopsstmt()
+	local function forstmt()
 		beginblock()
-		local count = compiler:poptmp()
-		compiler:append("for _ = 1, %s do", count)
+		local i = compiler:newtmp()
+		local last, first = compiler:poptmp(), compiler:poptmp()
+		compiler:append("for %s = %s, %s do", i, first, last)
+		compiler:push(i)
+	end
+
+	--! ( container -- itr, st, first )
+	local function iterator()
+		local container = stack:pop()
+		if type(container) ~= "table" then
+			compiler:runtimeerror("(loop iterator)", "TARGET NOT ITERABLE")
+		end
+		local mt = getmetatable(container)
+		if mt and mt.__itr then
+			stack:pushv(container:__itr())
+		else
+			stack:pushv(pairs(container))
+			stack:push(nil)
+		end
+	end
+
+	--! ( container -- )
+	local function foreachstmt()
+		beginblock()
+		compiler:call("iterator")
+		local first, st, itr = compiler:poptmp(), compiler:poptmp(), compiler:poptmp()
+		local key, value = compiler:newtmp(), compiler:newtmp()
+		compiler:append("for %s, %s in %s, %s, %s do",
+						key, value, itr, st, first)
+		compiler:push(key)
+		compiler:push(value)
+	end
+
+	--! ( b -- )
+	local function whilestmt()
+		beginblock()
+		compiler:append("while(stack:pop()) do")
 	end
 
 	local function dostmt()
@@ -196,7 +231,8 @@ function exports.initialize(compiler)
 		local compiling = cstack:pop()
 		compiler.compiling = compiling
 		if not compiling then
-			compiler:create()
+			compiler:buildfunc()
+			compiler:execfunc()
 		end
 	end
 
@@ -421,7 +457,7 @@ function exports.initialize(compiler)
 
 	--! ( entry -- )
 	local function does()
-		local varentry = compiler:poptmp()
+		local varentry = compiler:toptmp()
 		local doesname = compiler:newtmpstr(compiler:nexttoken())
 		local doesentry = compiler:newtmpfmt("compiler:lookup(%s)", doesname)
 		local doesfunc = compiler:newtmpfmt("%s.func", doesentry)
@@ -432,7 +468,7 @@ function exports.initialize(compiler)
 			end]]
 		closure = closure:gsub("varentry", varentry):gsub("doesfunc", doesfunc)
 		compiler:append(closure)
-		compiler:append("cstack:push(%s)", varentry)
+		compiler:call("settarget")
 		compiler:append("compiler:bindfunc()")
 		compiler:append("%s.compilebuf = {%q}", varentry, closure)
 	end
@@ -528,20 +564,6 @@ function exports.initialize(compiler)
 		stack:push(compiler.path)
 	end
 
-	local function calls()
-		local word = compiler:nexttoken()
-		for caller, _ in pairs(dictionary[word].calledby) do
-			stringio.printline(string.format("\tcalled by %s", caller))
-		end
-	end
-
-	local function calledby()
-		local word = compiler:nexttoken()
-		for callee, _ in pairs(dictionary[word].calls) do
-			stringio.printline(string.format("\tcalls %s", callee))
-		end
-	end
-
 	local function tstart()
 		stack:push(clock())
 	end
@@ -577,7 +599,10 @@ function exports.initialize(compiler)
 
 	dictionary['if'] = { func = ifstmt, immediate = true }
 	dictionary['else'] = { func = elsestmt, immediate = true }
-	dictionary['loops'] = { func = loopsstmt, immediate = true }
+	dictionary['for'] = { func = forstmt, immediate = true }
+	dictionary['iterator'] = { func = iterator, immediate = true }
+	dictionary['foreach'] = { func = foreachstmt, immediate = true }
+	dictionary['while'] = { func = whilestmt, immediate = true }
 	dictionary['do'] = { func = dostmt, immediate = true }
 	dictionary['end'] = { func = endstmt, immediate = true }
 
@@ -630,8 +655,8 @@ function exports.initialize(compiler)
 	dictionary.notrace = { func = notrace }
 	dictionary['tracing?'] = { func = tracing }
 	dictionary.path = { func = path }
-	dictionary['calls:'] = { func = calls, immediate = true }
-	dictionary['calledby:'] = { func = calledby, immediate = true }
+--	dictionary['calls:'] = { func = calls, immediate = true }
+--	dictionary['calledby:'] = { func = calledby, immediate = true }
 	dictionary.tstart = { func = tstart }
 	dictionary.tend = { func = tend }
 

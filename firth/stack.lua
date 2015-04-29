@@ -36,6 +36,13 @@ function stack:push(val)
 	self.height = top
 end
 
+function stack:pushv(...)
+	local args = {...}
+	for _, arg in ipairs(args) do
+		self:push(arg)
+	end
+end
+
 --! Pops an item off the stack
 --! @return the former top stack item.
 function stack:pop()
@@ -147,6 +154,15 @@ function stack:__tostring()
 	end
 
 	return "["..table.concat(buf, ' ').."]"
+end
+
+function stack:__itr()
+	return function(height, current)
+				if current < height then
+					current = current + 1
+					return current, self[current]
+				end
+			end, self.height, 0
 end
 
 

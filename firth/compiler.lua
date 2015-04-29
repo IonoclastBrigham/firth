@@ -149,8 +149,6 @@ function compiler:create(name)
 		end
 	end
 
---	local c = stack == self.cstack and 'c' or ''
---	stringio.print("PUSHING NEW ENTRY FOR "..name.." onto "..c)
 	local entry = {
 		name = name, compilebuf = newcompilebuf(),
 		calls = { nextidx = 1 }, calledby = {}, upvals = { nextidx = 1 }
@@ -161,8 +159,6 @@ function compiler:create(name)
 	else
 		self:settarget(entry)
 	end
---	stringio.printstack(stack)
---	stringio.printline(self:stacktrace())
 end
 
 function compiler:call(word)
@@ -200,7 +196,7 @@ end
 
 local function upvalues(upvals)
 	upvals.nextidx = nil
-	local buf = { "local upvals = cstack:top().upvals" }
+	local buf = { "local upvals = compiler.target.upvals" }
 	for tmp,val in pairs(upvals) do
 		buf[#buf + 1] = string.format("local %s = upvals[%q]", tmp, tmp)
 	end
@@ -247,8 +243,7 @@ function compiler:buildfunc()
 	end
 
 	-- didn't hit the success path; clean up target
-	target.func = nil
-	target.calls, target.calledby = nil
+	target.func, target.calls, target.calledby = nil
 end
 
 function compiler:bindfunc()
