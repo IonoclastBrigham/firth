@@ -1,11 +1,3 @@
-Implementation Notes
---------------------
-Switched from direct interpretation to pre-compiling interpret mode lines
-	Facilitates branching /loops, which don't work in a direct-interpreted context
-	Necessitated pre-compiling and executing the current scratch buffer when
-	switching to compile mode, to keep things consistent
-
-
 Ideas / TODOs
 -------------
 experimental optimization branch

@@ -9,6 +9,9 @@
 --! MIT-style license. You should have received a copy of the license with the
 --! source distribution in the file LICENSE; if not, you may find it online at
 --! <https://github.com/IonoclastBrigham/firth/blob/master/LICENSE></p>
+--
+-- Formatting:
+--	utf-8 ; unix ; 80 cols ; tabwidth 4
 --------------------------------------------------------------------------------
 
 

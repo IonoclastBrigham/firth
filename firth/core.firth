@@ -23,8 +23,16 @@ char : create settarget setcompiling
 // /////////////////////////////////////////////////////////////////////////////
 // core.firth
 // Core library for low level code and compiler manipulation
+//
 // Copyright © 2015 Brigham Toskin
+// This file is part of the Firth language reference implementation. Usage
+// and redistribution of this software is governed by the terms of a modified
+// MIT-style license. You should have received a copy of the license with the
+// source distribution in the file LICENSE; if not, you may find it online at:
 // <https://github.com/IonoclastBrigham/firth/blob/master/LICENSE>
+//
+// Formatting:
+//	utf-8 ; unix ; 80 cols ; tabwidth 4
 // /////////////////////////////////////////////////////////////////////////////
 
 : " char " parse push ;immed
@@ -66,8 +74,8 @@ char : create settarget setcompiling
 : var: ( x -- ) word variable ! ;immed
 : val: ( x -- ) word variable ! last does> @ ;immed
 
-0.1 const: VERSION
-: copyright " :Firth ver.". VERSION . " Copyright © 2015 Brigham Toskin.". ;
+1 const: VERSION
+: copyright " :Firth ver. pre-alpha". VERSION . " Copyright © 2015 Brigham Toskin.". ;
 ` copyright alias: ©
 
 // some basic arithmetic operators and shortcuts

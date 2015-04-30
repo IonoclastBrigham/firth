@@ -1,3 +1,20 @@
+--------------------------------------------------------------------------------
+--! @file test-stack.lua
+--! @brief Stack class test module.
+--! @author btoskin - <brigham@ionoclast.com>
+--! @copyright © 2015 Brigham Toskin
+--! 
+--! <p>This file is part of the Firth language reference implementation. Usage
+--! and redistribution of this software is governed by the terms of a modified
+--! MIT-style license. You should have received a copy of the license with the
+--! source distribution in the file LICENSE; if not, you may find it online at
+--! <https://github.com/IonoclastBrigham/firth/blob/master/LICENSE></p>
+--
+-- Formatting:
+--	utf-8 ; unix ; 80 cols ; tabwidth 4
+--------------------------------------------------------------------------------
+
+
 local stack = require 'firth/stack'
 
 local st
