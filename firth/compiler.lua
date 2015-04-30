@@ -61,21 +61,19 @@ function compiler:loadfile(path)
 	local cstack = self.cstack
 	local num = 1
 	self.running = true
+
 	cstack:push(stringio.input())
 	cstack:push(self.path)
 	cstack:push(self.linenum)
+
 	self.path = path
 	stringio.input(path)
 	local src = stringio.read()
-	-- print(src)
 	self:interpret(src, num)
+
+	if self.compiling then self:runtimeerror("loadfile", "UNEXPECTED EOF") end
+
 	if self.running and self.cstack.height > 0 then
-		local tos = cstack:top()
-		if type(tos) == "table"
-			and tos.compilebuf and #tos.compilebuf == 1
-			and tos.name == "[INTERP_BUF]" then
-			cstack:drop()
-		end
 		self.linenum = cstack:pop()
 		self.path = cstack:pop()
 		stringio.input(cstack:pop())
