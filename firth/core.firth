@@ -38,9 +38,21 @@ char : create settarget setcompiling
 : " char " parse push ;immed
 : ( char ( >ts " %b()" parsematch drop ;immed // ( (nestable) parentheses)
 
+// loop and iteration
+: loops ( n -- ) 1 push " swap" call postpone for " drop" call ;immed
+
+// some higher level stack manipulations
+: nip ( a b -- b ) swap drop ;
+: 2dup ( a b -- a b a b ) over over ;
+: 3dup ( a b c -- a b c a b c ) 2 pick 2 pick 2 pick ;
+: ndup ( n*x n -- 2n*x ) dup loops dup pick swap end drop ;
+: 2drop ( a b -- ) drop drop ;
+: 3drop ( a b c -- ) drop drop drop ;
+: ndrop ( n*x n -- ) loops drop end ;
+
 // a few parser/interpreter/compiler control words
 : call: word push " call" call ;immed
-: xt ( entry -- xt ) " func" @@ swap drop ;
+: xt ( entry -- xt ) " func" @@ nip ;
 : ?deferred ( -- )
 	last " name" @@ dup
 	create settarget setcompiling // create and start compiling overriding def
@@ -59,16 +71,13 @@ char : create settarget setcompiling
 ` NOP alias: NOOP
 : \n ( -- "\n" ) char \n push ;immed
 : CR ( -- ) \n .raw ;
-: calls: ( -- ) postpone ` " calledby" @@ swap drop foreach drop " \tcalledby". . CR end ;
-: calledby: ( -- ) postpone ` " calls" @@ swap drop foreach drop " \tcalls"   . . CR end ;
-
-// loop and iteration
-: loops ( n -- ) 1 push call: swap postpone for call: drop ;immed
+: calls: ( -- ) postpone ` " calledby" @@ nip foreach drop " \tcalledby". . CR end ;
+: calledby: ( -- ) postpone ` " calls" @@ nip foreach drop " \tcalls"   . . CR end ;
 
 // values and variables
 : const: ( x -- ) postpone : push call: push postpone ;immed ;immed
 " data" const: DATA
-: @ ( entry -- x ) DATA @@ swap drop ;
+: @ ( entry -- x ) DATA @@ nip ;
 : ! ( x entry -- ) DATA !! drop ;
 : variable ( name -- entry ) create dup does> NOP ;
 : var: ( x -- ) word variable ! ;immed
@@ -123,14 +132,6 @@ char : create settarget setcompiling
 : 100* ( n -- 100n ) 100 char * binopconst ;defer
 : 100/ ( n -- n/100 ) 100 char / binopconst ;defer
 : percent ( n p -- n*(p/100) ) postpone 100/  postpone * ;immed
-
-// some higher level stack manipulations
-: 2dup ( a b -- a b a b ) over over ;
-: 3dup ( a b c -- a b c a b c ) 2 pick 2 pick 2 pick ;
-: ndup ( n*x n -- 2n*x ) dup loops dup pick swap end drop ;
-: 2drop ( a b -- ) drop drop ;
-: 3drop ( a b c -- ) drop drop drop ;
-: ndrop ( n*x n -- ) loops drop end ;
 
 // some basic boolean operators
 : > ( a b -- a>b ) char > binop ;defer
