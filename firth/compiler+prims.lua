@@ -497,19 +497,20 @@ function exports.initialize(compiler)
 		compiler:push(dictionary[name] ~= nil)
 	end
 
-	--! @@ ( t k -- x )
+	--! @@ ( t k -- t x )
 	local function fetchfield()
 		local idx = stack:pop()
-		local tab = stack:pop()
+		local tab = stack:top()
 		stack:push(tab[idx])
 	end
 
-	--! !! ( x t k -- )
+	--! !! ( x t k -- t )
 	local function storefield()
 		local idx = stack:pop()
 		local tab = stack:pop()
 		local val = stack:pop()
 		tab[idx] = val
+		stack:push(tab)
 	end
 
 	--! ( -- )

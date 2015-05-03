@@ -40,9 +40,9 @@ char : create settarget setcompiling
 
 // a few parser/interpreter/compiler control words
 : call: word push " call" call ;immed
-: xt ( entry -- xt ) " func" @@ ;
+: xt ( entry -- xt ) " func" @@ swap drop ;
 : ?deferred ( -- )
-	last dup " name" @@ dup
+	last " name" @@ dup
 	create settarget setcompiling // create and start compiling overriding def
 		call: compiling? postpone if
 			call		// encode a call to compiling word
@@ -59,8 +59,8 @@ char : create settarget setcompiling
 ` NOP alias: NOOP
 : \n ( -- "\n" ) char \n push ;immed
 : CR ( -- ) \n .raw ;
-: calls: ( -- ) postpone ` " calledby" @@ foreach drop " \tcalledby". . CR end ;
-: calledby: ( -- ) postpone ` " calls" @@ foreach drop " \tcalls"   . . CR end ;
+: calls: ( -- ) postpone ` " calledby" @@ swap drop foreach drop " \tcalledby". . CR end ;
+: calledby: ( -- ) postpone ` " calls" @@ swap drop foreach drop " \tcalls"   . . CR end ;
 
 // loop and iteration
 : loops ( n -- ) 1 push call: swap postpone for call: drop ;immed
@@ -68,8 +68,8 @@ char : create settarget setcompiling
 // values and variables
 : const: ( x -- ) postpone : push call: push postpone ;immed ;immed
 " data" const: DATA
-: @ ( entry -- x ) DATA @@ ;
-: ! ( x entry -- ) DATA !! ;
+: @ ( entry -- x ) DATA @@ swap drop ;
+: ! ( x entry -- ) DATA !! drop ;
 : variable ( name -- entry ) create dup does> NOP ;
 : var: ( x -- ) word variable ! ;immed
 : val: ( x -- ) word variable ! last does> @ ;immed
