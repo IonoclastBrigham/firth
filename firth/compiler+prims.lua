@@ -493,7 +493,7 @@ function exports.initialize(compiler)
 
 	--! ( -- b ) TS: word
 	local function defined()
-		local name = compiler:nexttoken()
+		local name = stack:pop()
 		compiler:push(dictionary[name] ~= nil)
 	end
 
