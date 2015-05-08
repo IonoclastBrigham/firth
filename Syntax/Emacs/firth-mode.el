@@ -219,6 +219,7 @@
     ;; (modify-syntax-entry ?) "> n" stab)
     ;; (modify-syntax-entry ?/ "< 12" stab)
     ;; (modify-syntax-entry ?\n "> " stab)
+	(setq comment-start "//")
 
     stab)
   "Syntax Table for :Firth Mode")
