@@ -41,6 +41,11 @@ local function yank(i, tos, ...)
 	return yankfilter(0, i, tos, ...)
 end
 
+local function chop(n, tos, ...)
+	if n == 1 then return ... end
+	return select(n, ...)
+end
+
 local function peek(i, tos, ...)
 	if i == 0 then return tos end
 	return (select(i+1, tos, ...))
