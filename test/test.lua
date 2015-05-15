@@ -21,53 +21,62 @@ local table = require 'table'
 
 
 local failures = 0
-local messages = {}
-local mt = {}
-mt.insert = table.insert
+local mt = { insert = table.insert }
 mt.__index = mt
-setmetatable(messages, mt)
+local messages = setmetatable({}, mt)
 
-local function try(bool, msg)
-	if not bool then
+local function try(test, ...)
+	local succ, msg = pcall(test, ...)
+	if not succ then
 		failures = failures + 1
 		if msg then messages:insert(msg) end
 		output:write 'E'
 	else
 		output:write '.'
 	end
-	return bool, msg
 end
 
 local function failed(msg)
-	output:write('E\n')
+	output:write('E')
 	messages:insert(msg)
 	failures = failures + 1
 end
 
 local function dotests(path)
-	local success, tests = pcall(loadfile, path)
-	if success then
+	local tests, err = loadfile(path)
+	if tests and not err then
 		success, tests = pcall(tests)
 		if success then
 			for _, test in ipairs(tests) do
-				try(pcall(test))
+				try(test)
 			end
 		else
 			failed(tests)
 		end
 	else
-		failed(tests)
+		local me = ""
+		if err:sub(1, 11) == "cannot open" then
+			me = debug.getinfo(dotests, "S").source..": dotests(): "
+			if me:sub(1, 1) == '@' then me = me:sub(2) end
+		end
+		failed(me..err)
 	end
 	output:write('\n')
 end
 
--- TODO: parameterize this or automate it
-dotests 'test/test-stack.lua'
-dotests 'test/test-stringio.lua'
+
+-- export globally so it's accessible from tests.conf
+function testlist(list)
+	for _, path in ipairs(list) do dotests(path) end
+end
+
+local succ, msg = pcall(dofile, "test/tests.conf")
+if not succ then failed(msg) end
 
 if failures > 0 then
-	output:write(string.format("%d failed tests.\n", failures))
+	output:write(string.format("\n%d failed tests.\n", failures))
 	for _, msg in ipairs(messages) do
 		output:write(string.format("%s\n", msg))
 	end
+	os.exit(failures)
 end
