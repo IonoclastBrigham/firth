@@ -39,12 +39,12 @@ function stack:push(val)
 	self.height = top
 end
 
-function stack:pushv(...)
-	local args = {...}
-	for _, arg in ipairs(args) do
-		self:push(arg)
-	end
+local function pushv(self, ...)
+	if select("#", ...) == 0 then return end
+	self:push(...)
+	return pushv(self, select(2, ...))
 end
+stack.pushv = pushv
 
 --! Pops an item off the stack
 --! @return the former top stack item.
