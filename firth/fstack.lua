@@ -18,17 +18,19 @@ end
 
 -- in-thread stack manipulation primitives --
 
--- redundant, but possibly semantically useful	
+-- redundant, but possibly semantically useful
+-- (for lua code)
 local function push(x, ...)
 	return x, ...
 end
 
-local function drop(tos, ...)
-	return ...
-end
-
+-- (probably mostly for lua code)
 local function top(tos, ...)
 	return tos
+end
+
+local function drop(tos, ...)
+	return ...
 end
 
 local function shove(i, x, tos, ...)
@@ -41,17 +43,19 @@ local function yank(i, tos, ...)
 	return yankfilter(0, i, tos, ...)
 end
 
-local function chop(n, tos, ...)
-	if n == 1 then return ... end
-	return select(n, ...)
-end
-
 local function peek(i, tos, ...)
 	if i == 0 then return tos end
 	return (select(i+1, tos, ...))
 end
 
-local height = count
+local function chop(n, tos, ...)
+	if n == 1 then return ... end
+	return select(n, ...)
+end
+
+local function height(...)
+	return count(...), ...
+end
 
 -- stack method coroutines / continuations --
 
