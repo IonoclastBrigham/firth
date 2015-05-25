@@ -24,7 +24,7 @@ local height = stack.height
 
 local function dup(tos, ...) return tos, tos, ... end
 
--- local firth = require "firth.compiler"
+ local firth = require "firth.compiler"
 	
 
 -- words to call --
@@ -134,33 +134,33 @@ local function stackthread(...)
 	return execthread(4, add, sub, mul, div, ...)
 end
 
--- -- current firth, inline operators
--- local fooword = ": foo   + - * / ;"
--- local c = firth.new()
--- local s = c.stack
--- local d = c.dictionary
--- c:interpret(fooword)
--- local fooxt = d.foo.func
--- local function inlinefirth(...)
--- 	s:pushv(...)
--- 	fooxt()
--- 	return s:pop()
--- end
+ -- current firth, inline operators
+ local fooword = ": foo   + - * / ;"
+ local c = firth.new()
+ local s = c.stack
+ local d = c.dictionary
+ c:interpret(fooword)
+ local fooxt = d.foo.func
+ local function inlinefirth(...)
+ 	s:pushv(...)
+ 	fooxt()
+ 	return s:pop()
+ end
 
--- -- current firth, "operator" words
--- local opwords = [[
--- 	: add   + ;
--- 	: sub   - ;
--- 	: mul   * ;
--- 	: div   / ;
--- 	: foo2   add sub mul div ;]]
--- c:interpret(opwords)
--- local foo2xt = d.foo2.func
--- local function routinesfirth(...)
--- 	s:pushv(...)
--- 	foo2xt()
--- 	return s:pop()
--- end
+ -- current firth, "operator" words
+ local opwords = [[
+ 	: add   + ;
+ 	: sub   - ;
+ 	: mul   * ;
+ 	: div   / ;
+ 	: foo2   add sub mul div ;]]
+ c:interpret(opwords)
+ local foo2xt = d.foo2.func
+ local function routinesfirth(...)
+ 	s:pushv(...)
+ 	foo2xt()
+ 	return s:pop()
+ end
 
 
 -- native lua implementation
@@ -198,10 +198,10 @@ local function runtests(...)
 	insert = insert + 1
 	results[insert] = { "Stack:\t", timer(stackthread, ...) }
 	insert = insert + 1
-	-- results[insert] = { "Inline Firth:", timer(inlinefirth, ...) }
-	-- insert = insert + 1
-	-- results[insert] = { "Routines Firth:", timer(routinesfirth, ...) }
-	-- insert = insert + 1
+	 results[insert] = { "Inline Firth:", timer(inlinefirth, ...) }
+	 insert = insert + 1
+	 results[insert] = { "Routines Firth:", timer(routinesfirth, ...) }
+	 insert = insert + 1
 	results[insert] = { "Native:\t", timer(native, ...) }
 	printresults(results)
 end
