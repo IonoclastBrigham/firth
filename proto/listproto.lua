@@ -9,7 +9,7 @@ local time = os.clock
 local select = select
 
 
-local NULL, pair, append, list, buildlist, car, cdr, lvalues, foreach
+local NULL, pair, append, list, buildlist, car, cdr, eachcar, foreach
 
 -- test rig util functions --
 
@@ -31,14 +31,6 @@ local function gcon()
 	collectgarbage()
 	collectgarbage()
 	return mem
-end
-
-local function clearg()
-	local mem = collectgarbage("count")
-	while mem > 20 do
-		collectgarbage()
-		mem = mem - collectgarbage("count")
-	end
 end
 
 -- benchmark functions --
@@ -78,8 +70,6 @@ local function runtestsfor(name)
 	local total, memtotal, tests = 0, 0, 0
 
 	print("\n**"..name.."**")
-	
-	clearg()
 
 	mem = gcoff()
 	t = timeit(create10)
@@ -164,12 +154,17 @@ end
 print("Each test run 100,000 times for each list implementation..")
 print("Garbage collector is disabled for each test, with a cleanup step between them.")
 
+collectgarbage()
+collectgarbage()
+
 ---[[
 do
 	local L = setmetatable({}, { __mode = "k" })
+	local NULL = {}
 
 	function append(l, v)
 		local node = {v=v}
+		L[node] = NULL
 		if not l.head then
 			l.head = node
 		else
@@ -201,20 +196,16 @@ do
 		return { head = L[l.head], tail = l.tail}
 	end
 
-	function lvalues(l)
-		local next = l.head
-		local prev
-		return function()
-			if not next or prev == l.tail then return end
-			local node = next
-			prev = next
-			next = L[node]
-			return node.v
-		end
+	local function caritr(l, n)
+		if not n then return end
+		return  L[n], n.v
+	end
+	function eachcar(l)
+		return caritr, l, l.head
 	end
 
 	function foreach(l, f)
-		for v in lvalues(l) do f(v) end
+		for _,v in eachcar(l) do f(v) end
 	end
 
 	runtestsfor "Hash-Linked"
@@ -226,7 +217,7 @@ end
 do
 	NULL = setmetatable({0,0}, { __tostring = function(t) return "'()" end })
 	local L = {}
-	for i=1,256 do L[i] = NULL end
+	for i=1,256 do L[i] = 0 end
 
 	local nexti = 1
 	function append(l, v)
@@ -260,25 +251,22 @@ do
 	end
 
 	function cdr(l)
-		if l[1] == l[2] then return {0,0} end
+		if l[1] == l[2] then return NULL end
 		local next = l[1] + 1
 		return { L[next], l[2] }
 	end
 
-	function lvalues(l)
-		local next = l[1]
-		local prev = 0
-		return function()
-			if next == 0 or prev == l[2] then return end
-			local v = L[next]
-			prev = next
-			next = L[next+1]
-			return v
-		end
+	local function caritr(_, n)
+		if n == 0 then return end
+		local v = L[n]
+		return L[n+1], v
+	end
+	function eachcar(l)
+		return caritr, nil, l[1]
 	end
 
 	function foreach(l, f)
-		for v in lvalues(l) do f(v) end
+		for _,v in eachcar(l) do f(v) end
 	end
 
 	runtestsfor "Index-Linked"
@@ -338,17 +326,16 @@ do
 		return p[2]
 	end
 
-	function lvalues(l)
-		return function()
-			if l == NULL then return end
-			local v = l[1]
-			l = l[2]
-			return v
-		end
+	local function caritr(_, l)
+		if l == NULL then return end
+		return l[2], l[1]
+	end
+	function eachcar(l)
+		return caritr, nil, l
 	end
 
 	function foreach(l, f)
-		for v in lvalues(l) do f(v) end
+		for _,v in eachcar(l) do f(v) end
 	end
 	
 	runtestsfor "Traditional"
@@ -385,18 +372,21 @@ do
 		return { n = l.n - 1; unpack(l, 2) }
 	end
 
-	function lvalues(l)
-		local i = 1
-		return function()
-			if i > l.n then return end
-			local v = l[i]
-			i = i + 1
-			return v
-		end
+--	local function caritr(_, i)
+--	end
+	function eachcar(l)
+--		local i = 1
+--		return function()
+--			if i > l.n then return end
+--			local v = l[i]
+--			i = i + 1
+--			return v
+--		end
+		return ipairs(l)
 	end
 
 	function foreach(l, f)
-		for v in lvalues(l) do f(v) end
+		for _,v in eachcar(l) do f(v) end
 	end
 	
 	runtestsfor "Array-Tables"
@@ -411,11 +401,11 @@ summary()
 
 
 --[[
--- local l = {}
+--local l = {}
 --local l = {0,0}
-local l = pair(5, NULL)
--- local l = list()
---append(l, 5)
+--local l = pair(5, NULL)
+local l = list()
+append(l, 5)
 append(l, 10)
 append(l, 15)
 append(l, 20)
