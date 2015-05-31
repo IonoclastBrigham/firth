@@ -145,13 +145,13 @@ local function summary()
 	
 	print()
 	print("Fastest Overall:\t", fname.."("..fastest.." secs)")
-	print("Smallest on Average:", sname.."("..smallest.." MB)")
+	print("Smallest on Average:", sname.."("..smallest.." MB)\n")
 end
 --]]
 
 -- here down is the different implementations --
 
-print("Each test run 100,000 times for each list implementation..")
+print("\nEach test run 100,000 times for each list implementation..")
 print("Garbage collector is disabled for each test, with a cleanup step between them.")
 
 collectgarbage()
@@ -210,6 +210,8 @@ do
 
 	runtestsfor "Hash-Linked"
 end
+collectgarbage()
+collectgarbage()
 --]]
 
 
@@ -271,16 +273,14 @@ do
 
 	runtestsfor "Index-Linked"
 end
+collectgarbage()
+collectgarbage()
 --]=]
 
 
 ---[[
 do
 	NULL = setmetatable({}, { __tostring = function(t) return "'()" end })
-
-	function pair(a, b)
-		return {a, b}
-	end
 
 	function append(l, v)
 		-- first, make sure we're at the tail position
@@ -294,6 +294,13 @@ do
 		curr[2] = l
 		return listr(head, l, select(2, ...))
 	end
+--	local function listr(head, curr, n, next, ...)
+--		if n == 0 then curr[2] = NULL; return head end
+--		n = n - 1
+--		local l = {next}
+--		curr[2] = l
+--		return listr(head, l, n, ...)
+--	end
 	function list(...)
 --		if select("#", ...) == 0 then return NULL end
 --		return pair((...), list(select(2, ...)))
@@ -309,6 +316,9 @@ do
 
 		local l = {(...)}
 		return listr(l, l, select(2, ...))
+
+--		local l = {(...)}
+--		return listr(l, l, select("#", ...)-1, select(2, ...))
 	end
 
 	function buildlist(n, f)
@@ -338,7 +348,7 @@ do
 		for _,v in eachcar(l) do f(v) end
 	end
 	
-	runtestsfor "Traditional"
+--	runtestsfor "Traditional"
 end
 --]]
 
@@ -394,7 +404,7 @@ end
 --]]
 
 
-summary()
+--summary()
 
 
 
@@ -403,9 +413,9 @@ summary()
 --[[
 --local l = {}
 --local l = {0,0}
---local l = pair(5, NULL)
-local l = list()
-append(l, 5)
+local l = pair(5, NULL)
+--local l = list()
+--append(l, 5)
 append(l, 10)
 append(l, 15)
 append(l, 20)
