@@ -16,6 +16,12 @@
 local time = os.clock
 
 local unpack = unpack or table.unpack
+local function reverse(...)
+	local t = {...}
+	local new = {}
+	for i, v in ipairs(t) do new[#t - i + 1] = v end
+	return unpack(new)
+end
 
 local stack = require "firth.fstack"
 local push, drop, top = stack.push, stack.drop, stack.top
@@ -134,34 +140,33 @@ local function stackthread(...)
 	return execthread(4, add, sub, mul, div, ...)
 end
 
- -- current firth, inline operators
- local fooword = ": foo   + - * / ;"
- local c = firth.new()
- local s = c.stack
- local d = c.dictionary
- c:interpret(fooword)
- local fooxt = d.foo.func
- local function inlinefirth(...)
- 	s:pushv(...)
- 	fooxt()
- 	return s:pop()
- end
+-- current firth, inline operators
+local fooword = ": foo   + - * / ;"
+local c = firth.new()
+local s = c.stack
+local d = c.dictionary
+c:interpret(fooword)
+local fooxt = d.foo.func
+local function inlinefirth(...)
+	s:pushv(reverse(...))
+	fooxt()
+	return s:pop()
+end
 
- -- current firth, "operator" words
- local opwords = [[
- 	: add   + ;
- 	: sub   - ;
- 	: mul   * ;
- 	: div   / ;
- 	: foo2   add sub mul div ;]]
- c:interpret(opwords)
- local foo2xt = d.foo2.func
- local function routinesfirth(...)
- 	s:pushv(...)
- 	foo2xt()
- 	return s:pop()
- end
-
+-- current firth, "operator" words
+local opwords = [[
+	: add   + ;
+	: sub   - ;
+	: mul   * ;
+	: div   / ;
+	: foo2   add sub mul div ;]]
+c:interpret(opwords)
+local foo2xt = d.foo2.func
+local function routinesfirth(...)
+	s:pushv(reverse(...))
+	foo2xt()
+	return s:pop()
+end
 
 -- native lua implementation
 local function native(n5, n4, n3, n2, n1)
@@ -178,31 +183,25 @@ local function timer(f, ...)
 end
 
 local function printresults(t)
+	print(("\n\nExpected Result: (%f)"):format( -0.08333333333333))
 	table.sort(t, function(a, b) return a[2] < b[2] end)
 	print()
-	for _,v in ipairs(t) do print(("%s\t%.4f seconds"):format(v[1], v[2])) end
+	for _,v in ipairs(t) do print(("%s\t%.4f seconds (%f)"):format(v[1], v[2], v[3])) end
 end
 
 local function runtests(...)
 	-- print(continuations(...))
-	local results, insert = {}, 1
-	results[insert] = { "Nested:\t", timer(nested, ...) }
-	insert = insert + 1
-	results[insert] = { "Threaded:", timer(threaded, ...) }
-	insert = insert + 1
-	results[insert] = { "Closures:", timer(threadedclosures, ...) }
-	insert = insert + 1
-	results[insert] = { "Continuations:", timer(continuations, ...) }
-	insert = insert + 1
-	results[insert] = { "Contins inline:", timer(contsinline, ...) }
-	insert = insert + 1
-	results[insert] = { "Stack:\t", timer(stackthread, ...) }
-	insert = insert + 1
-	 results[insert] = { "Inline Firth:", timer(inlinefirth, ...) }
-	 insert = insert + 1
-	 results[insert] = { "Routines Firth:", timer(routinesfirth, ...) }
-	 insert = insert + 1
-	results[insert] = { "Native:\t", timer(native, ...) }
+	local results, insert = {
+		{ "Nested:\t", timer(nested, ...), nested(...) },
+		{ "Threaded:", timer(threaded, ...), threaded(...) },
+		{ "Closures:", timer(threadedclosures, ...), threadedclosures(...) },
+		{ "Continuations:", timer(continuations, ...), continuations(...) },
+		{ "Contins inline:", timer(contsinline, ...), contsinline(...) },
+		{ "Stack:\t", timer(stackthread, ...), stackthread(...) },
+		{ "Inline Firth:", timer(inlinefirth, ...), inlinefirth(...) },
+		{ "Routines Firth:", timer(routinesfirth, ...), routinesfirth(...) },
+		{ "Native:\t", timer(native, ...), native(...) }
+	}
 	printresults(results)
 end
 
