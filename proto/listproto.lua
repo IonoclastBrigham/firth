@@ -13,6 +13,8 @@ local NULL, pair, append, list, buildlist, car, cdr, eachcar, foreach
 
 -- test rig util functions --
 
+collectgarbage("setstepmul", 400)
+
 ---[[
 local function timeit(f, ...)
 	local t0 = time()
@@ -74,7 +76,7 @@ local function runtestsfor(name)
 	mem = gcoff()
 	t = timeit(create10)
 	mem = gcon() - mem
-	print("create10():\t", t.." secs, "..(mem).." MB")
+	print("create10():\t", t.." secs, "..mem.." MB")
 	total = total + t
 	memtotal = memtotal + mem
 	tests = tests + 1
@@ -84,7 +86,7 @@ local function runtestsfor(name)
 	t = timeit(foreach_sum1, l)
 	l = nil
 	mem = gcon() - mem
-	print("foreach_sum1(8K):", t.." secs, "..(mem).." MB")
+	print("foreach_sum1(8K):", t.." secs, "..mem.." MB")
 	total = total + t
 	memtotal = memtotal + mem
 	tests = tests + 1
@@ -94,7 +96,7 @@ local function runtestsfor(name)
 	t = timeit(foreach_sum1, l)
 	l = nil
 	mem = gcon() - mem
-	print("foreach_sum1(2K):", t.." secs, "..(mem).." MB")
+	print("foreach_sum1(2K):", t.." secs, "..mem.." MB")
 	total = total + t
 	memtotal = memtotal + mem
 	tests = tests + 1
@@ -109,7 +111,7 @@ local function runtestsfor(name)
 	end
 	l = nil
 	mem = gcon() - mem
-	print("foreach_sum4(4x512):", t.." secs, "..(mem).." MB")
+	print("foreach_sum4(4x512):", t.." secs, "..mem.." MB")
 	total = total + t
 	memtotal = memtotal + mem
 	tests = tests + 1
@@ -124,7 +126,7 @@ local function runtestsfor(name)
 	end
 	l = nil
 	mem = gcon() - mem
-	print("foreach_sum8(8x256):", t.." secs, "..(mem).." MB")
+	print("foreach_sum8(8x256):", t.." secs, "..mem.." MB")
 	total = total + t
 	memtotal = memtotal + mem
 	tests = tests + 1
@@ -143,8 +145,7 @@ local function summary()
 		if v[2] < smallest then smallest, sname = v[2], k end
 	end
 	
-	print()
-	print("Fastest Overall:\t", fname.."("..fastest.." secs)")
+	print("\nFastest Overall:", fname.."("..fastest.." secs)")
 	print("Smallest on Average:", sname.."("..smallest.." MB)\n")
 end
 --]]
@@ -159,8 +160,9 @@ collectgarbage()
 
 ---[[
 do
-	local L = setmetatable({}, { __mode = "k" })
 	local NULL = {}
+	local L = setmetatable({}, { __mode = "k" })
+	for i=1,1000000 do L[i] = 0 end
 
 	function append(l, v)
 		local node = {v=v}
@@ -209,6 +211,7 @@ do
 	end
 
 	runtestsfor "Hash-Linked"
+	NULL, pair, append, list, buildlist, car, cdr, eachcar, foreach = nil, nil, nil, nil, nil, nil, nil, nil, nil
 end
 collectgarbage()
 collectgarbage()
@@ -219,15 +222,22 @@ collectgarbage()
 do
 	NULL = setmetatable({0,0}, { __tostring = function(t) return "'()" end })
 	local L = {}
-	for i=1,256 do L[i] = 0 end
+	for i=1,1000000 do L[i] = 0 end
 
 	local nexti = 1
 	function append(l, v)
-		local idx = nexti; nexti = nexti + 2 -- XXX
+		-- FIXME: pretend first free index was found somehow
+		local idx = nexti; nexti = nexti + 2
+		
 		L[idx] = v			-- node.v = v
+		L[idx+1] = 0		-- node.next = NULL
 		if l[1] == 0 then
+			-- empty list/null node
 			l[1] = idx		-- head = node
 		else
+			-- extant list with at least one valid node
+			-- l[2] points at the data cell of the tail element
+			-- (which could also be the head)
 			L[l[2]+1] = idx	-- tail.next = node
 		end
 		l[2] = idx			-- tail = node
@@ -253,9 +263,9 @@ do
 	end
 
 	function cdr(l)
-		if l[1] == l[2] then return NULL end
-		local next = l[1] + 1
-		return { L[next], l[2] }
+		if l[1] == l[2] then return NULL end -- empty or length == 1
+		local nexti = l[1] + 1
+		return { L[nexti], l[2] }
 	end
 
 	local function caritr(_, n)
@@ -272,6 +282,7 @@ do
 	end
 
 	runtestsfor "Index-Linked"
+	NULL, pair, append, list, buildlist, car, cdr, eachcar, foreach = nil, nil, nil, nil, nil, nil, nil, nil, nil
 end
 collectgarbage()
 collectgarbage()
@@ -281,6 +292,20 @@ collectgarbage()
 ---[[
 do
 	NULL = setmetatable({}, { __tostring = function(t) return "'()" end })
+	
+	local free = { 0, NULL }
+	for i=1,1000000 do free = { 0, free } end
+
+	function pair(a, b)
+		local p
+		if free ~= NULL then 
+			p, free = free, free[2]
+			p[1], p[2] = a, b
+		else
+			p = { a, b }
+		end
+		return p
+	end
 
 	function append(l, v)
 		-- first, make sure we're at the tail position
@@ -288,37 +313,17 @@ do
 		l[2] = pair(v, NULL)
 	end
 
-	local function listr(head, curr, ...)
-		if select("#", ...) == 0 then curr[2] = NULL; return head end
-		local l = {(...)}
+	local function listr(curr, next, ...)
+		-- naively(?) assumes nil is not a valid value
+		if not next then curr[2] = NULL; return end
+		local l = pair(next, NULL)
 		curr[2] = l
-		return listr(head, l, select(2, ...))
+		return listr(l, ...)
 	end
---	local function listr(head, curr, n, next, ...)
---		if n == 0 then curr[2] = NULL; return head end
---		n = n - 1
---		local l = {next}
---		curr[2] = l
---		return listr(head, l, n, ...)
---	end
 	function list(...)
---		if select("#", ...) == 0 then return NULL end
---		return pair((...), list(select(2, ...)))
-
---		local l = {(...)}
---		local current = l
---		for i=2,select("#", ...) do
---			local new = {(select(i, ...))}
---			current[2] = new
---			current = new
---		end
---		current[2] = NULL
-
-		local l = {(...)}
-		return listr(l, l, select(2, ...))
-
---		local l = {(...)}
---		return listr(l, l, select("#", ...)-1, select(2, ...))
+		local l = pair((...), NULL)
+		listr(l, select(2, ...))
+		return l
 	end
 
 	function buildlist(n, f)
@@ -348,8 +353,11 @@ do
 		for _,v in eachcar(l) do f(v) end
 	end
 	
---	runtestsfor "Traditional"
+	runtestsfor "Traditional"
+	NULL, pair, append, list, buildlist, car, cdr, eachcar, foreach = nil, nil, nil, nil, nil, nil, nil, nil, nil
 end
+collectgarbage()
+collectgarbage()
 --]]
 
 
@@ -368,6 +376,7 @@ do
 	function buildlist(n, f)
 		if n < 1 then return list() end
 		local l = list()
+		l[1], l[n] = 0, 0 -- maybe force pre-alloc?
 		for i=1,n do append(l, f(i-1)) end
 		return l
 	end
@@ -400,11 +409,14 @@ do
 	end
 	
 	runtestsfor "Array-Tables"
+	NULL, pair, append, list, buildlist, car, cdr, eachcar, foreach = nil, nil, nil, nil, nil, nil, nil, nil, nil
 end
+collectgarbage()
+collectgarbage()
 --]]
 
 
---summary()
+summary()
 
 
 
