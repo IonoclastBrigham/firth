@@ -1,4 +1,4 @@
-#:Firth
+# :Firth
 
 :Firth (n.) – a Forth-like language designed for DSL creation, implemented in Lua.
 
