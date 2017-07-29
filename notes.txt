@@ -41,18 +41,6 @@ experimental optimization branch
 			use locals wherever possible
 			commit stack changes lazily
 			pre-calculate results when literals are arguments?
-refactor input stream tokenization
-	newlines(str)
-		returns an array table of offsets into str where newlines live
-		used in interpret() to set self.linenum in the processing loop
-		e.g. { 0, 35, 71, 123, 151, 200, ... }
-	nexttoken()
-		rather than resizing input string, use token begin/end pointers
-		makes extracting substrings faster and more memory efficient
-		makes >ts faster and more memory efficient
-		so we get: stringio.nexttoken(string, delim, searchstart) -> token, tokstart, tokend
-		if only delims in string (or empty) return "" and start == end
-			FIXES: will error if an input line has more than one trailing whitespace.
 stack data type
 	3>[], 4>[], n>[] ( n*x s n -- s )
 	[3]>, [4], [n]> ( s n -- s n*x )
@@ -77,7 +65,7 @@ loops
 		return an iterator closure
 		1 10 range		// -> 1 2 3 4 5 6 7 8 9 10
 		1 10 range: 2	// -> 1 3 5 7 9
-	each, map, reduce, etc.
+	each, map, fold, etc.
 		similar to foreach style loop, but applies an xt to each item
 	reference forth loops
 		end start DO xxx LOOP			// for i=start,end-1 ...
@@ -101,9 +89,10 @@ execution, lambdas, functional programming
 		leaves an xt on tos, using pushfunc()
 		when implemented, closes over locals?
 		possible names/syntax
-			lambda: 5 > ;	// rewrite ; to push based on target.name?
-			:( 5 > );		// ); will always do pushfunc()
+			lambda: 5 > ;	// rewrite ';' to push based on target.name?
+			:( 5 > );		// ');' will always do pushfunc()
 			:NONAME 5 > ;
+			:{ it ->  it 5 > } // ???
 		e.g.
 			:( 1- 2* ); data each
 compiletime macros / constexprs?
@@ -174,11 +163,8 @@ local variables
 		// uses a local to keep the stack cleaner
 		0 =: width
 		100 loops
-			nextfield dup printcontent widefield? if
-				50 setl: width	// will print a wide break
-			else
-				25 setl: width	// will print a narrower break
-			end
+			nextfield dup printcontent
+			widefield? if 50 else 25 end setl: width
 			// ...doing who knows what with the stack...
 			width loops char . .raw end CR 
 		end
@@ -186,7 +172,7 @@ local variables
 		1. check target.locals[token]
 		2. if not found, check dictionary
 		3. if not found, attempt numeric conversion
-		4. if fails, lookup error
+		4. if fails, error
 	print user's locals in stack traces?
 		at top level, or first after dumptrace
 		reverse lookup on func 
@@ -261,17 +247,34 @@ whittle the lua codebase down to
 FirthOS
 	tiny os that will boot directly into interactive emacs firth mode
 	stripped-down linux kernel
-		terminal drivers and maybe framebuffer
+		terminal drivers
+		maybe framebuffer?
+			tiny (SDL or linux native?) lib
+			display pretty text
+			graphics drawing
+			stirpped down rogue-op + turdle?
 		audio of any sort?
+			SDL? Rogue-op?
 		simplest/easiest FS support
+			probably means FAT32 or it's cousins
+			run the whole thing through git for full disk history?
+			some kind of idle-sync-to-disk for instant-restore?
 		single-user mode
 		needs virtual memory and multitasking
+		http://intestinate.com/pilfs/guide.html
 	minimal set of support utils and libs
 		probably things like ls, rm, mkdir, and such
 		libc
 		ncurses
 		readline?
-	stripped-down emacs
+	stripped-down emacs?
 		remove modes, routines, and elisp libraries that aren't applicable
 	luajit
+		ljsyscall - https://github.com/justincormack/ljsyscall
+		LJIT2RPi - https://github.com/Wiladams/LJIT2RPi
+		http://wiki.luajit.org/FFI-Bindings
 	firth
+		special systems programming support module
+			tiny C library
+			specifically to make reading/writing raw memory/GPIOs easy
+	PiTFT? https://www.adafruit.com/product/2423

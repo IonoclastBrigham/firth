@@ -24,6 +24,7 @@ local stdout = io.stdout
 
 local ipairs = ipairs
 local print = print
+local tonumber = tonumber
 
 
 local function shift(tbl)
@@ -62,21 +63,25 @@ function stringio.split(str)
 	return result
 end
 
---! Chops off the next token from the front of a string.
---! This function calculates the the next token, delimited as specified, from
---! the start of the string, followed by the substring that follows the
---! delimiter string.
+--! Finds a substring at or after start pos, surrounded by 0 or more delims.
+--!
+--! This function calculates the next token, delimited as specified, from
+--! the start position.
+--!
 --! @param str the string to tokenize
 --! @param delim the delimiter pattern to tokenize with,
---! 	defaults to '%s' (whitespace).
---! @return the token, the remaining substring
+--! 	defaults to '%s' (whitespace)
+--! @param start the starting char position to start searching, defaults to 1
+--! @return the token, 1 past the end index of the token in the input string
 --! @see #matchtoken()
-function stringio.nexttoken(str, delim)
+function stringio.nexttoken(str, delim, start)
 	delim = delim or "%s" -- here %s is an alias for any whitespace
+	start = start or 1
 	local pattern = string.format("([%s]*)([^%s]+)([%s]?)", delim, delim, delim) -- here %s is a string formatter as in C
-	local discard1, token, discard2 = str:match(pattern)
---	print(string.format("'%s', '%s', '%s'", discard1, token, discard2))
-	return token, str:sub(#token + #discard1 + #discard2 + 1)
+	local discard1, token, discard2 = str:match(pattern, start)
+
+	if token == nil then return "", math.huge end
+	return token, start + #discard1 + #token
 end
 
 --! Chops off the next matching token from the front of a string.
@@ -95,6 +100,12 @@ function stringio.matchtoken(str, pattern)
 	return token, str:sub(tend + 1)
 end
 
+--! @param str a string to trim whitespace from.
+--! @return the input string with leading and trailing whitespace removed.
+function stringio.trim(str)
+	return str:gsub("^%s*(.-)%s*$", "%1")
+end
+
 --! Tries to convert a string into a number.
 --! 
 --! <p>This function attempts to parse a string as a numeric value, and convert
@@ -108,7 +119,7 @@ end
 --! 
 --! <p>Some examples of valid numeric strings:</p>
 --! <ul>
---! <li> "1"
+--! <li> \v "1"
 --! <li> \c "1."
 --! <li> \c ".1"
 --! <li> \c "1.0"
@@ -116,7 +127,7 @@ end
 --! <li> \c " -1.48532e-12 "
 --! </ul>
 --! 
---! <p>Some examples of invalid numeric strings:</p>
+--! <p>Some examples of <i>invalid</i> numeric strings:</p>
 --! <ul>
 --! <li> \c "1!"
 --! <li> \c "1 2"
@@ -127,7 +138,52 @@ end
 --! @param val a token string to convert.
 --! @return the parsed numeric value of \c val, or \c nil.
 function stringio.tonumber(val)
+--	print("trying to convert value to number:", val)
 	return tonumber(val) or tonumber(tostring(val))
+end
+
+--! Tries to convert a string to a boolean.
+--!
+--! <p>This function attempts to parse a string as a boolean value, and convert
+--! it to the corresponding boolean. Surrounding whitespace is ignored, and the
+--! conversion is case-insensitive, but any other non-contiguous or invalid
+--! characters mean this string is not a boolean.</p>
+--!
+--! <p>If the argument is not of type string, it will attempt to first convert
+--! it to a string, and then convert that to a boolean. If that fails, the
+--! result is \c nil.</p>
+--!
+--! <p>Some examples of convertible input strings:</p>
+--! <ul>
+--! <li> \c "true"
+--! <li> \c "false"
+--! <li> \c "  TRUe\t"
+--! </ul>
+--!
+--! <p>Some examples of <i>invalid</i> boolean strings:</p>
+--! <ul>
+--! <li> \c "True!"    -- No!
+--! <li> \c "~false"   -- Bad!
+--! <li> \c "not true" -- You can't do that!
+--! <li> \c "nil"      -- What even are you doing here?
+--! </ul>
+--!
+--! @param val a token string to convert.
+--! @return the parsed boolean value of \c val, or \c nil.
+function stringio.toboolean(val)
+	if type(val) ~= 'string' then
+		return stringio.toboolean(tostring(val))
+	end
+
+
+	val = stringio.trim(val):lower()
+	if val == 'true' then
+		return true
+	elseif val == 'false' then
+		return false
+	else
+		return nil
+	end
 end
 
 -- file i/o stuff --
@@ -179,12 +235,11 @@ end
 --! 	</ul>
 --! @see #printline()
 function stringio.print(...)
-	local args = {...}
-	if #args == 0 then
+	if select('#', ...) == 0 then
 		return
 	end
 	
-	local arg1 = shift(args)
+	local arg1 = (...)
 	local out
 	if type(arg1) == 'function' then
 		out = stdout
@@ -196,7 +251,7 @@ function stringio.print(...)
 			out:write(unpack(args))
 		else
 			out = stdout
-			out:write(arg1, unpack(args))
+			out:write(arg1, select(2, ...))
 		end
 	end
 	out:flush()

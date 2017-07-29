@@ -59,6 +59,7 @@ end
 
 -- stack method coroutines / continuations --
 
+--[[
 local function pushs(x, ...)
 	local continuation, nx = yield()
 	return continuation(nx, push(x, ...))
@@ -136,15 +137,17 @@ local function new(...)
 		end,
 	}
 end
+--]]
 
 -- export
-firth = firth or {}
-firth.fstack = {
-	new = new;
+--firth = firth or {}
+--firth.fstack = {
+return {
+--	new = new;
 
 	push = push, drop = drop, top = top;
-	shove = shove, yank = yank, peek = peek;
+	shove = shove, yank = yank, peek = peek, chop = chop;
 
 	height = height;
 }
-return firth.fstack
+--return firth.fstack
