@@ -3,7 +3,7 @@
 --! @brief Stack class for Firth language.
 --! @author btoskin - <brigham@ionoclast.com>
 --! @copyright © 2015 Brigham Toskin
---! 
+--!
 --! <p>This file is part of the Firth language reference implementation. Usage
 --! and redistribution of this software is governed by the terms of a modified
 --! MIT-style license. You should have received a copy of the license with the
@@ -16,7 +16,7 @@
 
 
 --! @cond
-local table = require "table"
+local table = table
 
 local mt
 local stack = {
@@ -190,7 +190,7 @@ stack = {}
 --! @return a newly initialized stack object.
 function stack.new()
 	local s = setmetatable({ height = 0 }, mt)
-	for i = 32,1,-1 do s[i] = 0 end -- poke in some null data to pre-reserve array 
+	for i = 32,1,-1 do s[i] = 0 end -- poke in some null data to pre-reserve array
 	return s
 end
 

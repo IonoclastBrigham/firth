@@ -3,7 +3,7 @@
 --! @brief Text io and manipulation routines for Firth language.
 --! @author btoskin - <brigham@ionoclast.com>
 --! @copyright © 2015 Brigham Toskin
---! 
+--!
 --! <p>This file is part of the Firth language reference implementation. Usage
 --! and redistribution of this software is governed by the terms of a modified
 --! MIT-style license. You should have received a copy of the license with the
@@ -75,48 +75,54 @@ end
 --! @return the token, 1 past the end index of the token in the input string
 --! @see #matchtoken()
 function stringio.nexttoken(str, delim, start)
-	delim = delim or "%s" -- here %s is an alias for any whitespace
+	-- here %s is an alias for any whitespace
+	delim = delim or "%s"
 	start = start or 1
-	local pattern = string.format("([%s]*)([^%s]+)([%s]?)", delim, delim, delim) -- here %s is a string formatter as in C
+
+	-- here %s is a string formatter as in C
+	local pattern = string.format("^([%s]*)([^%s]+)([%s]?)", delim, delim, delim)
 	local discard1, token, discard2 = str:match(pattern, start)
 
 	if token == nil then return "", math.huge end
 	return token, start + #discard1 + #token
 end
 
---! Chops off the next matching token from the front of a string.
---! This function matches the first occurrence of specified pattern, extracting
---! and returning the matching substring, followed by the substring that follows
---! the match. This function differs from #nexttoken() in that it finds a
---! positive match, rather than the first thing it finds that doesn't match a
---! delimiter pattern.
+--! Finds the next matching token from the front of a string.
+--!
+--! This function matches the first occurrence of specified pattern. This
+--! function differs from #nexttoken() in that it finds a positive match, rather
+--! than the first thing it finds that doesn't match a delimiter pattern.
+--!
 --! @param str the string to tokenize
 --! @param pattern the pattern to match against
---! @return the token, the remaining substring
+--! @param start the starting char position to start searching, defaults to 1
+--! @return the token, 1 past the end index of the token in the input string
 --! @see #nexttoken()
-function stringio.matchtoken(str, pattern)
-	local tstart, tend = str:find(pattern)
-	local token = str:sub(tstart, tend)
-	return token, str:sub(tend + 1)
+function stringio.matchtoken(str, pattern, start)
+	start = start or 1
+	local searchregion = str:sub(start)
+	local tstart, tend, token = searchregion:find(pattern)
+	if not token then token = searchregion:sub(tstart, tend) end
+	return token, start + tend
 end
 
 --! @param str a string to trim whitespace from.
 --! @return the input string with leading and trailing whitespace removed.
 function stringio.trim(str)
-	return str:gsub("^%s*(.-)%s*$", "%1")
+	return string.match(str,'^()%s*$') and '' or string.match(str,'^%s*(.*%S)')
 end
 
 --! Tries to convert a string into a number.
---! 
+--!
 --! <p>This function attempts to parse a string as a numeric value, and convert
 --! it to the corresponding number. Surrounding whitespace is ignored, but any
 --! other non-contiguous or invalid characters mean this string is not a number.
 --! </p>
---! 
+--!
 --! <p>If the argument is not of type string or number, it will attempt to first
 --! convert it to a string, and then convert that to a number. If that fails,
 --! the result is \c nil.</p>
---! 
+--!
 --! <p>Some examples of valid numeric strings:</p>
 --! <ul>
 --! <li> \v "1"
@@ -126,7 +132,7 @@ end
 --! <li> \c "  3.14159"
 --! <li> \c " -1.48532e-12 "
 --! </ul>
---! 
+--!
 --! <p>Some examples of <i>invalid</i> numeric strings:</p>
 --! <ul>
 --! <li> \c "1!"
@@ -193,14 +199,14 @@ function stringio.stdin()
 end
 
 function stringio.input(infile)
-	if type(infile) == "string" then
+	if type(infile) == "string" and #infile > 0 then
 		return io.input(infile)
 	elseif type(infile) == "userdata" and infile.read then
 		return io.input(infile)
 	elseif infile == nil then
-		return io.input()
+		return io.input() -- return current input file
 	else
-		error("INVALID ARGUMENT: "..tostring(infile))
+		error("stringio.input() - INVALID ARGUMENT: "..tostring(infile))
 	end
 end
 
@@ -221,6 +227,11 @@ function stringio.readline(file)
 	return file:read("*line")
 end
 
+function stringio.lines(file)
+	file = file or stringio.input()
+	return file:lines()
+end
+
 --! Prints its arguments to its output.
 --! The behavior of this function can be modified depending on the first
 --! argument that is passed in.
@@ -238,7 +249,7 @@ function stringio.print(...)
 	if select('#', ...) == 0 then
 		return
 	end
-	
+
 	local arg1 = (...)
 	local out
 	if type(arg1) == 'function' then

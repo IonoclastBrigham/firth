@@ -1,4 +1,9 @@
-local create, yield, resume = coroutine.create, coroutine.yield, coroutine.resume
+local select = select
+
+local setfenv = setfenv or require 'compat.compat_env'.setfenv
+
+local module = {}
+setfenv(1, module)
 
 -- util functions --
 
@@ -18,44 +23,82 @@ end
 
 -- in-thread stack manipulation primitives --
 
--- redundant, but possibly semantically useful
--- (for lua code)
-local function push(x, ...)
+-- seems redundant, but needed for threading compiled lua code
+function push(x, ...)
 	return x, ...
 end
 
 -- (probably mostly for lua code)
-local function top(tos, ...)
+function top(tos, ...)
 	return tos
 end
 
-local function drop(tos, ...)
+function dup(tos, ...)
+	return tos, tos, ...
+end
+
+function over(tos, _2nd, ... )
+	return _2nd, tos, _2nd, ...
+end
+
+function drop(tos, ...)
 	return ...
 end
 
-local function shove(i, x, tos, ...)
+function clear(...)
+	return
+end
+
+function swap(tos, _2nd, ...)
+	return _2nd, tos, ...
+end
+
+function rot(tos, _2nd, _3rd, ... )
+	return _3rd, tos, _2nd, ...
+end
+
+module['-rot'] = function(tos, _2nd, _3rd, ... )
+	return _2nd, _3rd, tos, ...
+end
+
+function pick(idx, ...)
+	return select(idx, ...), ...
+end
+
+function shove(i, x, tos, ...)
 	if i == 0 then return x, tos, ... end
 	return shovefilter(0, i, x, ...)
 end
 
-local function yank(i, tos, ...)
+function yank(i, tos, ...)
 	if i == 0 then return ... end
 	return yankfilter(0, i, tos, ...)
 end
 
-local function peek(i, tos, ...)
+function peek(i, tos, ...)
 	if i == 0 then return tos end
 	return (select(i+1, tos, ...))
 end
 
-local function chop(n, tos, ...)
+function chop(n, tos, ...)
 	if n == 1 then return ... end
 	return select(n, ...)
 end
 
-local function height(...)
+function height(...)
 	return count(...), ...
 end
+
+function c_from(...)
+	return cstack:pop(), ...
+end
+
+function to_c(tos, ...)
+	cstack:push(tos)
+	return ...
+end
+
+return module
 
 -- stack method coroutines / continuations --
 
@@ -138,16 +181,3 @@ local function new(...)
 	}
 end
 --]]
-
--- export
---firth = firth or {}
---firth.fstack = {
-return {
---	new = new;
-
-	push = push, drop = drop, top = top;
-	shove = shove, yank = yank, peek = peek, chop = chop;
-
-	height = height;
-}
---return firth.fstack

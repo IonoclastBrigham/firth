@@ -1,0 +1,194 @@
+char @file:prims.firth drop
+char @see:comment_block_below_for_copyright_notice drop
+
+char : create compile
+	char %s parse create compile
+	interpret buildfunc bindfunc
+: %s
+	char %s cpush
+	interpret buildfunc dup bindfunc immediate
+: word
+	%s parse
+	interpret buildfunc bindfunc
+: postpone
+	word ccall
+	interpret buildfunc dup bindfunc immediate
+: ;
+	postpone interpret buildfunc bindfunc
+	interpret buildfunc dup bindfunc immediate
+: ;immed
+	postpone interpret buildfunc dup bindfunc immediate
+	interpret buildfunc dup bindfunc immediate
+
+: skipch -1 backtrack ;
+: 2skipch -2 backtrack ;
+: " skipch char " parse cpush skipch ;immed
+: #! word lookup exectoken ;immed
+: parseline " ^[^\n]*" fmt parsematch ;
+: // parseline drop ;immed // There, now we can comment our code!
+
+// /////////////////////////////////////////////////////////////////////////////
+// core.firth
+// Core library for low level code and compiler manipulation
+//
+// Copyright © 2015-2021 Brigham Toskin
+// This file is part of the Firth language reference implementation. Usage
+// and redistribution of this software is governed by the terms of a modified
+// MIT-style license. You should have received a copy of the license with the
+// source distribution in the file LICENSE; if not, you may find it online at:
+// <https://github.com/IonoclastBrigham/firth/blob/master/LICENSE>
+//
+// Formatting:
+//	utf-8 ; unix ; 80 cols ; tabwidth 4
+// /////////////////////////////////////////////////////////////////////////////
+
+// text and parsing words
+: ( 1 backtrack " %b()" parsematch countlines ;immed ( (nestable) parentheses)
+: (C:  2 backtrack postpone ( ;immed
+: (TS: 3 backtrack postpone ( ;immed
+: (CB: 3 backtrack postpone ( ;immed
+: ` ( -- word )(TS: word ) word cpush ;immed
+: ' ( -- xt )  (TS: word ) word lookup cpush ;immed
+: "" ( -- s )(TS: "" (s)"") ` (.-)"" parsematch trim cpush ;immed
+: TODO: postpone // ;immed  TODO: add to list with file/line/word?
+
+// loop and iteration
+// : loops ( n -- ) 1 push " swap" call postpone for " drop" call ;immed
+
+// some higher level stack manipulations
+: nip ( a b -- b ) swap drop ;
+: 2dup ( a b -- a b a b ) over over ;
+: 3dup ( a b c -- a b c a b c ) 2 pick 2 pick 2 pick ;
+// : ndup ( n*x n -- 2n*x ) dup loops dup pick swap end drop ;
+: 2drop ( a b -- ) drop drop ;
+: 3drop ( a b c -- ) drop drop drop ;
+// : ndrop ( n*x n -- ) loops drop end ;
+
+// a few parser/interpreter/compiler control words
+(
+: call: word cpush " ccall" ccall ;immed
+: xt ( entry -- xt ) " func" @@ nip ;
+: ?deferred ( entry -- )
+	" name" @@ dup
+	create comiple // create and start compiling overriding def
+		call: compiling? postpone if
+			call		// encode a call to compiling word
+		postpone else
+			xt execute	// exec compiling word, so it can write semantics to def
+		postpone end
+	postpone ;immed ;
+: ;defer   postpone interpret buildfunc dup bindfunc ?deferred ;immed
+)
+// : eval: ( -- i*x )(TS: word ) postpone ' execute ;immed
+: 2word ( -- s1 s2 ) word word ;
+
+// values and variables
+: ! ( x name -- ) dictionary swap !! drop ;
+: const ( x name -- )
+	create compile
+	cpush ' cpush ccall
+	postpone ;immed
+	TODO: guard against re-binding `name`.
+	;
+: const: ( -- )(TS: word x ) word word resolve exectoken? swap cpush const ;immed
+: alias: ( -- )(TS: new old )
+	2word 2dup lookup swap !
+	( new old ) immediates swap @@
+	( new imm ) immediates rot !! drop
+	;immed
+// : @ ( entry -- x ) DATA @@ nip ;  TODO: is this a thing anymore?
+// : variable ( name -- entry ) create dup does> NOP ;
+// : var: ( x -- ) word variable ! ;immed
+// : val: ( x -- ) word variable ! last does> @ ;immed
+
+// miscellaneous util words and stuff
+: NOP ;
+alias: NOOP NOP
+: \n ( -- "\n" ) char \n cpush ;immed
+: .2 ( x1 x2 -- ) . . ;
+: char. postpone char ' . ccall ;immed
+: CR ( -- ) \n .raw ;
+: 2CR ( -- ) \n \n .raw .raw ;
+// : calls: ( -- ) postpone ` " calledby" @@ nip foreach drop " \tcalledby". . CR end ;
+// : calledby: ( -- ) postpone ` " calls" @@ nip foreach drop " \tcalls"   . . CR end ;
+
+// some basic arithmetic operators and shortcuts
+(
+: + ( a b -- a+b ) char + binop ;defer
+` + alias: add
+: - ( a b -- a-b ) char - binop ;defer
+` - alias: sub
+: * ( a b -- a*b ) char * binop ;defer
+` * alias: mul
+: / ( a b -- a/b ) char / binop ;defer
+` / alias: div
+: % ( a b -- a%b ) char % binop ;defer
+` % alias: mod
+: ** ( a b -- a^b ) char ^ binop ;defer // ^ is the name for bit-wise xor
+` ** alias: pow
+
+: 1+ ( n -- n+1 ) 1 char + binopconst ;defer
+` 1+ alias: inc
+: 1- ( n -- n-1 ) 1 char - binopconst ;defer
+` 1- alias: dec
+: -1* ( n -- -n ) -1 char * binopconst ;defer
+` -1* alias: neg
+: -1** ( n -- 1/n ) 1 swap / ; // division is faster, even with swap
+` -1** alias: inverse
+
+: 2+ ( n -- n+2 ) 2 char + binopconst ;defer
+: 2- ( n -- n-2 ) 2 char - binopconst ;defer
+: 2* ( n -- 2n ) 2 char * binopconst ;defer
+` 2* alias: double
+: 2/ ( n -- n/2 ) 2 char / binopconst ;defer
+` 2/ alias: halve
+
+: 5+ ( n -- n+5 ) 5 char + binopconst ;defer
+: 5- ( n -- n-5 ) 5 char - binopconst ;defer
+: 5* ( n -- 5n ) 5 char * binopconst ;defer
+: 5/ ( n -- n/5 ) 5 char / binopconst ;defer
+
+: 10+ ( n -- n+10 ) 10 char + binopconst ;defer
+: 10- ( n -- n-10 ) 10 char - binopconst ;defer
+: 10* ( n -- 10n ) 10 char * binopconst ;defer
+: 10/ ( n -- n/10 ) 10 char / binopconst ;defer
+
+: 100+ ( n -- n+100 ) 100 char + binopconst ;defer
+: 100- ( n -- n-100 ) 100 char - binopconst ;defer
+: 100* ( n -- 100n ) 100 char * binopconst ;defer
+: 100/ ( n -- n/100 ) 100 char / binopconst ;defer
+: percent ( n p -- n*(p/100) ) postpone 100/  postpone * ;immed
+
+// some basic boolean operators
+: > ( a b -- a>b ) char > binop ;defer
+` > alias: greater?
+: < ( a b -- a<b ) char < binop ;defer
+` < alias: less?
+: = ( a b -- a==b ) " ==" binop ;defer
+` = alias: equal?
+: <= ( a b -- a<=b ) " <=" binop ;defer
+` <= alias: lesseq?
+: >= ( a b -- a>=b ) " >=" binop ;defer
+` >= alias: greatereq?
+: ~= ( a b -- a!=b ) " ~=" binop ;defer
+` ~= alias: noteq?
+
+: and ( a b -- a&&b ) " and" binop ;defer
+: or ( a b -- a||b ) " or" binop ;defer
+: nand ( a b -- !a&&b ) postpone and postpone not ;immed
+: nor ( a b -- !a||b ) postpone or postpone not ;immed
+: xor ( a b -- aXORb ) postpone 2not postpone ~= ;immed
+)
+
+// copyright, version, banner
+: Copyright
+	` Copyright create compile
+		parseline trim cpush ` Copyright cpush ' .2 ccall ' 2CR ccall
+		buildfunc bindfunc
+	false immediates ` Copyright !! drop
+	` Copyright ccall
+	;immed
+" LICENSE.firth" loadfile
+alias: © Copyright
+const: VERSION " pre-alpha3"
+: banner ( -- ) " :Firth ver." . VERSION . char. | © ;

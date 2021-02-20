@@ -1,5 +1,13 @@
 Ideas / TODOs
 -------------
+proto branch tasks
+	sublime syntax
+	fix up remaining core words
+	move all possible lua prims to firth core
+		lua0, lua1, etc.
+		move any that can just work
+		minimal functionality + redefine "real" version if firth
+full IDE plugin for sublime
 experimental optimization branch
 	checks and cleanup tasks
 		new compiler:trace(str) method, only prints if self.tracing == true
@@ -166,7 +174,7 @@ local variables
 			nextfield dup printcontent
 			widefield? if 50 else 25 end setl: width
 			// ...doing who knows what with the stack...
-			width loops char . .raw end CR 
+			width loops char . .raw end CR
 		end
 	process for compiling a token becomes
 		1. check target.locals[token]
@@ -175,16 +183,8 @@ local variables
 		4. if fails, error
 	print user's locals in stack traces?
 		at top level, or first after dumptrace
-		reverse lookup on func 
+		reverse lookup on func
 		pull locals map from entry
-access lua tables form firth land
-	compiler
-		new prim word
-		local function pushcompiler() stack:push(compiler) end
-	dictionary
-		: dictionary ( -- dict ) compiler " dictionary" @@ ;
-		or, for efficiency...
-		local function pushdict() stack:push(dictionary) end
 refactor scratch/last scheme
 	should set us up for nested functions/lambdas
 multiline comments and strings

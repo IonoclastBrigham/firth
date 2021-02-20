@@ -10,7 +10,7 @@
 --	current firth implementation, using math calls
 --	native lua equivalent
 -- We will be simulating the word:
---	: foo ( n1 n2 n3 n4 n5 -- n6 ) + - * / ; 
+--	: foo ( n1 n2 n3 n4 n5 -- n6 ) + - * / ;
 
 
 local time = os.clock
@@ -23,15 +23,15 @@ local function reverse(...)
 	return unpack(new)
 end
 
-local stack = require "firth.fstack"
-local push, drop, top = stack.push, stack.drop, stack.top
-local shove, yank, chop, peek = stack.shove, stack.yank, stack.chop, stack.peek
-local height = stack.height
+require "firth.fstack"
+local push, drop, top = push, drop, top
+local shove, yank, chop, peek = shove, yank, chop, peek
+local height = height
 
 local function dup(tos, ...) return tos, tos, ... end
 
  local firth = require "firth.compiler"
-	
+
 
 -- words to call --
 
@@ -125,7 +125,7 @@ local function thread(fa, fb, ...)
 	end
 end
 local contsinline = thread(unpack(foothread))
-	
+
 -- thread lives on the stack
 local function splicewithcall(n, len, xt, ...)
 	if n == len then return xt(...) end
@@ -141,32 +141,32 @@ local function stackthread(...)
 end
 
 -- current firth, inline operators
-local fooword = ": foo   + - * / ;"
-local c = firth.new()
-local s = c.stack
-local d = c.dictionary
-c:interpret(fooword)
-local fooxt = d.foo.func
-local function inlinefirth(...)
-	s:pushv(reverse(...))
-	fooxt()
-	return s:pop()
-end
+-- local fooword = ": foo   + - * / ;"
+-- local c = firth.new()
+-- local s = c.stack
+-- local d = c.dictionary
+-- c:interpret(fooword)
+-- local fooxt = d.foo.func
+-- local function inlinefirth(...)
+-- 	s:pushv(reverse(...))
+-- 	fooxt()
+-- 	return s:pop()
+-- end
 
--- current firth, "operator" words
-local opwords = [[
-	: add   + ;
-	: sub   - ;
-	: mul   * ;
-	: div   / ;
-	: foo2   add sub mul div ;]]
-c:interpret(opwords)
-local foo2xt = d.foo2.func
-local function routinesfirth(...)
-	s:pushv(reverse(...))
-	foo2xt()
-	return s:pop()
-end
+-- -- current firth, "operator" words
+-- local opwords = [[
+-- 	: add   + ;
+-- 	: sub   - ;
+-- 	: mul   * ;
+-- 	: div   / ;
+-- 	: foo2   add sub mul div ;]]
+-- c:interpret(opwords)
+-- local foo2xt = d.foo2.func
+-- local function routinesfirth(...)
+-- 	s:pushv(reverse(...))
+-- 	foo2xt()
+-- 	return s:pop()
+-- end
 
 -- native lua implementation
 local function native(n5, n4, n3, n2, n1)
@@ -198,8 +198,8 @@ local function runtests(...)
 		{ "Continuations:", timer(continuations, ...), continuations(...) },
 		{ "Contins inline:", timer(contsinline, ...), contsinline(...) },
 		{ "Stack:\t", timer(stackthread, ...), stackthread(...) },
-		{ "Inline Firth:", timer(inlinefirth, ...), inlinefirth(...) },
-		{ "Routines Firth:", timer(routinesfirth, ...), routinesfirth(...) },
+		-- { "Inline Firth:", timer(inlinefirth, ...), inlinefirth(...) },
+		-- { "Routines Firth:", timer(routinesfirth, ...), routinesfirth(...) },
 		{ "Native:\t", timer(native, ...), native(...) }
 	}
 	printresults(results)
