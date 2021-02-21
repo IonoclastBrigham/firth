@@ -95,7 +95,7 @@ function xperrhandler(msg)
 	stringio.printline('stack : '..stackstring)
 	stringio.printline('cstack: '..tostring(cstack))
 	-- stringio.printline('dict  :')
-	-- for k, _ in pairs(_G) do stringio.printline("    "..k) end
+	-- for k, _ in pairs(dictionary) do stringio.printline("    "..k) end
 	-- stringio.printline(stacktrace())
 
 	cclearstate()
@@ -139,7 +139,7 @@ local function lookup_err(tok, num, ...)
 	if not path or #path == 0 then path = "./" end
 	local prefix = path..':'..num
 	local buckets = {}
-	for k,v in pairs(_G) do
+	for k,v in pairs(dictionary) do
 		for i = 1, #tok do
 			buckets[i] = buckets[i] or {}
 			if i > #k then break end
@@ -171,7 +171,7 @@ end
 -- end
 
 -- ( s -- ) ( Out: s )
-_G['.raw'] = function(str, ...)
+dictionary['.raw'] = function(str, ...)
 	assert(type(str) == "string", "NOT A STRING")
 	stringio.print(str)
 	return ...
@@ -179,8 +179,8 @@ end
 
 -- ( x -- ) ( Out: s(x) )
 local dot_fmt = "%s "
-_G['.'] = function(x, ...)
-	return _G['.raw'](dot_fmt:format(x), ...)
+dictionary['.'] = function(x, ...)
+	return dictionary['.raw'](dot_fmt:format(x), ...)
 end
 
 -- ( s -- s' )
@@ -216,12 +216,12 @@ end
 
 -- ( s -- b )
 function defined(name, ...)
-	return (rawget(_G, name) ~= nil), ...
+	return (rawget(dictionary, name) ~= nil), ...
 end
 
 -- ( word -- x )
 function lookup(word, ...)
-	return _G[word], ...
+	return dictionary[word], ...
 end
 
 function resolve(word, ...)
@@ -238,8 +238,8 @@ function resolve(word, ...)
 	end
 end
 
--- _G['!'] = function(name, val, ...)
--- 	_G[name] = val
+-- dictionary['!'] = function(name, val, ...)
+-- 	dictionary[name] = val
 -- end
 
 --! ( -- c ) ( TS: c ) ;immed
@@ -327,7 +327,7 @@ function create(name, ...)
 		--calls = { nextidx = 1 }, calledby = {}, upvals = { nextidx = 1 }
 	}
 	setmetatable(entry, entrymt)
-	_G[name] = entry
+	dictionary[name] = entry
 	return entry, ...
 end
 
@@ -354,7 +354,7 @@ local function thread(xt1, xt2, ...)
 	if not xt2 then return xt1 end
 	local next = thread(xt2, ...)
 	local thr = function(...) return next(xt1(...)) end
-	setfenv(thr, _G)
+	setfenv(thr, dictionary)
 	return thr
 end
 
@@ -376,7 +376,7 @@ end
 
 -- ( entry -- )
 function bindfunc(entry, ...)
-	_G[entry.name] = entry.xt
+	dictionary[entry.name] = entry.xt
 	return ...
 end
 
@@ -386,7 +386,7 @@ function exectoken(xt, ...)
 end
 
 -- ( x * -- * )
-_G["exectoken?"] = function(xt, ...)
+dictionary["exectoken?"] = function(xt, ...)
 	if type(xt) == "function" then return xt(...) end
 	return xt, ...
 end
@@ -407,7 +407,7 @@ end
 function ccall(func, ...)
 	local xt
 	if type(func) == "string" then
-		xt = compiling and function(...) return (_G[func])(...) end or _G[func]
+		xt = compiling and function(...) return (dictionary[func])(...) end or dictionary[func]
 	elseif type(func) == "function" then
 		xt = func
 	else
@@ -427,7 +427,7 @@ function cpush(val, ...)
 		local function push(...)
 			return val, ...
 		end
-		setfenv(push, _G)
+		setfenv(push, dictionary)
 		cappend(push)
 		return ...
 	else
@@ -470,7 +470,7 @@ local function cnewtmp(initialval)
 end
 
 -- ( cond -- )
-_G['if'] = function(...)
+dictionary['if'] = function(...)
 	cbeginblock()
 	local cond = cnewtmp('top(...)') -- FIXME: how to manage stack here??
 	cappend(("if %s then"):format(cond))
@@ -478,19 +478,19 @@ _G['if'] = function(...)
 end
 
 -- ( -- )
-_G['else'] = function(...)
+dictionary['else'] = function(...)
 	cappend('else')
 	return ...
 end
 
 -- ( -- )
-_G['end'] = function(...)
+dictionary['end'] = function(...)
 	cendblock()
 	return ...
 end
 
 -- ( first last -- )
-_G['for'] = function(...)
+dictionary['for'] = function(...)
 	cbeginblock()
 	local i = cnewtmp()
 	-- TODO: I think these need to come in as named params of the lua function?
@@ -501,32 +501,32 @@ _G['for'] = function(...)
 end
 
 -- ( cond -- )
-_G['while'] = function(...)
+dictionary['while'] = function(...)
 	cbeginblock()
 	cappend("while(stack:pop()) do") -- FIXME: how to manage stack here??
 	return ...
 end
 
 -- ( -- )
-_G['break'] = function(...)
+dictionary['break'] = function(...)
 	cappend('break')
 	return ...
 end
 
 -- ( -- )
-_G['do'] = function(...)
+dictionary['do'] = function(...)
 	cbeginblock()
 	cappend('do')
 	return ...
 end
 
 -- ( t k -- t x )
-_G['@@'] = function(k, t, ...)
+dictionary['@@'] = function(k, t, ...)
 	return t[k], ...
 end
 
 -- ( x t k -- t )
-_G['!!'] = function(k, t, x, ...)
+dictionary['!!'] = function(k, t, x, ...)
 	t[k] = x
 	return t, ...
 end
@@ -565,7 +565,7 @@ local function _interpret_r(...)
 
 	-- try dictionary lookup
 	if defined(word) then
-		local found = _G[word]
+		local found = lookup(word)
 		if type(found) == "function" then
 			if not compiling or immediates[word] then
 				-- pass through drop because xpcall returns an error flag, already handled elsewhere
@@ -612,9 +612,9 @@ end
 local function _afterfile(success, ...)
 	debug("FILE COMPLETED %sSUCCESSFULLY", success and "" or "UN")
 	if not success then
-		runtime_err("loadfile", top(...))
+		runtime_err("runfile", top(...))
 	elseif compiling then
-		runtime_err("loadfile", "UNEXPECTED EOF")
+		runtime_err("runfile", "UNEXPECTED EOF WILE COMPILING")
 	end
 
 	if cstack.height >= 2 then -- could have been cleared if error
@@ -627,7 +627,7 @@ local function _afterfile(success, ...)
 end
 
 -- ( path -- * )
-function loadfile(path, ...)
+function runfile(path, ...)
 	-- TODO: default/search paths?
 
 	cstack:push(stringio.input())
@@ -653,9 +653,9 @@ local function _postcall(...)
 	-- debug("%sCOMPILING? (%s)", indentation, compiling)
 	return ...
 end
-for k,v in pairs(_G) do
+for k,v in pairs(dictionary) do
 	if type(v) == "function" and k ~= "quote" then
-		_G[k] = function(...)
+		dictionary[k] = function(...)
 			debug("%sCALLING WORD: %s(%s)", ("    "):rep(depth), k, concatstack(...))
 			depth = depth + 1
 			return _postcall(v(...))
@@ -663,4 +663,4 @@ for k,v in pairs(_G) do
 	end
 end
 --]]
-return { runstring = runstring, loadfile = loadfile, dict = _G }
+return { runstring = runstring, runfile = runfile, dict = dictionary }

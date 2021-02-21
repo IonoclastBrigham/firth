@@ -188,7 +188,7 @@ alias: NOOP NOP
 	false immediates ` Copyright !! drop
 	` Copyright ccall
 	;immed
-" LICENSE.firth" loadfile
+" LICENSE.firth" runfile
 alias: © Copyright
 const: VERSION " pre-alpha3"
 : banner ( -- ) " :Firth ver." . VERSION . char. | © ;

@@ -20,7 +20,7 @@ local unpack = unpack or table.unpack
 
 local stringio = require "firth.stringio"
 local firth = require "proto.bootstrap"
-local runstring, loadfile, dict = firth.runstring, firth.loadfile, firth.dict
+local runstring, runfile, dict = firth.runstring, firth.runfile, firth.dict
 
 local function REPL(running, ...)
     if not running then
@@ -33,7 +33,7 @@ local function REPL(running, ...)
     return REPL(pcall(runstring, stringio.readline(), ...))
 end
 
-loadfile "proto/core.firth"
+runfile "proto/core.firth"
 
 if select("#", ...) > 0 then
     stringio.printline("<==[ "..table.concat({runstring(table.concat({...}, " "))}, " ").." ]")
