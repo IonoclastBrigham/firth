@@ -1,12 +1,14 @@
-#:Firth
+# :Firth
 
-:Firth (n.) – a Forth-like language designed for DSL creation, implemented in Lua.
+_:Firth (n.)_ – a Forth-like language designed for DSL creation, implemented in Lua.
 
 ## Alpha Warning!
+
 This code is incomplete, broken in places, and generally not ready for prime
 time. I decided to make it available on Github because, why not?
 
 ## What's All This, Then?
+
 I had previously created a forth-like language / parser / interpreter / virtual
 machine / _thing_, and had a great time doing it. It was far more successful an
 endeavor than I had dared to hope. Unfortunately, the project ended up growing
@@ -33,24 +35,26 @@ We'll get into more details about what the language is, how it works, and what
 to do with it as it develops.
 
 ## Building and Running
+
 Currently, it is implemented completely in the LuaJIT dialect of Lua 5.1. This
 means it has a few Lua 5.2-isms, and should generally run on PUC-Rio 5.2 as well.
 It doesn't depend on any 3rd party libraries or C extensions. That said, it is
-recommended to use [LuaJIT](http://luajit.org/), version 2.0.2 or later, for optimal performance.
+recommended to use [LuaJIT](http://luajit.org/), version 2.x, for optimal performance.
 
 You can require the libraries from Lua code, run the REPL from the command line,
-or load the whole thing at runtime from the Lua API. Details to follow.
+or load the whole thing at runtime from the Lua C API. Details to follow.
 
-To build the Doxygen documentation, you need Perl 5 and the Doxygen::Lua
+To build the Doxygen documentation, you need Perl 5 and the `Doxygen::Lua`
 perl module (available on CPAN) installed on your system.
 
 ## Examples
+
 The _examples_ directory is where to look for code that shows off the :Firth's
 power and abilities. Currently, there is only iniloader.firth, and a sample input file.
 You would run it from the :Firth REPL thusly:
 
 ```forth
-" examples/iniloader.firth" loadfile
+" examples/iniloader.firth" runfile
 inifile: examples/test.ini
 BLERG @ .
 ```
@@ -58,5 +62,6 @@ BLERG @ .
 You should see output `127.0.0.1:8080 ok` if it all ran successfully
 
 ## License
-Copyright © 2015 Brigham Toskin.
-[MIT License](https://github.com/IonoclastBrigham/firth/blob/master/LICENSE).
+
+Copyright © 2015-2021 Brigham Toskin.
+[MIT License](https://github.com/IonoclastBrigham/firth/blob/master/LICENSE.firth).

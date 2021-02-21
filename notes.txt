@@ -2,12 +2,20 @@ Ideas / TODOs
 -------------
 proto branch tasks
 	sublime syntax
+	loops, conditional, blocks
 	fix up remaining core words
+	vacabs.firth
 	move all possible lua prims to firth core
 		lua0, lua1, etc.
 		move any that can just work
 		minimal functionality + redefine "real" version if firth
-full IDE plugin for sublime
+full plugin for sublime
+	syntax
+	completion
+	goto def
+	execute code/re-run file/repl
+	linter?
+	debugger?
 experimental optimization branch
 	checks and cleanup tasks
 		new compiler:trace(str) method, only prints if self.tracing == true

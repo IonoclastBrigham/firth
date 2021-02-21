@@ -1,3 +1,21 @@
+--------------------------------------------------------------------------------
+--! @file fstack.lua
+--! @brief fast stack routines for :Firth language.
+--! @author btoskin - <brigham@ionoclast.com>
+--! @copyright © 2015-2021 Brigham Toskin
+--!
+--! <p>This file is part of the :Firth language reference implementation. Usage
+--! and redistribution of this software is governed by the terms of a modified
+--! MIT-style license. You should have received a copy of the license with the
+--! source distribution in the file LICENSE; if not, you may find it online at
+--! <https://github.com/IonoclastBrigham/firth/blob/master/LICENSE></p>
+--
+-- Formatting:
+--	utf-8 ; unix ; 80 cols ; tabwidth 4
+--------------------------------------------------------------------------------
+
+
+--! @cond
 local select = select
 
 local setfenv = setfenv or require 'compat.compat_env'.setfenv
@@ -20,6 +38,8 @@ local function yankfilter(n, i, tos, ...)
 	if i == n then return ... end
 	if count(...) > 0 then return tos, yankfilter(n+1, i, ...) end
 end
+
+--! @endcond
 
 -- in-thread stack manipulation primitives --
 
