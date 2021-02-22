@@ -53,6 +53,12 @@ function top(tos, ...)
 	return tos
 end
 
+-- (probably mostly for lua code)
+function peek(i, tos, ...)
+	if i == 0 then return tos end
+	return (select(i+1, tos, ...))
+end
+
 function dup(tos, ...)
 	return tos, tos, ...
 end
@@ -77,27 +83,26 @@ function rot(tos, _2nd, _3rd, ... )
 	return _3rd, tos, _2nd, ...
 end
 
-module['-rot'] = function(tos, _2nd, _3rd, ... )
+local function revrot(tos, _2nd, _3rd, ... )
 	return _2nd, _3rd, tos, ...
 end
+module['-rot'] = revrot
 
 function pick(idx, ...)
-	return select(idx, ...), ...
+	if idx == 1 then return dup(...) end
+	return (select(idx, ...)), ...
 end
 
 function shove(i, x, tos, ...)
 	if i == 0 then return x, tos, ... end
+	if i == 1 then return swap(x, tos, ...) end
+	if i == 2 then return revrot(x, tos, ...) end
 	return shovefilter(0, i, x, ...)
 end
 
 function yank(i, tos, ...)
 	if i == 0 then return ... end
 	return yankfilter(0, i, tos, ...)
-end
-
-function peek(i, tos, ...)
-	if i == 0 then return tos end
-	return (select(i+1, tos, ...))
 end
 
 function chop(n, tos, ...)
@@ -109,14 +114,16 @@ function height(...)
 	return count(...), ...
 end
 
-function c_from(...)
+local function c_from(...)
 	return cstack:pop(), ...
 end
+module['C>'] = c_from
 
-function to_c(tos, ...)
+local function to_c(tos, ...)
 	cstack:push(tos)
 	return ...
 end
+module['>C'] = to_c
 
 return module
 
