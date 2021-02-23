@@ -1,0 +1,102 @@
+%YAML 1.2
+---
+# https://www.sublimetext.com/docs/3/syntax.html
+# https://github.com/IonoclastBrigham/firth
+name: :Firth
+file_extensions: [firth, flurth]
+scope: source.firth
+
+variables:
+  stdelim: '^|\s'
+  endelim: '\s|$'
+  escapechar: '\\[rntv\\]|%[%bsqdxXfo]'
+
+contexts:
+  prototype:
+    - include: comments
+
+  main:
+    - meta_include_prototype: false
+    - match: (?:{{stdelim}})((2|3)?dup|over|(2|3)?drop|clear|swap|-?rot|pick|shove|yank|chop|height|C>|>C)(?:{{endelim}})
+      scope: keyword.control.firth
+    - include: colon-defs
+    - include: strings
+    - include: comments
+    - include: numbers
+
+  colon-defs:
+    - meta_include_prototype: false
+    - match: (?:{{stdelim}})(:)\s+(\S+)
+      captures:
+        1: punctuation.definition.function.begin.firth
+        2: entity.name.function.firth
+    - include: comments
+    - match: (?:{{stdelim}})(;\S*)
+      scope: punctuation.definition.function.end.firth
+
+  escapes:
+    - match: ({{escapechar}})
+      scope: constant.character.escape.firth
+  strings:
+    - match: "(?:{{stdelim}})`\\s+\\S+"
+      # TODO: push so we can include escapes
+      scope: string.unquoted.firth
+    - match: (?:{{stdelim}})(char\s+)({{escapechar}}|\S)(\S*)
+      # TODO: push so we can include escapes
+      captures:
+        1: string.unquoted.firth
+        2: string.unquoted.firth
+        3: comment.line.firth
+    - match: '(?:{{stdelim}})(")\s'
+      captures:
+        1: punctuation.definition.string.quoted.begin.firth
+      push:
+        - meta_include_prototype: false
+        - meta_scope: string.quoted.firth
+        - include: escapes
+        - match: '"'
+          scope: punctuation.definition.string.quoted.end.firth
+          pop: true
+    - match: '(?:{{stdelim}})("")\s'
+      captures:
+        1: punctuation.definition.string.quoted.double.begin.firth
+      push:
+        - meta_include_prototype: false
+        - meta_scope: string.quoted.double.firth
+        - include: escapes
+        - match: '""'
+          scope: punctuation.definition.string.quoted.double.end.firth
+
+  comments:
+    - match: (?:{{stdelim}})//(?:{{endelim}})
+      scope: punctuation.definition.comment.firth
+      push:
+        - meta_scope: comment.line.double-slash.firth
+        - match: $\n?
+          pop: true
+    - match: (?:{{stdelim}})TODO:(?:{{endelim}})
+      scope: punctuation.definition.comment.firth
+      push:
+        - meta_scope: comment.line.todo.firth
+        - match: $\n?
+          pop: true
+    - match: (?:{{stdelim}})(\()(?:{{endelim}})
+      scope: punctuation.definition.comment.firth
+      push:
+        - meta_scope: comment.block.firth
+        - match: \(
+          push: comments
+        - match: \)
+          pop: true
+
+  numbers:
+    - match: (?i)(?:{{stdelim}})([-+]?(?:\.\d+|\d+\.?\d*)(?:e[-+]?\d+)?)(?:{{endelim}})
+      scope: constant.numeric.firth
+    - match: (?i)(?:{{stdelim}})(0x\h+)(?:{{endelim}})
+      scope: constant.numeric.firth
+    - match: (?i)(?:{{stdelim}})(0b[01]+)(?:{{endelim}})
+      scope: constant.numeric.firth
+    - match: (?:{{stdelim}})([+-]?inf)(?:{{endelim}})
+      scope: constant.language.infinity.firth
+    - match: (?:{{stdelim}})nan(?:{{endelim}})
+      scope: constant.language.nan.firth
