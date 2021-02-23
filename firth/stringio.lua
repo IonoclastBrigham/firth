@@ -125,12 +125,15 @@ end
 --!
 --! <p>Some examples of valid numeric strings:</p>
 --! <ul>
---! <li> \v "1"
+--! <li> \c "1"
 --! <li> \c "1."
 --! <li> \c ".1"
 --! <li> \c "1.0"
 --! <li> \c "  3.14159"
 --! <li> \c " -1.48532e-12 "
+--! <li> \c "0xff" -- hex
+--! <li> \c "0777" -- octal
+--! <li> \c "0b10" -- binary
 --! </ul>
 --!
 --! <p>Some examples of <i>invalid</i> numeric strings:</p>
@@ -144,8 +147,23 @@ end
 --! @param val a token string to convert.
 --! @return the parsed numeric value of \c val, or \c nil.
 function stringio.tonumber(val)
---	print("trying to convert value to number:", val)
-	return tonumber(val) or tonumber(tostring(val))
+	if type(val) == "string" then
+		val = stringio.trim(val)
+		local radix
+		if val:match("^0[0-7]+$") then
+			radix = 8
+		else
+			local bin = val:match("^0b([01]+)$")
+			if bin then
+				radix = 2
+				val = bin
+			end
+		end
+		-- hex strings prefixed with '0x' will be recognized
+		return tonumber(val, radix)
+	end
+	if type(val) == "number" then return val end
+	return tonumber(tostring(val))
 end
 
 --! Tries to convert a string to a boolean.
