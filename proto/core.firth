@@ -20,7 +20,7 @@ char : create compile
 	postpone interpret buildfunc dup bindfunc immediate
 	interpret buildfunc dup bindfunc immediate
 
-: skipch -1 backtrack ;
+: skipch  -1 backtrack ;
 : 2skipch -2 backtrack ;
 : " skipch char " parse cpush skipch ;immed
 : #! word lookup exectoken ;immed
@@ -43,13 +43,13 @@ char : create compile
 // /////////////////////////////////////////////////////////////////////////////
 
 // text and parsing words
-: ( 1 backtrack " %b()" parsematch countlines ;immed ( (nestable) parentheses)
+: ( 1 backtrack " %b()" parsematch countlines ;immed ( ( nestable) parentheses)
 : (C:  2 backtrack postpone ( ;immed
 : (TS: 3 backtrack postpone ( ;immed
 : (CB: 3 backtrack postpone ( ;immed
 : ` ( -- word )(TS: word ) word cpush ;immed
 : ' ( -- xt )  (TS: word ) word lookup cpush ;immed
-: "" ( -- s )(TS: "" (s)"") ` (.-)"" parsematch trim cpush ;immed
+: "" ( -- s ) ` (.-)"" parsematch trim cpush ;immed
 : TODO: postpone // ;immed  TODO: add to list with file/line/word?
 
 // loop and iteration

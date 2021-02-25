@@ -80,14 +80,15 @@ contexts:
         - meta_scope: comment.line.todo.firth
         - match: $\n?
           pop: true
-    - match: (?:{{stdelim}})(\()(?:{{endelim}})
-      scope: punctuation.definition.comment.firth
-      push:
-        - meta_scope: comment.block.firth
-        - match: \(
-          push: comments
-        - match: \)
-          pop: true
+    - match: >-
+        (?xm)
+          (?:{{stdelim}})\((..?:)?\s
+          ([^()]+ | (?<parens>
+            \(
+              ([^()]+ | \g<parens>)*
+            \)\g<parens>?
+          ))\)\g<parens>?
+      scope: comment.block.firth
 
   numbers:
     - match: (?i)(?:{{stdelim}})([-+]?(?:\.\d+|\d+\.?\d*)(?:e[-+]?\d+)?)(?:{{endelim}})
