@@ -16,13 +16,13 @@ contexts:
     - include: comments
 
   main:
-    - meta_include_prototype: false
-    - match: (?:{{stdelim}})((2|3)?dup|over|(2|3)?drop|clear|swap|-?rot|pick|shove|yank|chop|height|C>|>C)(?:{{endelim}})
-      scope: keyword.control.firth
     - include: colon-defs
+    - include: word-consumers
+    - include: stack-manip
     - include: strings
     - include: comments
     - include: numbers
+    - include: storage
 
   colon-defs:
     - meta_include_prototype: false
@@ -34,6 +34,22 @@ contexts:
     - match: (?:{{stdelim}})(;\S*)
       scope: punctuation.definition.function.end.firth
 
+  word-consumers:
+    - meta_include_prototype: false
+    # not including strings and comments
+    - match: (?:{{stdelim}})(postpone|#!|'|const:|alias:)\s+(\S+)
+      captures:
+        1: keyword.firth
+        2: entity.name.function.firth
+
+  stack-manip:
+    - match: (?:{{stdelim}})([23]?dup|[23]?drop|nip|over|clear|swap|-?rot|pick|shove|yank|chop|height|C>|>C)(?:{{endelim}})
+      scope: keyword.control.firth
+
+  storage:
+    - match: (@@?|!!?)
+      scope: keyword.operator.accessor.firth
+
   escapes:
     - match: ({{escapechar}})
       scope: constant.character.escape.firth
@@ -41,7 +57,7 @@ contexts:
     - match: "(?:{{stdelim}})`\\s+\\S+"
       # TODO: push so we can include escapes
       scope: string.unquoted.firth
-    - match: (?:{{stdelim}})(char\s+)({{escapechar}}|\S)(\S*)
+    - match: (?:{{stdelim}})(char\.?\s+)({{escapechar}}|\S)(\S*)
       # TODO: push so we can include escapes
       captures:
         1: string.unquoted.firth
@@ -80,15 +96,24 @@ contexts:
         - meta_scope: comment.line.todo.firth
         - match: $\n?
           pop: true
-    - match: >-
-        (?xm)
-          (?:{{stdelim}})\((..?:)?\s
-          ([^()]+ | (?<parens>
-            \(
-              ([^()]+ | \g<parens>)*
-            \)\g<parens>?
-          ))\)\g<parens>?
-      scope: comment.block.firth
+    - include: paren_comment
+  paren_comment:
+    - meta_include_prototype: false
+    - match: (?:(?<=\))|{{stdelim}})\((..?:)?\s
+      scope: punctuation.definition.comment.firth
+      push:
+        - meta_scope: comment.block.firth
+        - match: \(
+          push: simple_matched_parens
+        - match: \)
+          pop: true
+  simple_matched_parens:
+    # keep whatever scope we were previously in
+    - meta_include_prototype: false
+    - match: \(
+      push: simple_matched_parens
+    - match: \)
+      pop: true
 
   numbers:
     - match: (?i)(?:{{stdelim}})([-+]?(?:\.\d+|\d+\.?\d*)(?:e[-+]?\d+)?)(?:{{endelim}})

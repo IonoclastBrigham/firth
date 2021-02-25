@@ -23,7 +23,6 @@ char : create compile
 : skipch  -1 backtrack ;
 : 2skipch -2 backtrack ;
 : " skipch char " parse cpush skipch ;immed
-: #! word lookup exectoken ;immed
 : parseline " ^[^\n]*" fmt parsematch ;
 : // parseline drop ;immed // There, now we can comment our code!
 
@@ -81,6 +80,7 @@ char : create compile
 )
 // : eval: ( -- i*x )(TS: word ) postpone ' execute ;immed
 : 2word ( -- s1 s2 ) word word ;
+: #! word lookup exectoken ;immed
 
 // values and variables
 : ! ( x name -- ) dictionary swap !! drop ;
