@@ -23,20 +23,54 @@ contexts:
     - include: comments
     - include: scalars
     - include: storage
+    - include: fallback-words
+
+  comments:
+    - match: (?<={{stdelim}})//(?={{endelim}})
+      scope: punctuation.definition.comment.firth
+      push:
+        - meta_scope: comment.line.double-slash.firth
+        - match: $\n?
+          pop: true
+    - match: (?<={{stdelim}})TODO:(?={{endelim}})
+      scope: punctuation.definition.comment.firth
+      push:
+        - meta_scope: comment.line.todo.firth
+        - match: $\n?
+          pop: true
+    - match: (?<={{stdelim}})\(--\)(?={{endelim}})
+      scope: comment.block.firth
+    - include: paren_comment
+  paren_comment:
+    - meta_include_prototype: false
+    - match: (?<=\)|{{stdelim}})(\(--\))?\((..?:)?\s
+      scope: punctuation.definition.comment.firth
+      push:
+        - meta_scope: comment.block.firth
+        - match: \(
+          push: simple_matched_parens
+        - match: \)
+          pop: true
+  simple_matched_parens:
+    # keep whatever scope we were previously in
+    - meta_include_prototype: false
+    - match: \(
+      push: simple_matched_parens
+    - match: \)
+      pop: true
 
   colon-defs:
     - meta_include_prototype: false
     - match: (?<={{stdelim}})(:)\s+(\S+)
       captures:
-        1: punctuation.definition.function.begin.firth
+        1: storage.type.function.begin.firth
         2: entity.name.function.firth
-    - include: comments
-    - match: (?<={{stdelim}})(;\S*)
-      scope: punctuation.definition.function.end.firth
+    - match: (?<={{stdelim}});\S*
+      scope: storage.type.function.end.firth
 
   word-consumers:
+    # not including strings, comments, or colon-defs
     - meta_include_prototype: false
-    # not including strings and comments
     - match: (?<={{stdelim}})(postpone|#!|'|const:|alias:)\s+(\S+)
       captures:
         1: keyword.firth
@@ -83,38 +117,6 @@ contexts:
         - match: '""'
           scope: punctuation.definition.string.quoted.double.end.firth
 
-  comments:
-    - match: (?<={{stdelim}})//(?={{endelim}})
-      scope: punctuation.definition.comment.firth
-      push:
-        - meta_scope: comment.line.double-slash.firth
-        - match: $\n?
-          pop: true
-    - match: (?<={{stdelim}})TODO:(?={{endelim}})
-      scope: punctuation.definition.comment.firth
-      push:
-        - meta_scope: comment.line.todo.firth
-        - match: $\n?
-          pop: true
-    - include: paren_comment
-  paren_comment:
-    - meta_include_prototype: false
-    - match: (?:(?<=\))|{{stdelim}})\((..?:)?\s
-      scope: punctuation.definition.comment.firth
-      push:
-        - meta_scope: comment.block.firth
-        - match: \(
-          push: simple_matched_parens
-        - match: \)
-          pop: true
-  simple_matched_parens:
-    # keep whatever scope we were previously in
-    - meta_include_prototype: false
-    - match: \(
-      push: simple_matched_parens
-    - match: \)
-      pop: true
-
   scalars:
     # numbers
     - match: (?i)(?<={{stdelim}})([-+]?(?:\.\d+|\d+\.?\d*)(?:e[-+]?\d+)?)(?={{endelim}})
@@ -135,3 +137,7 @@ contexts:
     # refs
     - match: (?<={{stdelim}})nil(?={{endelim}})
       scope: constant.language.nil.firth
+
+  fallback-words:
+    - match: (?<={{stdelim}})\S+(?={{endelim}})
+      scope: variable.function.firth
