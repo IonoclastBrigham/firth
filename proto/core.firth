@@ -35,7 +35,7 @@ char : create compile
 // and redistribution of this software is governed by the terms of a modified
 // MIT-style license. You should have received a copy of the license with the
 // source distribution in the file LICENSE; if not, you may find it online at:
-// <https://github.com/IonoclastBrigham/firth/blob/master/LICENSE>
+// <https://github.com/IonoclastBrigham/firth/blob/master/LICENSE.firth>
 //
 // Formatting:
 //	utf-8 ; unix ; 80 cols ; tabwidth 4
@@ -43,13 +43,17 @@ char : create compile
 
 // text and parsing words
 : ( 1 backtrack " %b()" parsematch countlines ;immed ( ( nestable) parentheses)
+: (--) ;immed // empty signature coment
 : (C:  2 backtrack postpone ( ;immed
+: (--)(C: postpone (C: ;immed // empty signature coment
 : (TS: 3 backtrack postpone ( ;immed
-: (CB: 3 backtrack postpone ( ;immed
+: (--)(TS: postpone (TS: ;immed
+: (CB: 3 backtrack postpone ( ;immed // compile buf
+: (--)(CB: postpone (CB: ;immed
 : ` ( -- word )(TS: word ) word cpush ;immed
 : ' ( -- xt )  (TS: word ) word lookup cpush ;immed
 : "" ( -- s ) ` (.-)"" parsematch trim cpush ;immed
-: TODO: postpone // ;immed  TODO: add to list with file/line/word?
+: TODO: (TS: .*\n) postpone // ;immed  TODO: add to list with file/line/word?
 
 // loop and iteration
 // : loops ( n -- ) 1 push " swap" call postpone for " drop" call ;immed
@@ -80,7 +84,7 @@ char : create compile
 )
 // : eval: ( -- i*x )(TS: word ) postpone ' execute ;immed
 : 2word ( -- s1 s2 ) word word ;
-: #! word lookup exectoken ;immed
+: #! (--)(TS: word) word lookup exectoken ;immed
 
 // values and variables
 : ! ( x name -- ) dictionary swap !! drop ;
@@ -90,8 +94,8 @@ char : create compile
 	postpone ;immed
 	TODO: guard against re-binding `name`.
 	;
-: const: ( -- )(TS: word x ) word word resolve exectoken? swap cpush const ;immed
-: alias: ( -- )(TS: new old )
+: const: (--)(TS: word x ) 2word resolve exectoken? swap cpush const ;immed
+: alias: (--)(TS: new old )
 	2word 2dup lookup swap !
 	( new old ) immediates swap @@
 	( new imm ) immediates rot !! drop
@@ -102,15 +106,15 @@ char : create compile
 // : val: ( x -- ) word variable ! last does> @ ;immed
 
 // miscellaneous util words and stuff
-: NOP ;
+: NOP ;immed
 alias: NOOP NOP
 : \n ( -- "\n" ) char \n cpush ;immed
 : .. ( x1 x2 -- ) . . ;
-: char. postpone char ' . ccall ;immed
-: CR ( -- ) \n .raw ;
-: 2CR ( -- ) \n \n .raw .raw ;
-// : calls: ( -- ) postpone ` " calledby" @@ nip foreach drop " \tcalledby". . CR end ;
-// : calledby: ( -- ) postpone ` " calls" @@ nip foreach drop " \tcalls"   . . CR end ;
+: char. (--)(TS: ch) postpone char ' . ccall ;immed
+: CR (--) \n .raw ;
+: 2CR (--) \n \n .raw .raw ;
+// : calls: (--) postpone ` " calledby" @@ nip foreach drop " \tcalledby". . CR end ;
+// : calledby: (--) postpone ` " calls" @@ nip foreach drop " \tcalls"   . . CR end ;
 
 // some basic arithmetic operators and shortcuts
 (
@@ -181,7 +185,7 @@ alias: NOOP NOP
 )
 
 // copyright, version, banner
-: Copyright
+: Copyright (--)
 	` Copyright create compile
 		parseline trim cpush ` Copyright cpush ' .. ccall ' 2CR ccall
 		buildfunc bindfunc
@@ -191,4 +195,4 @@ alias: NOOP NOP
 " LICENSE.firth" runfile
 alias: © Copyright
 const: VERSION " pre-alpha3"
-: banner ( -- ) " :Firth ver." . VERSION . char. | © ;
+: banner (--) " :Firth ver." . VERSION . char. | © ;

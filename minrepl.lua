@@ -29,13 +29,14 @@ local function REPL(running, ...)
         return
     end
 
-    stringio.print('\nok> ')
+    stringio.print('ok> ')
     return REPL(pcall(runstring, stringio.readline(), ...))
 end
 
 runfile "proto/core.firth"
 
 if select("#", ...) > 0 then
+    -- TODO: proper printstack word that doesn't care about nils
     stringio.printline("<==[ "..table.concat({runstring(table.concat({...}, " "))}, " ").." ]")
 else
     stringio.print(':MiniREPL, ')

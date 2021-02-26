@@ -351,6 +351,7 @@ end
 immediates['interpret'] = true
 
 local function thread(xt1, xt2, ...)
+	if not xt1 then return function(...) return ... end end
 	if not xt2 then return xt1 end
 	local next = thread(xt2, ...)
 	local thr = function(...) return next(xt1(...)) end
