@@ -105,7 +105,7 @@ char : create compile
 : NOP ;
 alias: NOOP NOP
 : \n ( -- "\n" ) char \n cpush ;immed
-: .2 ( x1 x2 -- ) . . ;
+: .. ( x1 x2 -- ) . . ;
 : char. postpone char ' . ccall ;immed
 : CR ( -- ) \n .raw ;
 : 2CR ( -- ) \n \n .raw .raw ;
@@ -183,7 +183,7 @@ alias: NOOP NOP
 // copyright, version, banner
 : Copyright
 	` Copyright create compile
-		parseline trim cpush ` Copyright cpush ' .2 ccall ' 2CR ccall
+		parseline trim cpush ` Copyright cpush ' .. ccall ' 2CR ccall
 		buildfunc bindfunc
 	false immediates ` Copyright !! drop
 	` Copyright ccall
