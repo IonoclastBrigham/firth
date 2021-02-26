@@ -26,24 +26,24 @@ contexts:
 
   colon-defs:
     - meta_include_prototype: false
-    - match: (?:{{stdelim}})(:)\s+(\S+)
+    - match: (?<={{stdelim}})(:)\s+(\S+)
       captures:
         1: punctuation.definition.function.begin.firth
         2: entity.name.function.firth
     - include: comments
-    - match: (?:{{stdelim}})(;\S*)
+    - match: (?<={{stdelim}})(;\S*)
       scope: punctuation.definition.function.end.firth
 
   word-consumers:
     - meta_include_prototype: false
     # not including strings and comments
-    - match: (?:{{stdelim}})(postpone|#!|'|const:|alias:)\s+(\S+)
+    - match: (?<={{stdelim}})(postpone|#!|'|const:|alias:)\s+(\S+)
       captures:
         1: keyword.firth
         2: entity.name.function.firth
 
   stack-manip:
-    - match: (?:{{stdelim}})([23]?dup|[23]?drop|nip|over|clear|swap|-?rot|pick|shove|yank|chop|height|C>|>C)(?:{{endelim}})
+    - match: (?<={{stdelim}})([23]?dup|[23]?drop|nip|over|clear|swap|-?rot|pick|shove|yank|chop|height|C>|>C)(?={{endelim}})
       scope: keyword.control.firth
 
   storage:
@@ -54,16 +54,16 @@ contexts:
     - match: ({{escapechar}})
       scope: constant.character.escape.firth
   strings:
-    - match: "(?:{{stdelim}})`\\s+\\S+"
+    - match: "(?<={{stdelim}})`\\s+\\S+"
       # TODO: push so we can include escapes
       scope: string.unquoted.firth
-    - match: (?:{{stdelim}})(char\.?\s+)({{escapechar}}|\S)(\S*)
+    - match: (?<={{stdelim}})(char\.?\s+)({{escapechar}}|\S)(\S*)
       # TODO: push so we can include escapes
       captures:
         1: string.unquoted.firth
         2: string.unquoted.firth
         3: comment.line.firth
-    - match: '(?:{{stdelim}})(")\s'
+    - match: '(?<={{stdelim}})(")\s'
       captures:
         1: punctuation.definition.string.quoted.begin.firth
       push:
@@ -73,7 +73,7 @@ contexts:
         - match: '"'
           scope: punctuation.definition.string.quoted.end.firth
           pop: true
-    - match: '(?:{{stdelim}})("")\s'
+    - match: '(?<={{stdelim}})("")\s'
       captures:
         1: punctuation.definition.string.quoted.double.begin.firth
       push:
@@ -84,13 +84,13 @@ contexts:
           scope: punctuation.definition.string.quoted.double.end.firth
 
   comments:
-    - match: (?:{{stdelim}})//(?:{{endelim}})
+    - match: (?<={{stdelim}})//(?={{endelim}})
       scope: punctuation.definition.comment.firth
       push:
         - meta_scope: comment.line.double-slash.firth
         - match: $\n?
           pop: true
-    - match: (?:{{stdelim}})TODO:(?:{{endelim}})
+    - match: (?<={{stdelim}})TODO:(?={{endelim}})
       scope: punctuation.definition.comment.firth
       push:
         - meta_scope: comment.line.todo.firth
@@ -116,13 +116,13 @@ contexts:
       pop: true
 
   numbers:
-    - match: (?i)(?:{{stdelim}})([-+]?(?:\.\d+|\d+\.?\d*)(?:e[-+]?\d+)?)(?:{{endelim}})
+    - match: (?i)(?<={{stdelim}})([-+]?(?:\.\d+|\d+\.?\d*)(?:e[-+]?\d+)?)(?={{endelim}})
       scope: constant.numeric.firth
-    - match: (?i)(?:{{stdelim}})(0x\h+)(?:{{endelim}})
+    - match: (?i)(?<={{stdelim}})(0x\h+)(?={{endelim}})
       scope: constant.numeric.firth
-    - match: (?i)(?:{{stdelim}})(0b[01]+)(?:{{endelim}})
+    - match: (?i)(?<={{stdelim}})(0b[01]+)(?={{endelim}})
       scope: constant.numeric.firth
-    - match: (?:{{stdelim}})([+-]?inf)(?:{{endelim}})
+    - match: (?<={{stdelim}})([+-]?inf)(?={{endelim}})
       scope: constant.language.infinity.firth
-    - match: (?:{{stdelim}})nan(?:{{endelim}})
+    - match: (?<={{stdelim}})nan(?={{endelim}})
       scope: constant.language.nan.firth
