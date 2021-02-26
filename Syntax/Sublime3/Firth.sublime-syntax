@@ -21,7 +21,7 @@ contexts:
     - include: stack-manip
     - include: strings
     - include: comments
-    - include: numbers
+    - include: scalars
     - include: storage
 
   colon-defs:
@@ -115,7 +115,8 @@ contexts:
     - match: \)
       pop: true
 
-  numbers:
+  scalars:
+    # numbers
     - match: (?i)(?<={{stdelim}})([-+]?(?:\.\d+|\d+\.?\d*)(?:e[-+]?\d+)?)(?={{endelim}})
       scope: constant.numeric.firth
     - match: (?i)(?<={{stdelim}})(0x\h+)(?={{endelim}})
@@ -126,3 +127,11 @@ contexts:
       scope: constant.language.infinity.firth
     - match: (?<={{stdelim}})nan(?={{endelim}})
       scope: constant.language.nan.firth
+    # booleans
+    - match: (?<={{stdelim}})true(?={{endelim}})
+      scope: constant.language.boolean.true.firth
+    - match: (?<={{stdelim}})false(?={{endelim}})
+      scope: constant.language.boolean.false.firth
+    # refs
+    - match: (?<={{stdelim}})nil(?={{endelim}})
+      scope: constant.language.nil.firth
