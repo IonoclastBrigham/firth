@@ -29,7 +29,7 @@ local function REPL(running, ...)
         return
     end
 
-    stringio.print('ok> ')
+    stringio.print(dict.compiling and '      ' or 'ok> ')
     return REPL(pcall(runstring, stringio.readline(), ...))
 end
 
