@@ -491,11 +491,10 @@ end
 -- ( x -- ) ( CB: push(x) ) ;immed
 function cpush(val, ...)
 	if compiling then
-		local function push(...)
+		local function pushval(...)
 			return val, ...
 		end
-		setfenv(push, dictionary)
-		cappend(push)
+		cappend(pushval)
 		return ...
 	else
 		return val, ...
