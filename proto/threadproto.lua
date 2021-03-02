@@ -23,10 +23,10 @@ local function reverse(...)
 	return unpack(new)
 end
 
-require "firth.fstack"
-local push, drop, top = push, drop, top
-local shove, yank, chop, peek = shove, yank, chop, peek
-local height = height
+local fstack = require "firth.fstack"
+local push, drop, top = fstack.push, fstack.drop, fstack.top
+local shove, yank, chop, peek = fstack.shove, fstack.yank, fstack.chop, fstack.peek
+local height = fstack.height
 
 local function dup(tos, ...) return tos, tos, ... end
 

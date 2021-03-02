@@ -69,17 +69,18 @@ char : create compile
 
 // a few parser/interpreter/compiler control words
 (
-: call: word cpush " ccall" ccall ;immed
+: ccall: word cpush " ccall" ccall ;immed
 : xt ( entry -- xt ) " func" @@ nip ;
 : ?deferred ( entry -- )
 	" name" @@ dup
-	create comiple // create and start compiling overriding def
-		call: compiling? postpone if
-			call		// encode a call to compiling word
+	create compile // create and start compiling overriding def
+		` compiling cpush `lookup ccall postpone if
+			lookup ccall // encode a call to original word
 		postpone else
-			xt execute	// exec compiling word, so it can write semantics to def
+			xt exectoken // exec compiling word, so it can compile to new def
 		postpone end
-	postpone ;immed ;
+	postpone ;immed
+	;
 : ;defer   postpone interpret buildfunc dup bindfunc ?deferred ;immed
 )
 // : eval: ( -- i*x )(TS: word ) postpone ' execute ;immed
@@ -97,8 +98,8 @@ char : create compile
 : const: (--)(TS: word x ) 2word resolve exectoken? swap cpush const ;immed
 : alias: (--)(TS: new old )
 	2word 2dup lookup swap !
-	( new old ) immediates swap @@
-	( new imm ) immediates rot !! drop
+	( "new" "old" ) immediates swap @@
+	( "new"  imm? ) immediates rot !! drop
 	;immed
 // : @ ( entry -- x ) DATA @@ nip ;  TODO: is this a thing anymore?
 // : variable ( name -- entry ) create dup does> NOP ;
@@ -117,20 +118,20 @@ alias: NOOP NOP
 // : calledby: (--) postpone ` " calls" @@ nip foreach drop " \tcalls"   . . CR end ;
 
 // some basic arithmetic operators and shortcuts
-(
-: + ( a b -- a+b ) char + binop ;defer
-` + alias: add
-: - ( a b -- a-b ) char - binop ;defer
-` - alias: sub
-: * ( a b -- a*b ) char * binop ;defer
-` * alias: mul
-: / ( a b -- a/b ) char / binop ;defer
-` / alias: div
-: % ( a b -- a%b ) char % binop ;defer
-` % alias: mod
-: ** ( a b -- a^b ) char ^ binop ;defer // ^ is the name for bit-wise xor
-` ** alias: pow
+: + ( a b -- a+b ) char + cbinop ;immed
+alias: add +
+: - ( a b -- a-b ) char - cbinop ;immed
+alias: sub -
+: * ( a b -- a*b ) char * cbinop ;immed
+alias: mul *
+: / ( a b -- a/b ) char / cbinop ;immed
+alias: div /
+: % ( a b -- a%b ) char % cbinop ;immed
+alias: mod %
+: ** ( a b -- a^b ) char ^ cbinop ;immed // use ** because ^ is bit-wise xor
+alias: pow **
 
+(
 : 1+ ( n -- n+1 ) 1 char + binopconst ;defer
 ` 1+ alias: inc
 : 1- ( n -- n-1 ) 1 char - binopconst ;defer
@@ -162,27 +163,32 @@ alias: NOOP NOP
 : 100* ( n -- 100n ) 100 char * binopconst ;defer
 : 100/ ( n -- n/100 ) 100 char / binopconst ;defer
 : percent ( n p -- n*(p/100) ) postpone 100/  postpone * ;immed
-
-// some basic boolean operators
-: > ( a b -- a>b ) char > binop ;defer
-` > alias: greater?
-: < ( a b -- a<b ) char < binop ;defer
-` < alias: less?
-: = ( a b -- a==b ) " ==" binop ;defer
-` = alias: equal?
-: <= ( a b -- a<=b ) " <=" binop ;defer
-` <= alias: lesseq?
-: >= ( a b -- a>=b ) " >=" binop ;defer
-` >= alias: greatereq?
-: ~= ( a b -- a!=b ) " ~=" binop ;defer
-` ~= alias: noteq?
-
-: and ( a b -- a&&b ) " and" binop ;defer
-: or ( a b -- a||b ) " or" binop ;defer
-: nand ( a b -- !a&&b ) postpone and postpone not ;immed
-: nor ( a b -- !a||b ) postpone or postpone not ;immed
-: xor ( a b -- aXORb ) postpone 2not postpone ~= ;immed
 )
+// some basic boolean operators
+: > ( a b -- a>b ) char > cbinop ;immed
+alias: greater? >
+: < ( a b -- a<b ) char < cbinop ;immed
+alias: less? <
+: = ( a b -- a==b ) " ==" cbinop ;immed
+` = alias: equal? =
+: >= ( a b -- a>=b ) " >=" cbinop ;immed
+alias: greatereq? >=
+: <= ( a b -- a<=b ) " <=" cbinop ;immed
+alias: lesseq? <=
+: ~= ( a b -- a!=b ) " ~=" cbinop ;immed
+alias: noteq? ~=
+
+: 2not ( a b -- ~a ~b) swap not swap not ;
+: && ( a b -- a&&b ) " and" cbinop ;immed
+alias: and &&
+: || ( a b -- a||b ) " or" cbinop ;immed
+alias: or ||
+: ^^ ( a b -- aXORb ) postpone 2not postpone ~= ;immed
+alias: xor ^^
+: ~&& ( a b -- !a&&b ) postpone and not ;immed
+alias: nand ~&&
+: ~|| ( a b -- !a||b ) postpone or not ;immed
+alias: nor ~||
 
 // copyright, version, banner
 : Copyright (--)

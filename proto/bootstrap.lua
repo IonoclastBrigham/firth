@@ -32,6 +32,9 @@ local tostring = tostring
 local type = type
 local pcall, xpcall = pcall, xpcall
 
+local bit = bit or bit32
+local bitand, bitor, bitxor, bitnot = bit.band, bit.bor, bit.bxor, bit.bnot
+
 -- firth imports
 local stringio = require "firth.stringio"
 local stack    = require "firth.stack"
@@ -196,24 +199,6 @@ function trim(str, ...)
 	return stringio.trim(str), ...
 end
 
--- ( -- )
-function cclearstate(...)
-	debug("CLEARING COMPILE STATE!!!!!!!")
-	intptr_running = false
-	current_infile = "stdin"
-	stringio.input(stringio.stdin())
-	tok_stream = ""
-	line_num = 1
-	parse_pos = 1
-	next_tmp = 1
-
-	compiling = false
-	compile_target = nil
-	cstack = stack.new()
-
-	return ...
-end
-
 -- ( s -- b )
 function defined(name, ...)
 	return (rawget(dictionary, name) ~= nil), ...
@@ -238,24 +223,24 @@ function resolve(word, ...)
 	end
 end
 
--- dictionary['!'] = function(name, val, ...)
--- 	dictionary[name] = val
--- end
+dictionary["not"] = function(b, ...)
+	return not b, ...
+end
 
 --! ( -- c ) ( TS: c ) ;immed
 function char(...)
 	local word = parse("%s")
-	if #word == 0 then return "", ... end
+	if #word == 0 then return cpush("", ...) end -- TODO: nil? error?
 
 	local ch = word:sub(1, 1)
 	if ch == "%" or ch == "\\" then
 		ch = word:sub(1, 2)
 		if ch == "\\n" then
-			ch = ch:gsub("\\n", "\n")
+			ch = "\n"
 		elseif ch == "\\t" then
-			ch = ch:gsub("\\t", "\t")
+			ch = "\t"
 		elseif ch == '\\"' then
-			ch = ch:gsub('\\"', '"')
+			ch = '"'
 		end
 	end
 
@@ -268,6 +253,24 @@ function fmt(str, ...)
 	str = str:gsub("\\t", "\t"):gsub("\\n", "\n"):gsub('\\"', '"')
 	local _, count = str:gsub("%%[^%%]", "")
 	return str:format(...), select(count + 1, ...)
+end
+
+-- ( -- )
+function cclearstate(...)
+	debug("CLEARING COMPILE STATE!!!!!!!")
+	intptr_running = false
+	current_infile = "stdin"
+	stringio.input(stringio.stdin())
+	tok_stream = ""
+	line_num = 1
+	parse_pos = 1
+	next_tmp = 1
+
+	compiling = false
+	compile_target = nil
+	cstack = stack.new()
+
+	return ...
 end
 
 -- ( s1 -- s2 )
@@ -318,6 +321,8 @@ local function newcompilebuf()
 	return {}
 end
 
+
+
 -- ( s -- entry )
 function create(name, ...)
 	debug("CREATE %q", name)
@@ -350,12 +355,28 @@ function interpret(...)
 end
 immediates['interpret'] = true
 
-local function thread(xt1, xt2, ...)
-	if not xt1 then return function(...) return ... end end
-	if not xt2 then return xt1 end
-	local next = thread(xt2, ...)
-	local thr = function(...) return next(xt1(...)) end
-	setfenv(thr, dictionary)
+-- Can't be a word because recursion depends on params in chronological order
+local function _thread_r(xt1, xt2, ...)
+	-- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	-- TODO: normalize cappend to always use a metatable, always use xt:thread()
+	-- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+	if not xt2 then
+		if getmetatable(xt1) then
+			return xt1:thread()
+		else
+			return xt1
+		end
+	end
+
+	local next = _thread_r(xt2, ...)
+	local thr
+	if getmetatable(xt1) then
+		thr = xt1:thread(next)
+	else
+		thr = function(...) return next(xt1(...)) end
+	end
+
 	return thr
 end
 
@@ -370,7 +391,7 @@ function buildfunc(...)
 
 	local name, compilebuf = entry.name, entry.compilebuf
 	debug("BUILDING %s", name)
-	entry.xt = thread(unpack(compilebuf))
+	entry.xt = (#compilebuf > 0) and _thread_r(unpack(compilebuf)) or function(...) return ... end
 
 	return entry, ...
 end
@@ -402,6 +423,51 @@ end
 function cappend(xt, ...)
 	table.insert(compile_target.compilebuf, xt)
 	return ...
+end
+
+local binopmt = {
+	thread = function(self, next)
+		local src = next and [[
+			local next = ...
+			return function(b, a, ...)
+				return next(a %s b, ...)
+			end
+		]] or [[
+			return function(b, a, ...)
+				return a %s b, ...
+			end
+		]]
+		return loadstring(src:format(self.op))(next)
+	end,
+	exec = function(self, b, a, ...)
+		local src = ([[
+			-- skip `self`
+			local b = select(2, ...)
+			local a = select(3, ...)
+			return a %s b, select(4, ...)
+		]]):format(self.op)
+		debug("COMPILING BINOP FUNC: '%s'", src)
+		self.exec = loadstring(src)
+		return self:exec(b, a, ...)
+	end
+}
+binopmt.__index = binopmt
+local opcache = {}
+local function binop(op)
+	if not opcache[op] then
+		opcache[op] = setmetatable({op = op}, binopmt)
+	end
+	return opcache[op]
+end
+
+-- ( op -- ) ( CB: {op} ) ;immed
+function cbinop(op, ...)
+	op = binop(op)
+	if compiling then
+		return cappend(op, ...)
+	else
+		return op:exec(...)
+	end
 end
 
 -- (f -- * ) ( CB: xt ) ;immed
