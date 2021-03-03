@@ -640,7 +640,11 @@ local function _interpret_r(...)
 				return _interpret_r(ccall(found, ...))
 			end
 		else
-			return _interpret_r(cpush(found, ...))
+			if compiling then
+				return _interpret_r(ccall(lookup, cpush(word, ...)))
+			else
+				return _interpret_r(found, ...)
+			end
 		end
 	end
 
