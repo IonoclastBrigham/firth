@@ -20,7 +20,20 @@ local unpack = unpack or table.unpack
 
 local stringio = require "firth.stringio"
 local firth = require "proto.bootstrap"
-local runstring, runfile, dict = firth.runstring, firth.runfile, firth.dict
+local runstring, runfile, dictionary = firth.runstring, firth.runfile, firth.dictionary
+
+local function freeze(...)
+    local frozenstack = {...}
+    frozenstack.height = dictionary.height(...)
+    return frozenstack
+end
+
+local function spread(frozenstack, i)
+    i = i or 1
+    if i <= frozenstack.height then
+        return frozenstack[i], spread(frozenstack, i + 1)
+    end
+end
 
 local function REPL(running, ...)
     if not running then
@@ -29,17 +42,18 @@ local function REPL(running, ...)
         return
     end
 
-    stringio.print(dict.compiling and '      ' or 'ok> ')
+    stringio.print(dictionary.compiling and '      ' or 'ok> ')
     return REPL(pcall(runstring, stringio.readline(), ...))
 end
 
-runfile "proto/core.firth"
-
 if select("#", ...) > 0 then
-    -- TODO: proper printstack word that doesn't care about nils
-    stringio.printline("<==[ "..table.concat({runstring(table.concat({...}, " "))}, " ").." ]")
+    local src = table.concat({...}, " ")
+    local frozenstack = freeze(runstring(src))
+    stringio.print("\n<==[ ")
+    dictionary[".S"](spread(frozenstack))
+    stringio.printline("]")
 else
     stringio.print(':MiniREPL, ')
-    dict.banner()
+    dictionary.banner()
     REPL(true, ...)
 end

@@ -83,18 +83,10 @@ entrymt.__index = entrymt
 
 -- Error Handling --------------------------------------------------------------
 
-local function concatstack(...)
-	if select('#', ...) == 0 then return '∅' end
-
-	local raw, reversed = {...}, {}
-	for i,v in ipairs(raw) do reversed[#raw - i + 1] = tostring(quote(v)) end
-	return table.concat(reversed, ' '):gsub('\\\n', '\\n'):gsub('\\9', '\\t')
-end
-
 function xperrhandler(msg)
 	stringio.printline(("ERROR: %s"):format(msg))
 	stringio.printline(("while running %s:%d"):format(current_infile, line_num))
-	local stackstring = '[ '..concatstack(unpack(frozen_stack))..' ]'
+	local stackstring = '[ '..prepstack(unpack(frozen_stack))..' ]'
 	stringio.printline('stack : '..stackstring)
 	stringio.printline('cstack: '..tostring(cstack))
 	-- stringio.printline('dict  :')
@@ -184,6 +176,42 @@ end
 local dot_fmt = "%s "
 dictionary['.'] = function(x, ...)
 	return dictionary['.raw'](dot_fmt:format(x), ...)
+end
+
+local function mapstack(f, ...)
+	if height(...) == 0 then return end
+
+	return f((...)), mapstack(f, select(2, ...))
+end
+
+local function eachstack(f, ...)
+	if height(...) == 0 then return end
+
+	f((...))
+	mapstack(f, select(2, ...))
+end
+
+local function _reverse_r(i, ...)
+	local cnt = height(...) - i
+	if cnt > 0 then
+		return select(cnt, ...), _reverse_r(i + 1, ...)
+	end
+end
+
+local function prepstack(...)
+	if select('#', ...) == 0 then return '∅' end
+
+	return mapstack(
+		function(x)
+			return tostring(quote(x)):gsub('\\\n', '\\n'):gsub('\\9', '\\t').." "
+		end,
+		_reverse_r(0, ...)
+	)
+end
+
+-- ( * -- )
+dictionary[".S"] = function(...)
+	return stringio.print(prepstack(...))
 end
 
 -- ( s -- s' )
@@ -713,24 +741,36 @@ function runfile(path, ...)
 	return _afterfile(pcall(runstring, src, ...))
 end
 
--- Export
 --[[
 local depth = 0
+local prints = dictionary[".S"]
 local function _postcall(...)
 	depth = depth - 1
 	local indentation = ("    "):rep(depth)
-	debug("%s<==[ %s ]", indentation, concatstack(...))
+	-- debug("%s<==[ %s ]", indentation, prepstack(...))
+	stringio.print(("🐛%s<==[ "):format(indentation))
+	prints(...)
+	stringio.printline("]")
 	-- debug("%sCOMPILING? (%s)", indentation, compiling)
 	return ...
 end
 for k,v in pairs(dictionary) do
-	if type(v) == "function" and k ~= "quote" then
+	if type(v) == "function" and k ~= "quote" and k ~= "height" then
 		dictionary[k] = function(...)
-			debug("%sCALLING WORD: %s(%s)", ("    "):rep(depth), k, concatstack(...))
+			debug("%sCALLING WORD: %s", ("    "):rep(depth), k)
 			depth = depth + 1
 			return _postcall(v(...))
 		end
 	end
 end
 --]]
-return { runstring = runstring, runfile = runfile, dict = dictionary }
+
+local skipcore = select(2, ...)
+if not skipcore then runfile "proto/core.firth" end
+
+-- Export
+return {
+	runstring = runstring,
+	runfile = runfile,
+	dictionary = dictionary
+}

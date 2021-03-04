@@ -280,7 +280,7 @@ function stringio.print(...)
 			out:write(unpack(args))
 		else
 			out = stdout
-			out:write(arg1, select(2, ...))
+			out:write(...)
 		end
 	end
 	out:flush()
