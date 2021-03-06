@@ -222,6 +222,10 @@ dictionary[".S"] = function(...)
 	return stringio.print(prepstack(...))
 end
 
+dictionary[">string"] = function(x, ...)
+	return tostring(x), ...
+end
+
 -- ( s -- s' )
 function quote(str, ...)
 	if type(str) == "string" then
