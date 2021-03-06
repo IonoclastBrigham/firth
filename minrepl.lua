@@ -22,36 +22,23 @@ local stringio = require "firth.stringio"
 local firth = require "proto.bootstrap"
 local runstring, runfile, dictionary = firth.runstring, firth.runfile, firth.dictionary
 
-local function freeze(...)
-    local frozenstack = {...}
-    frozenstack.height = dictionary.height(...)
-    return frozenstack
-end
-
-local function spread(frozenstack, i)
-    i = i or 1
-    if i <= frozenstack.height then
-        return frozenstack[i], spread(frozenstack, i + 1)
-    end
-end
 
 local function REPL(running, ...)
     if not running then
-        stringio.printline(...)
+        dictionary.printstack(...)
         stringio.printline("Goodbye 🖤")
         return
     end
 
     stringio.print(dictionary.compiling and '      ' or 'ok> ')
-    return REPL(pcall(runstring, stringio.readline(), ...))
+    local line = stringio.readline() -- nil => EOF => CTRL+D
+    if line == nil then return REPL(false, ...) end
+    return REPL(pcall(runstring, line, ...))
 end
 
 if select("#", ...) > 0 then
     local src = table.concat({...}, " ")
-    local frozenstack = freeze(runstring(src))
-    stringio.print("\n<==[ ")
-    dictionary[".S"](spread(frozenstack))
-    stringio.printline("]")
+    printstack(runstring(src))
 else
     stringio.print(':MiniREPL, ')
     dictionary.banner()

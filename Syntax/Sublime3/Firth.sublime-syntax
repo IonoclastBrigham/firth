@@ -67,6 +67,7 @@ contexts:
         2: entity.name.function.firth
     - match: (?<={{stdelim}});\S*
       scope: storage.type.function.end.firth
+      pop: true
 
   word-consumers:
     # not including strings, comments, or colon-defs
@@ -91,13 +92,15 @@ contexts:
     - match: "(?<={{stdelim}})`\\s+\\S+"
       # TODO: push so we can include escapes
       scope: string.unquoted.firth
-    - match: (?<={{stdelim}})(char\.?\s+)({{escapechar}}|\S)(\S*)
+    - match: "(?<={{stdelim}})({{escapechar}})"
+      scope: string.unquoted.firth
+    - match: (?<={{stdelim}})(\.?char\s+)({{escapechar}}|\S)(\S*)
       # TODO: push so we can include escapes
       captures:
         1: string.unquoted.firth
         2: string.unquoted.firth
         3: comment.line.firth
-    - match: '(?<={{stdelim}})(")\s'
+    - match: '(?<={{stdelim}})(\.?")\s'
       captures:
         1: punctuation.definition.string.quoted.begin.firth
       push:

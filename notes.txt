@@ -3,6 +3,7 @@ Ideas / TODOs
 proto branch tasks
 	sublime syntax
 	loops, conditional, blocks
+	once conditionals work, get ;defer working and use instead of ad hoc cbinop
 	fix up remaining core words
 	vacabs.firth
 	move all possible lua prims to firth core

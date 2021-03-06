@@ -109,13 +109,20 @@ char : create compile
 // miscellaneous util words and stuff
 : NOP ;immed
 alias: NOOP NOP
-: \n ( -- "\n" ) char \n cpush ;immed
-: .. ( x1 x2 -- ) . . ;
-: char. (--)(TS: ch) postpone char ' . ccall ;immed
-: CR (--) \n .raw ;
-: 2CR (--) \n \n .raw .raw ;
 // : calls: (--) postpone ` " calledby" @@ nip foreach drop " \tcalledby". . CR end ;
 // : calledby: (--) postpone ` " calls" @@ nip foreach drop " \tcalls"   . . CR end ;
+
+// strings and i/o
+const: \r char \r
+const: \n char \n
+const: \t char \t
+const: \v char \v
+: .. ( x1 x2 -- ) . . ;
+: .char (--)(TS: ch) postpone char ' . ccall ;immed
+: ." ( -- )(TS: "s") postpone " ' . ccall ;immed
+: CR (--) \n .raw ;
+: 2CR (--) \n \n .raw .raw ;
+: TAB (--) \t .raw ;
 
 // some basic arithmetic operators and shortcuts
 : + ( a b -- a+b ) char + cbinop ;immed
@@ -190,6 +197,9 @@ alias: nand ~&&
 : ~|| ( a b -- !a||b ) postpone or not ;immed
 alias: nor ~||
 
+// control and os words
+alias: exit bye
+
 // copyright, version, banner
 : Copyright (--)
 	` Copyright create compile
@@ -201,4 +211,4 @@ alias: nor ~||
 " LICENSE.firth" runfile
 alias: © Copyright
 const: VERSION " pre-alpha3"
-: banner (--) " :Firth ver." . VERSION . char. | © ;
+: banner (--) ." :Firth ver." VERSION . .char | © ;

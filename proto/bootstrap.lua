@@ -23,6 +23,7 @@ local getmetatable, setmetatable = getmetatable, setmetatable
 local ipairs, pairs = ipairs, pairs
 local loadstring = loadstring
 local math = math
+local os = os
 local print = print
 local rawget = rawget
 local require = require
@@ -125,6 +126,8 @@ local function sortmatches(buckets, tok)
 	return result
 end
 
+local LOOKUP_ERR_MSG = "%s is undefined\n%s"
+
 -- ( n s -- 0 )
 local function lookup_err(tok, num, ...)
 	local __FIRTH_DUMPTRACE__ = true -- TODO ???
@@ -145,7 +148,7 @@ local function lookup_err(tok, num, ...)
 		end
 	end
 	local suffix = "Did You Mean..?\n\t"..table.concat(sortmatches(buckets, tok), "\n\t")
-	return runtime_err(prefix, "UNKNOWN WORD '"..tok.."'\n"..suffix, 2, ...)
+	return runtime_err(prefix, LOOKUP_ERR_MSG:format(tok, suffix), 2, ...)
 end
 
 debuglogs = false
@@ -160,10 +163,52 @@ end
 
 -- core primitives -------------------------------------------------------------
 
+local function mapstack(f, ...)
+	if height(...) == 0 then return end
+
+	return f((...)), mapstack(f, select(2, ...))
+end
+
+function eachstack(f, ...)
+	if height(...) == 0 then return end
+
+	f((...))
+	return eachstack(f, select(2, ...))
+end
+
+local function _reverse_r(i, ...)
+	local cnt = height(...) - i
+	if cnt > 0 then
+		return select(cnt, ...), _reverse_r(i + 1, ...)
+	end
+end
+
+local function prepstack(...)
+	if select('#', ...) == 0 then return '∅ ' end
+
+	return mapstack(
+		function(x)
+			-- pass through quote before tostring; quote will quote strings
+			-- but leave e.g. numbers untouched.
+			-- then we convert everything for printing.
+			return tostring(quote(x)):gsub('\\\n', '\\n'):gsub('\\9', '\\t').." "
+		end,
+		_reverse_r(0, ...)
+	)
+end
+
+function printstack(...)
+    stringio.print("\n<==[ ")
+    dictionary[".S"](...)
+    stringio.printline("]")
+end
+
 -- ( -- )
--- function exit(...)
--- 	error("Goodbye 🖤")
--- end
+function bye(...)
+	printstack(...)
+	stringio.printline "Goodbye 🖤"
+	os.exit(0)
+end
 
 -- ( s -- ) ( Out: s )
 dictionary['.raw'] = function(str, ...)
@@ -176,37 +221,6 @@ end
 local dot_fmt = "%s "
 dictionary['.'] = function(x, ...)
 	return dictionary['.raw'](dot_fmt:format(x), ...)
-end
-
-local function mapstack(f, ...)
-	if height(...) == 0 then return end
-
-	return f((...)), mapstack(f, select(2, ...))
-end
-
-local function eachstack(f, ...)
-	if height(...) == 0 then return end
-
-	f((...))
-	mapstack(f, select(2, ...))
-end
-
-local function _reverse_r(i, ...)
-	local cnt = height(...) - i
-	if cnt > 0 then
-		return select(cnt, ...), _reverse_r(i + 1, ...)
-	end
-end
-
-local function prepstack(...)
-	if select('#', ...) == 0 then return '∅' end
-
-	return mapstack(
-		function(x)
-			return tostring(quote(x)):gsub('\\\n', '\\n'):gsub('\\9', '\\t').." "
-		end,
-		_reverse_r(0, ...)
-	)
 end
 
 -- ( * -- )
@@ -534,6 +548,7 @@ end
 local function cbeginblock()
 	-- TODO: when entering a block, new tmp to capture output stack?
 	cstack:push(compiling)
+	cstack:push(compile_target)
 	if not compiling then
 		create("[INTERP_BUF]")
 		compiling = true
@@ -543,24 +558,13 @@ end
 -- this is not meant to be a prim word available to firth code.
 -- is there a reasonable usecase for doing so?
 local function cendblock()
-	-- TODO??
+	compile_target = cstack:pop()
 	compiling = cstack:pop()
 	if not compiling then
 		exectoken(buildfunc().xt)
 	else
 		-- TODO: thread closures??
 	end
-end
-
--- this is not meant to be a prim word available to firth code.
--- is there a reasonable usecase for doing so?
-local function cnewtmp(initialval)
-	local tmpid = next_tmp
-	next_tmp = tmpid + 1
-	local var = string.format("__tmp%d__", tmpid)
-	cappend("local %s = %s", var, tostring(initialval))
-
-	return var
 end
 
 -- ( cond -- )
