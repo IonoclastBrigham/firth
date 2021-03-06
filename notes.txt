@@ -5,11 +5,19 @@ proto branch tasks
 	loops, conditional, blocks
 	once conditionals work, get ;defer working and use instead of ad hoc cbinop
 	fix up remaining core words
-	vacabs.firth
+	vocabs.firth
 	move all possible lua prims to firth core
 		lua0, lua1, etc.
 		move any that can just work
 		minimal functionality + redefine "real" version if firth
+	threading
+		whatever it ends up being, need to figure out SEE / src
+		calls and callers
+		simple array of function pointers passed through a recursive wrapper?
+			function xthread(idx, ...)
+				return xthread(idx + 1, th[idx](...))
+			end
+	get some of that badass reflection/debugging stuff working again
 full plugin for sublime
 	syntax
 	completion
