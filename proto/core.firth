@@ -106,12 +106,6 @@ char : create compile
 // : var: ( x -- ) word variable ! ;immed
 // : val: ( x -- ) word variable ! last does> @ ;immed
 
-// miscellaneous util words and stuff
-: NOP ;immed
-alias: NOOP NOP
-// : calls: (--) postpone ` " calledby" @@ nip foreach drop " \tcalledby". . CR end ;
-// : calledby: (--) postpone ` " calls" @@ nip foreach drop " \tcalls"   . . CR end ;
-
 // strings and i/o
 const: \r char \r
 const: \n char \n
@@ -120,9 +114,18 @@ const: \v char \v
 : .. ( x1 x2 -- ) . . ;
 : .char (--)(TS: ch) postpone char ' . ccall ;immed
 : ." ( -- )(TS: "s") postpone " ' . ccall ;immed
-: CR (--) \n .raw ;
-: 2CR (--) \n \n .raw .raw ;
+: .fmt" ( -- )(TS: "s") postpone " ' fmt ccall ' . ccall ;immed
+: .CR (--) \n .raw ;
+: .2CR (--) \n \n .raw .raw ;
+: .line ( x -- ) >string .raw .CR ;
 : TAB (--) \t .raw ;
+: printstack ( * -- ) .fmt" \n<==[" .S .char ] .CR ;
+
+// miscellaneous util words and stuff
+: NOP ;immed
+alias: NOOP NOP
+// : calls: (--) postpone ` " calledby" @@ nip foreach drop " \tcalledby". . .CR end ;
+// : calledby: (--) postpone ` " calls" @@ nip foreach drop " \tcalls"   . . .CR end ;
 
 // some basic arithmetic operators and shortcuts
 : + ( a b -- a+b ) char + cbinop ;immed
@@ -203,7 +206,7 @@ alias: exit bye
 // copyright, version, banner
 : Copyright (--)
 	` Copyright create compile
-		parseline trim cpush ` Copyright cpush ' .. ccall ' 2CR ccall
+		parseline trim cpush ` Copyright cpush ' .. ccall ' .2CR ccall
 		buildfunc bindfunc
 	false immediates ` Copyright !! drop
 	` Copyright ccall

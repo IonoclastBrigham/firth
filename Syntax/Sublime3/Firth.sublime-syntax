@@ -100,9 +100,8 @@ contexts:
         1: string.unquoted.firth
         2: string.unquoted.firth
         3: comment.line.firth
-    - match: '(?<={{stdelim}})(\.?")\s'
-      captures:
-        1: punctuation.definition.string.quoted.begin.firth
+    - match: '(?<={{stdelim}})((\.\S*)?")\s'
+      scope: punctuation.definition.string.quoted.begin.firth
       push:
         - meta_include_prototype: false
         - meta_scope: string.quoted.firth

@@ -197,12 +197,6 @@ local function prepstack(...)
 	)
 end
 
-function printstack(...)
-    stringio.print("\n<==[ ")
-    dictionary[".S"](...)
-    stringio.printline("]")
-end
-
 -- ( -- )
 function bye(...)
 	printstack(...)

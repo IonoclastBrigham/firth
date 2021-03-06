@@ -19,6 +19,10 @@ proto branch tasks
 		they all have to be tail recursive?
 		could we get away with anything else?
 		create a "break continuation" that is called if user invokes break?
+	lambdas
+		: (λ nil create compile ;immed
+		: ); interpret buildfunc nip ` xt @@ ;immed
+		(λ ." I'm a lambda!" );
 	threading
 		whatever it ends up being, need to figure out SEE / src
 		calls and callers
@@ -108,7 +112,6 @@ loops
 		BEGIN xxx cond WHILE yyy REPEAT	// while(cond) yyy OR do xxx while(cond)
 		LEAVE							// break
 conversions
-	>string
 	>number
 change parse routines to allow for doubled delimiters
 	// e.g. alternative string syntax, for quoting options
