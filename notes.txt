@@ -10,6 +10,10 @@ proto branch tasks
 		lua0, lua1, etc.
 		move any that can just work
 		minimal functionality + redefine "real" version if firth
+	loops
+		they all have to be tail recursive?
+		could we get away with anything else?
+		create a "break continuation" that is called if user invokes break?
 	threading
 		whatever it ends up being, need to figure out SEE / src
 		calls and callers

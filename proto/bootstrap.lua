@@ -374,7 +374,7 @@ function create(name, ...)
 		--calls = { nextidx = 1 }, calledby = {}, upvals = { nextidx = 1 }
 	}
 	setmetatable(entry, entrymt)
-	dictionary[name] = entry
+	-- dictionary[name] = entry
 	return entry, ...
 end
 
@@ -550,8 +550,9 @@ local function cbeginblock()
 	cstack:push(compiling)
 	cstack:push(compile_target)
 	if not compiling then
-		create("[INTERP_BUF]")
-		compiling = true
+		compile(create("[INTERP_BUF]"))
+	else
+		-- TODO: same thing, different name?
 	end
 end
 
@@ -563,7 +564,7 @@ local function cendblock()
 	if not compiling then
 		exectoken(buildfunc().xt)
 	else
-		-- TODO: thread closures??
+		-- TODO: cappend closure for correct block type
 	end
 end
 
