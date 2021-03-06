@@ -44,20 +44,24 @@ local stringio = {
 --! Creates a Lua-style iterator to loop over tokens in string.
 --! Tokens are any consecutive printable chars broken up by white space.
 --! @param str the string of tokens to iterate over.
+--! @param delim the string or pattern that delimits the tokens.
 --! @return an iterator function suitable for a for loop.
 --! @see #split()
-function stringio.tokens(str)
-	return string.gmatch(str, "([^%s]+)")
+function stringio.tokens(str, delim)
+	delim = delim or "([^%s]+)"
+	return string.gmatch(str, delim)
 end
 
 --! Splits a string into an array, tokenized on whitespace.
 --! Tokens are any consecutive printable chars broken up by white space.
---! @param str the string of tokens to split.
+--! @param str   the string of tokens to split.
+--! @param delim the string or pattern that delimits the tokens.
 --! @return an array of tokenized substrings.
 --! @see #tokens()
-function stringio.split(str)
+function stringio.split(str, delim)
+	delim = delim or "([^%s]+)"
 	local result = {}
-	for word in stringio.tokens(str) do
+	for word in stringio.tokens(str, delim) do
 		table.insert(result, word)
 	end
 	return result
@@ -254,8 +258,8 @@ end
 --! The behavior of this function can be modified depending on the first
 --! argument that is passed in.
 --! @param ... a list of arguments to print. If the first argument is:<ul>
---! 		<li>a function, it is called, and the returned value is used to
---! 			concatenate the items of the list;
+--! 		<li>a function, it is called, and the returned value is used as
+--!				the separator to concatenate the items of the list;
 --! 		<li>a file descriptor or file-like object, it is treated as the
 --! 			output file, and printing is carried out by calling its
 --! 			\c write() method;
