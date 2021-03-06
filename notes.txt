@@ -3,6 +3,11 @@ Ideas / TODOs
 proto branch tasks
 	sublime syntax
 	loops, conditional, blocks
+	error handling/reporting
+		' foo try ' . catch
+		try{ foo 2 + }catch{ quote .S }
+		xpcall return value is return from xphandler; forward to repl somehow?
+		handler appears to be crashing
 	once conditionals work, get ;defer working and use instead of ad hoc cbinop
 	fix up remaining core words
 	vocabs.firth

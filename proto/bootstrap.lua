@@ -471,22 +471,23 @@ local binopmt = {
 	thread = function(self, next)
 		local src = next and [[
 			local next = ...
-			return function(b, a, ...)
-				return next(a %s b, ...)
+			return function(TOS, NOS, ...)
+				return next(NOS %s TOS, ...)
 			end
 		]] or [[
-			return function(b, a, ...)
-				return a %s b, ...
+			return function(TOS, NOS, ...)
+				return NOS %s TOS, ...
 			end
 		]]
 		return loadstring(src:format(self.op))(next)
 	end,
 	exec = function(self, b, a, ...)
 		local src = ([[
+			-- print(...)
 			-- skip `self`
-			local b = select(2, ...)
-			local a = select(3, ...)
-			return a %s b, select(4, ...)
+			local TOS = select(2, ...)
+			local NOS = select(3, ...)
+			return NOS %s TOS, select(4, ...)
 		]]):format(self.op)
 		debug("COMPILING BINOP FUNC: '%s'", src)
 		self.exec = loadstring(src)
