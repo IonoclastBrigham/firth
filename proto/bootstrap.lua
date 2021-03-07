@@ -668,31 +668,25 @@ local function _interpret_r(...)
 			if not compiling or immediates[word] then
 				-- pass through drop because xpcall returns an error flag, already handled elsewhere
 				return _interpret_r(drop(xpcall(found, xperrhandler, ...)))
-			else
-				return _interpret_r(ccall(found, ...))
 			end
-		else
-			if compiling then
-				return _interpret_r(ccall(lookup, cpush(word, ...)))
-			else
-				return _interpret_r(found, ...)
-			end
+			return _interpret_r(ccall(word, ...)) -- pass `found` instead to static-link
 		end
+
+		if compiling then
+			return _interpret_r(ccall(lookup, cpush(word, ...)))
+		end
+		return _interpret_r(found, ...)
 	end
 
 	-- try to parse it as a literal value
 	local val = stringio.tonumber(word) or stringio.toboolean(word)
-	if val ~= nil then
+	if val ~= nil or word == 'nil' then
 		return _interpret_r(cpush(val, ...))
-	else
-		if word == 'nil' then
-			return _interpret_r(cpush(nil, ...))
-		else
-			-- error; use xpcall, so we get the stacktrace
-			xpcall(lookup_err, xperrhandler, word, line_num, ...)
-			return ...
-		end
 	end
+
+	-- error; use xpcall, so we get the stacktrace
+	xpcall(lookup_err, xperrhandler, word, line_num, ...)
+	return ...
 end
 
 -- ( s -- * )
