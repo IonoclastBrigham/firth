@@ -1,3 +1,4 @@
+#!/usr/bin/env luajit
 --------------------------------------------------------------------------------
 --! @file minirepl.lua
 --! @brief Tiny minimal REPL for :Firth language.

@@ -31,6 +31,12 @@ proto branch tasks
 				return xthread(idx + 1, th[idx](...))
 			end
 	get some of that badass reflection/debugging stuff working again
+	scripting
+		':' script for defining shell scripts in firth
+		expects a new "word" name as first arg, like normal firth
+		compiles subsequent args
+		';' means "write executable script to disk and exit"
+		if reaches end of shell args without ";", goes into line-edit mode
 full plugin for sublime
 	syntax
 	completion

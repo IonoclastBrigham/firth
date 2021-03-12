@@ -1,5 +1,5 @@
 --------------------------------------------------------------------------------
---! @file fstack.lua
+--! @file bootstrap.lua
 --! @brief prototype :Firth bootstrap script.
 --! @author btoskin - <brigham@ionoclast.com>
 --! @copyright © 2015-2021 Brigham Toskin
@@ -37,21 +37,22 @@ local bit = bit or bit32
 local bitand, bitor, bitxor, bitnot = bit.band, bit.bor, bit.bxor, bit.bnot
 
 -- firth imports
+local fli = require "firth.fli"
 local stringio = require "firth.stringio"
-local stack    = require "firth.stack"
+local stack	= require "firth.stack"
 local fstack   = require "firth.fstack"
 
 -- set up Lua global namespace as firth dictionary / global environment
 local _lua = _G
-_lua._G = nil
-local _G  = { Lua = _lua }
-for k, v in pairs(fstack) do _G[k] = v end
+local _G  = {
+	Lua = fli.inject({}, _lua )
+}
 _G.dictionary = _G
--- setmetatable(_G, { __index = _G })
-setmetatable(_G, getmetatable(_lua))
 setfenv(1, _G)
--- TODO: metatable inheritence mechanisms for vocabs
--- (maybe not in bootstrap file though?)
+
+fli.wrapglobals(Lua)
+fli.maplua(dictionary, Lua)
+fli.inject(dictionary, fstack)
 
 --! @endcond
 
@@ -91,7 +92,7 @@ function xperrhandler(msg)
 	stringio.printline('stack : '..stackstring)
 	stringio.printline('cstack: '..tostring(cstack))
 	-- stringio.printline('dict  :')
-	-- for k, _ in pairs(dictionary) do stringio.printline("    "..k) end
+	-- for k, _ in pairs(dictionary) do stringio.printline("	"..k) end
 	-- stringio.printline(stacktrace())
 
 	cclearstate()
@@ -744,7 +745,7 @@ local depth = 0
 local prints = dictionary[".S"]
 local function _postcall(...)
 	depth = depth - 1
-	local indentation = ("    "):rep(depth)
+	local indentation = ("	"):rep(depth)
 	-- debug("%s<==[ %s ]", indentation, prepstack(...))
 	stringio.print(("🐛%s<==[ "):format(indentation))
 	prints(...)
@@ -755,7 +756,7 @@ end
 for k,v in pairs(dictionary) do
 	if type(v) == "function" and k ~= "quote" and k ~= "height" then
 		dictionary[k] = function(...)
-			debug("%sCALLING WORD: %s", ("    "):rep(depth), k)
+			debug("%sCALLING WORD: %s", ("	"):rep(depth), k)
 			depth = depth + 1
 			return _postcall(v(...))
 		end

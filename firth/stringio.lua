@@ -25,6 +25,7 @@ local stdout = io.stdout
 local ipairs = ipairs
 local print = print
 local tonumber = tonumber
+local type = type
 
 
 local function shift(tbl)
