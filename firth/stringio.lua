@@ -1,14 +1,14 @@
 --------------------------------------------------------------------------------
---! @file stringio.lua
+--! @file
 --! @brief Text io and manipulation routines for :Firth language.
 --! @author btoskin - <brigham@ionoclast.com>
 --! @copyright © 2015-2021 Brigham Toskin
 --!
---! <p>This file is part of the :Firth language reference implementation. Usage
---! and redistribution of this software is governed by the terms of a modified
---! MIT-style license. You should have received a copy of the license with the
---! source distribution in the file LICENSE; if not, you may find it online at
---! <https://github.com/IonoclastBrigham/firth/blob/master/LICENSE></p>
+-- <p>This file is part of the :Firth language reference implementation. Usage
+-- and redistribution of this software is governed by the terms of a modified
+-- MIT-style license. You should have received a copy of the license with the
+-- source distribution in the file LICENSE; if not, you may find it online at
+-- <https://github.com/IonoclastBrigham/firth/blob/master/LICENSE></p>
 --
 -- Formatting:
 --	utf-8 ; unix ; 80 cols ; tabwidth 4
@@ -119,7 +119,7 @@ end
 
 --! Tries to convert a string into a number.
 --!
---! <p>This function attempts to parse a string as a numeric value, and convert
+-- <p>This function attempts to parse a string as a numeric value, and convert
 --! it to the corresponding number. Surrounding whitespace is ignored, but any
 --! other non-contiguous or invalid characters mean this string is not a number.
 --! </p>
@@ -173,7 +173,7 @@ end
 
 --! Tries to convert a string to a boolean.
 --!
---! <p>This function attempts to parse a string as a boolean value, and convert
+-- <p>This function attempts to parse a string as a boolean value, and convert
 --! it to the corresponding boolean. Surrounding whitespace is ignored, and the
 --! conversion is case-insensitive, but any other non-contiguous or invalid
 --! characters mean this string is not a boolean.</p>
