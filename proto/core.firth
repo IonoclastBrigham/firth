@@ -31,7 +31,7 @@ char : create compile
 // Core library for low level code and compiler manipulation
 //
 // Copyright © 2015-2021 Brigham Toskin
-// This file is part of the Firth language reference implementation. Usage
+// This file is part of the :Firth language reference implementation. Usage
 // and redistribution of this software is governed by the terms of a modified
 // MIT-style license. You should have received a copy of the license with the
 // source distribution in the file LICENSE; if not, you may find it online at:
@@ -70,7 +70,6 @@ char : create compile
 // a few parser/interpreter/compiler control words
 (
 : ccall: word cpush " ccall" ccall ;immed
-: xt ( entry -- xt ) " func" @@ nip ;
 : ?deferred ( entry -- )
 	" name" @@ dup
 	create compile // create and start compiling overriding def
@@ -84,6 +83,7 @@ char : create compile
 : ;defer   postpone interpret buildfunc dup bindfunc ?deferred ;immed
 )
 // : eval: ( -- i*x )(TS: word ) postpone ' execute ;immed
+: xt ( {word} -- xt ) ` xt @@ nip ;
 : 2word ( -- s1 s2 ) word word ;
 : #! (--)(TS: word) word lookup exectoken ;immed
 
@@ -207,9 +207,9 @@ alias: exit bye
 : Copyright (--)
 	` Copyright create compile
 		parseline trim cpush ` Copyright cpush ' .. ccall ' .2CR ccall
-		buildfunc bindfunc
+		buildfunc dup bindfunc
+	xt ccall
 	false immediates ` Copyright !! drop
-	` Copyright ccall
 	;immed
 " LICENSE.firth" runfile
 alias: © Copyright

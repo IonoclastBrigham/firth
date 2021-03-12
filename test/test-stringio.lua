@@ -2,9 +2,9 @@
 --! @file test-stringio.lua
 --! @brief Text io and manipulation routines test module.
 --! @author btoskin - <brigham@ionoclast.com>
---! @copyright © 2015 Brigham Toskin
---! 
---! <p>This file is part of the Firth language reference implementation. Usage
+--! @copyright © 2015-2021 Brigham Toskin
+--!
+--! <p>This file is part of the :Firth language reference implementation. Usage
 --! and redistribution of this software is governed by the terms of a modified
 --! MIT-style license. You should have received a copy of the license with the
 --! source distribution in the file LICENSE; if not, you may find it online at
@@ -73,7 +73,7 @@ return {
 		assert(stringio.tonumber('.1') == 0.1, "Conversion to number failed")
 		assert(stringio.tonumber(' 3.14159 ') == 3.14159, "Conversion to number failed")
 		assert(stringio.tonumber('-1.23456E-5') == -1.23456E-5, "Conversion to number failed")
-		
+
 		local t = {s = "2.718281828459045"}
 		local mt = {}
 		function mt:__tostring() return self.s end
@@ -87,5 +87,5 @@ return {
 		assert(stringio.tonumber('123 hello') == nil, "Conversion to number failed to fail")
 		assert(stringio.tonumber('') == nil, "Conversion to number failed to fail")
 	end,
-	
+
 }

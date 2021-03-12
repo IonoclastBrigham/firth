@@ -41,7 +41,6 @@ if select("#", ...) > 0 then
     local src = table.concat({...}, " ")
     printstack(runstring(src))
 else
-    stringio.print(':MiniREPL, ')
     dictionary.banner()
     REPL(true, ...)
 end

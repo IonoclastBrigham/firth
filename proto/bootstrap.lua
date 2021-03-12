@@ -724,6 +724,10 @@ local function _afterfile(success, ...)
 end
 
 -- ( path -- * )
+--! Runs the specified file.
+--! @param path path to file to load.
+--! @param ...  firth stack.
+--! @return     contents of stack after execution.
 function runfile(path, ...)
 	-- TODO: default/search paths?
 

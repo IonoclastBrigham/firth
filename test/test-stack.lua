@@ -2,9 +2,9 @@
 --! @file test-stack.lua
 --! @brief Stack class test module.
 --! @author btoskin - <brigham@ionoclast.com>
---! @copyright © 2015 Brigham Toskin
---! 
---! <p>This file is part of the Firth language reference implementation. Usage
+--! @copyright © 2015-2021 Brigham Toskin
+--!
+--! <p>This file is part of the :Firth language reference implementation. Usage
 --! and redistribution of this software is governed by the terms of a modified
 --! MIT-style license. You should have received a copy of the license with the
 --! source distribution in the file LICENSE; if not, you may find it online at
@@ -35,7 +35,7 @@ local function assertstack(name, ...)
 			name, st.height, #items),
 		3)
 	for i = 1, st.height do
-		assert(st[i] == items[i], 
+		assert(st[i] == items[i],
 			string.format("%s(): stack[%d] == %s (expected %s)",
 				name, i, tostring(st[i]), tostring(items[i])),
 			3)
@@ -54,7 +54,7 @@ return {
 		for i = 1, initialcount do
 			st:push(i)
 			assert(st[st.height] == i, "Error pushing "..i.." onto stack")
-		end 
+		end
 		assertstack("push", 1, 2, 3, 4, 5)
 	end,
 
@@ -136,7 +136,7 @@ return {
 		st:revrot()
 		assertstack("-rot", 1, 2, 5, 3, 5, 5)
 	end,
-	
+
 	function()
 		local top = st.height
 		st:push(nil)
