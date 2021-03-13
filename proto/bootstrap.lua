@@ -204,19 +204,9 @@ dictionary['.raw'] = function(str, ...)
 	return ...
 end
 
--- ( x -- ) ( Out: s(x) )
-local dot_fmt = "%s "
-dictionary['.'] = function(x, ...)
-	return dictionary['.raw'](dot_fmt:format(x), ...)
-end
-
 -- ( * -- )
 dictionary[".S"] = function(...)
 	return stringio.print(prepstack(...))
-end
-
-dictionary[">string"] = function(x, ...)
-	return tostring(x), ...
 end
 
 -- ( s -- s' )
