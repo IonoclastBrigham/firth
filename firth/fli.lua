@@ -19,13 +19,19 @@
 
 local pairs = pairs
 local print = print
+local select = select
+local setfenv = setfenv or require 'compat.compat_env'.setfenv
 local string = string
 local type = type
-local setfenv = setfenv or require 'compat.compat_env'.setfenv
 
 local module = {}
 setfenv(1, module)
 
+
+function luaN(xt, n, ...)
+	local f = dispatch[n]
+	return f(xt, ...)
+end
 
 function lua0(xt, ...)
 	return xt(), ...
@@ -51,7 +57,11 @@ function lua5(xt, p5, p4, p3, p2, p1, ...)
 	return xt(p1, p2, p3, p4, p5), ...
 end
 
-local dispatch = { lua1, lua2, lua3, lua4, lua5 }
+function lua6(xt, p6, p5, p4, p3, p2, p1, ...)
+	return xt(p1, p2, p3, p4, p5, p6), ...
+end
+
+local dispatch = { lua1, lua2, lua3, lua4, lua5, lua6 }
 dispatch[0] = lua0
 
 function wrapfunc(f, argc)
@@ -103,13 +113,12 @@ end
 local PREFIX = "Lua"
 function maplua(globalenv, lua)
 	for name, val in pairs(lua) do
-		if name ~= "_G" then
-			local path = PREFIX.."."..name
-			globalenv[path] = val
-			if type(val) == "table" then
-				for fname, fval in pairs(val) do
-					globalenv[path.."."..fname] = val
-				end
+		local path = PREFIX.."."..name
+		globalenv[path] = val
+		if type(val) == "table" then
+			for fname, fval in pairs(val) do
+				local path = path.."."..fname
+				globalenv[path] = fval
 			end
 		end
 	end

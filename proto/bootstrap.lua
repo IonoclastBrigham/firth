@@ -43,15 +43,14 @@ local stack	= require "firth.stack"
 local fstack   = require "firth.fstack"
 
 -- set up Lua global namespace as firth dictionary / global environment
-local _lua = _G
-local _G  = {
-	Lua = fli.inject({}, _lua )
-}
+local _lua = fli.inject({}, _G)
+_lua._G, _lua.arg = nil, nil
+local _G  = { Lua =  _lua }
 _G.dictionary = _G
 setfenv(1, _G)
 
 fli.wrapglobals(Lua)
-fli.maplua(dictionary, Lua)
+fli.maplua(dictionary, Lua) -- TODO: upon request
 fli.inject(dictionary, fstack)
 
 --! @endcond
@@ -196,13 +195,6 @@ local function prepstack(...)
 		end,
 		_reverse_r(0, ...)
 	)
-end
-
--- ( -- )
-function bye(...)
-	printstack(...)
-	stringio.printline "Goodbye 🖤"
-	os.exit(0)
 end
 
 -- ( s -- ) ( Out: s )
@@ -444,7 +436,7 @@ function bindfunc(entry, ...)
 end
 
 -- ( xt * -- * )
-function exectoken(xt, ...)
+function execute(xt, ...)
 	return xt(...)
 end
 
@@ -562,7 +554,7 @@ local function cendblock()
 	compile_target = cstack:pop()
 	compiling = cstack:pop()
 	if not compiling then
-		exectoken(buildfunc().xt)
+		execute(buildfunc().xt)
 	else
 		-- TODO: cappend closure for correct block type
 	end

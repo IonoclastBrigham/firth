@@ -76,16 +76,16 @@ char : create compile
 		` compiling cpush `lookup ccall postpone if
 			lookup ccall // encode a call to original word
 		postpone else
-			xt exectoken // exec compiling word, so it can compile to new def
+			xt execute // exec compiling word, so it can compile to new def
 		postpone end
 	postpone ;immed
 	;
 : ;defer   postpone interpret buildfunc dup bindfunc ?deferred ;immed
 )
-// : eval: ( -- i*x )(TS: word ) postpone ' execute ;immed
+// : eval: ( -- i*x )(TS: word ) postpone ' execute  ;immed
 : xt ( {word} -- xt ) ` xt @@ nip ;
 : 2word ( -- s1 s2 ) word word ;
-: #! (--)(TS: word) word lookup exectoken ;immed
+: #! (--)(TS: word) word lookup execute ;immed
 
 // values and variables
 : ! ( x name -- ) dictionary swap !! drop ;
@@ -114,7 +114,8 @@ const: \v char \v
 : .. ( x1 x2 -- ) . . ;
 : .char (--)(TS: ch) postpone char ' . ccall ;immed
 : ." ( -- )(TS: "s") postpone " ' . ccall ;immed
-: .fmt" ( -- )(TS: "s") postpone " ' fmt ccall ' . ccall ;immed
+: .fmt ( * s -- s' ) fmt .raw ;
+: .fmt" ( * -- )(TS: "s") postpone " ' .fmt ccall ;immed
 : .CR (--) \n .raw ;
 : .2CR (--) \n \n .raw .raw ;
 : .line ( x -- ) >string .raw .CR ;
@@ -174,6 +175,7 @@ alias: pow **
 : 100/ ( n -- n/100 ) 100 char / binopconst ;defer
 : percent ( n p -- n*(p/100) ) postpone 100/  postpone * ;immed
 )
+
 // some basic boolean operators
 : > ( a b -- a>b ) char > cbinop ;immed
 alias: greater? >
@@ -201,7 +203,12 @@ alias: nand ~&&
 alias: nor ~||
 
 // control and os words
-alias: exit bye
+alias: exit Lua.os.exit
+: bye ( * -- )
+	printstack
+	.fmt" Goodbye 🖤\n"
+	0 exit
+	;
 
 // copyright, version, banner
 : Copyright (--)
