@@ -3,7 +3,7 @@
 --! @brief Fast Lua Interface - launguage bindings for :Firth.
 --! @author btoskin - <brigham@ionoclast.com>
 --! @copyright © 2021 Brigham Toskin
---!
+--
 -- <p>This file is part of the :Firth language reference implementation. Usage
 -- and redistribution of this software is governed by the terms of a modified
 -- MIT-style license. You should have received a copy of the license with the
