@@ -17,7 +17,7 @@
 
 
 local pcall = pcall
-local unpack = unpack or table.unpack
+local table = table
 
 local stringio = require "firth.stringio"
 local firth = require "proto.bootstrap"
@@ -26,7 +26,7 @@ local runstring, runfile, dictionary = firth.runstring, firth.runfile, firth.dic
 
 local function REPL(running, ...)
     if not running then
-        dictionary.exit(...)
+        dictionary.exit(1)
     end
 
     -- prompt and read input
@@ -38,8 +38,9 @@ local function REPL(running, ...)
 end
 
 if select("#", ...) > 0 then
+    runfile("firth/cli.firth")
     local src = table.concat({...}, " ")
-    printstack(runstring(src))
+    runstring(src)
 else
     dictionary.banner()
     REPL(true, ...)

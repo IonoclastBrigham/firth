@@ -120,7 +120,7 @@ const: \v char \v
 : .2CR (--) \n \n .raw .raw ;
 : .line ( x -- ) >string .raw .CR ;
 : TAB (--) \t .raw ;
-: printstack ( * -- ) .fmt" \n<==[" .S .char ] .CR ;
+: printstack ( * -- ) .fmt" \n<==[ " .S .char ] .CR ;
 
 // miscellaneous util words and stuff
 : NOP ;immed

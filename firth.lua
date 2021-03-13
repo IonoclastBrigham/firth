@@ -9,7 +9,7 @@
 -- MIT-style license. You should have received a copy of the license with the
 -- source distribution; if not, you may find it online at:
 -- <https://github.com/IonoclastBrigham/firth/blob/master/LICENSE.firth></p>
---!
+--
 --! @see compiler.lua
 --! @see stringio.lua
 --
