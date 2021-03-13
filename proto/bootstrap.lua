@@ -525,7 +525,7 @@ end
 -- is there a reasonable usecase for doing so?
 local function cbeginblock(name, completion)
 	cstack:push(compiling)
-	compile(create(name)) -- pushes compile_target
+	compile(create(name)) -- compile pushes prev compile_target
 	cstack:push(completion)
 end
 
@@ -533,13 +533,9 @@ end
 -- is there a reasonable usecase for doing so?
 local function cendblock(...)
 	local completion = cstack:pop()
-	local thread = completion(buildfunc().xt) -- pops compile_target
+	local thread = completion(buildfunc().xt) -- pops prev compile_target
 	compiling = cstack:pop()
-	if not compiling then
-		return thread(...)
-	else
-		return cappend(thread, ...)
-	end
+	return ccall(thread, ...)
 end
 
 -- ( cond -- )
@@ -555,11 +551,24 @@ immediates['if'] = true
 
 -- ( -- )
 dictionary['else'] = function(...)
-	cstack:drop()
+	-- restore compile state for cbeginblock
+	cstack:drop() -- drop basic if-then completion
 	local thenthread = buildfunc().xt
-	-- TODO
-	return
+	compiling = cstack:pop()
+
+	-- replacement completion for end
+	cbeginblock("{if}", function(elsethread, ...)
+		return function(cond, ...)
+			if cond then
+				return thenthread(...)
+			else
+				return elsethread(...)
+			end
+		end
+	end)
+	return ...
 end
+immediates['else'] = true
 
 -- ( -- )
 dictionary['end'] = function(...)
