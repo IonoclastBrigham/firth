@@ -53,6 +53,7 @@ char : create compile
 : TODO: (TS: .*\n) postpone // ;immed  TODO: add to list with file/line/word?
 : ` ( -- word )(TS: word ) word cpush ;immed
 : ' ( -- xt )  (TS: word ) word lookup cpush ;immed
+: " skipch ` [^"]* parsematch cpush skipch ;immed // redefine for empty strings
 : "" ( -- s ) ` (.-)"" parsematch trim cpush ;immed
 : >string ( x -- s ) Lua.tostring ;
 
@@ -67,6 +68,7 @@ char : create compile
 : 2drop ( a b -- ) drop drop ;
 : 3drop ( a b c -- ) drop drop drop ;
 // : ndrop ( n*x n -- ) loops drop end ;
+: ?drop ( x b -- x? ) if drop end ;
 
 // a few parser/interpreter/compiler control words
 (
@@ -204,6 +206,9 @@ alias: xor ^^
 alias: nand ~&&
 : ~|| ( a b -- !a||b ) postpone or not ;immed
 alias: nor ~||
+
+// util and type queries
+alias: type Lua.type
 
 // control and os words
 alias: exit Lua.os.exit
