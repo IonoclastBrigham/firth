@@ -365,7 +365,7 @@ function compile(newtarget, ...)
 
 	-- print("COMPILING: "..newtarget.name)
 	newtarget.compilebuf = newcompilebuf()
-	if compile_target then cstack:push(compile_target) end
+	cstack:push(compile_target)
 	compile_target = newtarget
 	compiling = true
 	return ...
@@ -406,11 +406,7 @@ end
 -- ( -- entry )
 function buildfunc(...)
 	local  entry = compile_target
-	if cstack.height > 0 and getmetatable(cstack:top()) == entrymt then
-		compile_target = cstack:pop()
-	else
-		compile_target = nil
-	end
+	compile_target = cstack:pop()
 
 	local name, compilebuf = entry.name, entry.compilebuf
 	debug("BUILDING %s", name)
@@ -506,9 +502,9 @@ function ccall(func, ...)
 	end
 
 	if compiling then
-		cappend(xt, ...)
+		return cappend(xt, ...)
 	else
-		xt(...)
+		return xt(...)
 	end
 end
 
@@ -527,48 +523,49 @@ end
 
 -- this is not meant to be a prim word available to firth code.
 -- is there a reasonable usecase for doing so?
-local function cbeginblock()
-	-- TODO: when entering a block, new tmp to capture output stack?
+local function cbeginblock(name, completion)
 	cstack:push(compiling)
-	cstack:push(compile_target)
-	if not compiling then
-		compile(create("[INTERP_BUF]"))
-	else
-		-- TODO: same thing, different name?
-	end
+	compile(create(name)) -- pushes compile_target
+	cstack:push(completion)
 end
 
 -- this is not meant to be a prim word available to firth code.
 -- is there a reasonable usecase for doing so?
-local function cendblock()
-	compile_target = cstack:pop()
+local function cendblock(...)
+	local completion = cstack:pop()
+	local thread = completion(buildfunc().xt) -- pops compile_target
 	compiling = cstack:pop()
 	if not compiling then
-		execute(buildfunc().xt)
+		return thread(...)
 	else
-		-- TODO: cappend closure for correct block type
+		return cappend(thread, ...)
 	end
 end
 
 -- ( cond -- )
 dictionary['if'] = function(...)
-	cbeginblock()
-	local cond = cnewtmp('top(...)') -- FIXME: how to manage stack here??
-	cappend(("if %s then"):format(cond))
+	cbeginblock("{if}", function(thenthread, ...)
+		return function(cond, ...)
+			if cond then return thenthread(...) else return ... end
+		end
+	end)
 	return ...
 end
+immediates['if'] = true
 
 -- ( -- )
 dictionary['else'] = function(...)
-	cappend('else')
-	return ...
+	cstack:drop()
+	local thenthread = buildfunc().xt
+	-- TODO
+	return
 end
 
 -- ( -- )
 dictionary['end'] = function(...)
-	cendblock()
-	return ...
+	return cendblock(...)
 end
+immediates['end'] = true
 
 -- ( first last -- )
 dictionary['for'] = function(...)
