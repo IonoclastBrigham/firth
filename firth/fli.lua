@@ -95,6 +95,15 @@ function wrapglobals(globalenv)
 		type = 1,
 		pcall = nil,	-- TODO
 		xpcall = nil,	-- TODO
+		bit = {
+			band = 2,
+			bor = 2,
+			bxor = 2,
+			bnot = 1
+		},
+		math = {
+			abs = 1
+		},
 		os = {
 			exit = 1
 		},

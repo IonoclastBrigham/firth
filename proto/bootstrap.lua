@@ -421,15 +421,9 @@ function bindfunc(entry, ...)
 	return ...
 end
 
--- ( xt * -- * )
+-- ( * xt -- * )
 function execute(xt, ...)
 	return xt(...)
-end
-
--- ( x * -- * )
-dictionary["exectoken?"] = function(xt, ...)
-	if type(xt) == "function" then return xt(...) end
-	return xt, ...
 end
 
 -- ( entry -- )
@@ -540,7 +534,7 @@ end
 
 -- ( cond -- )
 dictionary['if'] = function(...)
-	cbeginblock("{if}", function(thenthread, ...)
+	cbeginblock("[[IF]]", function(thenthread, ...)
 		return function(cond, ...)
 			if cond then return thenthread(...) else return ... end
 		end
@@ -557,7 +551,7 @@ dictionary['else'] = function(...)
 	compiling = cstack:pop()
 
 	-- replacement completion for end
-	cbeginblock("{if}", function(elsethread, ...)
+	cbeginblock("[[IF]]", function(elsethread, ...)
 		return function(cond, ...)
 			if cond then
 				return thenthread(...)
@@ -578,19 +572,28 @@ immediates['end'] = true
 
 -- ( first last -- )
 dictionary['for'] = function(...)
-	cbeginblock()
-	local i = cnewtmp()
-	-- TODO: I think these need to come in as named params of the lua function?
-	local last, first = compiler:poptmp(), compiler:poptmp()
-	cappend(("for %s = %s, %s do"):format(i, first, last))
-	cpush(i)
+	cbeginblock("[[FOR]]", function(forthread, ...)
+		local function _for(limit, i, ...)
+			assert(limit % 1 == 0 and i % 1 == 0, "Arguments must be integers")
+			local step = sign(limit - i)
+			if step ~= step then return ... end
+			local function _for_r(i, ...)
+				if i == limit then
+					return forthread(i, ...)
+				else
+					return _for_r(i + step, forthread(i, ...))
+				end
+			end
+			return _for_r(i, ...)
+		end
+		return _for
+	end)
 	return ...
 end
 
 -- ( cond -- )
 dictionary['while'] = function(...)
-	cbeginblock()
-	cappend("while(stack:pop()) do") -- FIXME: how to manage stack here??
+	cbeginblock() -- TODO
 	return ...
 end
 

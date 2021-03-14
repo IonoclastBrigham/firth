@@ -57,6 +57,29 @@ char : create compile
 : "" ( -- s ) ` (.-)"" parsematch trim cpush ;immed
 : >string ( x -- s ) Lua.tostring ;
 
+// some basic arithmetic operators
+: + ( a b -- a+b ) char + cbinop ;immed
+: - ( a b -- a-b ) char - cbinop ;immed
+: * ( a b -- a*b ) char * cbinop ;immed
+: / ( a b -- a/b ) char / cbinop ;immed
+: % ( a b -- a%b ) char % cbinop ;immed
+: ** ( a b -- a^b ) char ^ cbinop ;immed // use ** because ^ is bit-wise xor
+
+// some basic boolean operators
+: > ( a b -- a>b ) char > cbinop ;immed
+: < ( a b -- a<b ) char < cbinop ;immed
+: = ( a b -- a==b ) " ==" cbinop ;immed
+: >= ( a b -- a>=b ) " >=" cbinop ;immed
+: <= ( a b -- a<=b ) " <=" cbinop ;immed
+: ~= ( a b -- a!=b ) " ~=" cbinop ;immed
+
+: 2not ( a b -- ~a ~b) swap not swap not ;
+: && ( a b -- a&&b ) " and" cbinop ;immed
+: || ( a b -- a||b ) " or" cbinop ;immed
+: ^^ ( a b -- aXORb ) postpone 2not postpone ~= ;immed
+: ~&& ( a b -- !a&&b ) postpone and not ;immed
+: ~|| ( a b -- !a||b ) postpone or not ;immed
+
 // loop and iteration
 // : loops ( n -- ) 1 push " swap" call postpone for " drop" call ;immed
 
@@ -87,24 +110,34 @@ char : create compile
 )
 // : eval: ( -- i*x )(TS: word ) postpone ' execute  ;immed
 : xt ( {word} -- xt ) ` xt @@ nip ;
+: xt? ( x -- b ) Lua.type ` function = ;
+: xt?exec ( * x -- * ) dup xt? if execute end ;
 : 2word ( -- s1 s2 ) word word ;
 : #! (--)(TS: word) word lookup execute ;immed
 
 // values and variables
+: >bool ( x -- b ) not not ;
+: executable? ( x -- b )
+	dup Lua.type ` function =
+	dup if nip else
+		drop Lua.getmetatable
+		dup if ` __call @@ >bool else drop false end
+	end
+	;
 : ! ( x name -- ) dictionary swap !! drop ;
+// : @ ( entry -- x ) DATA @@ nip ;  TODO: is this a thing anymore?
 : const ( x name -- )
 	create compile
 	cpush ' cpush ccall
 	postpone ;immed
-	TODO: guard against re-binding `name`.
+	TODO: guard against re-binding `name`?
 	;
-: const: (--)(TS: word x ) 2word resolve exectoken? swap cpush const ;immed
+: const: (--)(TS: word x ) 2word resolve xt?exec swap cpush const ;immed
 : alias: (--)(TS: new old )
 	2word 2dup lookup swap !
 	( "new" "old" ) immediates swap @@
 	( "new"  imm? ) immediates rot !! drop
 	;immed
-// : @ ( entry -- x ) DATA @@ nip ;  TODO: is this a thing anymore?
 // : variable ( name -- entry ) create dup does> NOP ;
 // : var: ( x -- ) word variable ! ;immed
 // : val: ( x -- ) word variable ! last does> @ ;immed
@@ -115,6 +148,7 @@ const: \n char \n
 const: \t char \t
 const: \v char \v
 const: SPACE "  "
+
 : . ( x -- ) >string .raw SPACE .raw ;
 : .. ( x1 x2 -- ) swap . . ;
 : .char (--)(TS: ch) postpone char ' . ccall ;immed
@@ -133,79 +167,38 @@ alias: NOOP NOP
 // : calls: (--) postpone ` " calledby" @@ nip foreach drop " \tcalledby". . .CR end ;
 // : calledby: (--) postpone ` " calls" @@ nip foreach drop " \tcalls"   . . .CR end ;
 
-// some basic arithmetic operators and shortcuts
-: + ( a b -- a+b ) char + cbinop ;immed
 alias: add +
-: - ( a b -- a-b ) char - cbinop ;immed
 alias: sub -
-: * ( a b -- a*b ) char * cbinop ;immed
 alias: mul *
-: / ( a b -- a/b ) char / cbinop ;immed
 alias: div /
-: % ( a b -- a%b ) char % cbinop ;immed
 alias: mod %
-: ** ( a b -- a^b ) char ^ cbinop ;immed // use ** because ^ is bit-wise xor
 alias: pow **
+// : percent ( n p -- n*(p/100) ) postpone 100/  postpone * ;immed
+: isnan? ( n -- b ) dup = not ;
+: sign ( n -- -1|0|1|nan )
+	dup 0 > 1 ( -- n b 1 ) && // collapse
+	over 0 < -1 ( -- n 1|#f b -1 ) && // collapse
+	|| ( -- n -1|1|#f )
+	swap ||
+	;
 
-(
-: 1+ ( n -- n+1 ) 1 char + binopconst ;defer
-` 1+ alias: inc
-: 1- ( n -- n-1 ) 1 char - binopconst ;defer
-` 1- alias: dec
-: -1* ( n -- -n ) -1 char * binopconst ;defer
-` -1* alias: neg
-: -1** ( n -- 1/n ) 1 swap / ; // division is faster, even with swap
-` -1** alias: inverse
-
-: 2+ ( n -- n+2 ) 2 char + binopconst ;defer
-: 2- ( n -- n-2 ) 2 char - binopconst ;defer
-: 2* ( n -- 2n ) 2 char * binopconst ;defer
-` 2* alias: double
-: 2/ ( n -- n/2 ) 2 char / binopconst ;defer
-` 2/ alias: halve
-
-: 5+ ( n -- n+5 ) 5 char + binopconst ;defer
-: 5- ( n -- n-5 ) 5 char - binopconst ;defer
-: 5* ( n -- 5n ) 5 char * binopconst ;defer
-: 5/ ( n -- n/5 ) 5 char / binopconst ;defer
-
-: 10+ ( n -- n+10 ) 10 char + binopconst ;defer
-: 10- ( n -- n-10 ) 10 char - binopconst ;defer
-: 10* ( n -- 10n ) 10 char * binopconst ;defer
-: 10/ ( n -- n/10 ) 10 char / binopconst ;defer
-
-: 100+ ( n -- n+100 ) 100 char + binopconst ;defer
-: 100- ( n -- n-100 ) 100 char - binopconst ;defer
-: 100* ( n -- 100n ) 100 char * binopconst ;defer
-: 100/ ( n -- n/100 ) 100 char / binopconst ;defer
-: percent ( n p -- n*(p/100) ) postpone 100/  postpone * ;immed
-)
-
-// some basic boolean operators
-: > ( a b -- a>b ) char > cbinop ;immed
 alias: greater? >
-: < ( a b -- a<b ) char < cbinop ;immed
 alias: less? <
-: = ( a b -- a==b ) " ==" cbinop ;immed
-` = alias: equal? =
-: >= ( a b -- a>=b ) " >=" cbinop ;immed
+alias: equal? =
 alias: greatereq? >=
-: <= ( a b -- a<=b ) " <=" cbinop ;immed
 alias: lesseq? <=
-: ~= ( a b -- a!=b ) " ~=" cbinop ;immed
 alias: noteq? ~=
 
-: 2not ( a b -- ~a ~b) swap not swap not ;
-: && ( a b -- a&&b ) " and" cbinop ;immed
 alias: and &&
-: || ( a b -- a||b ) " or" cbinop ;immed
 alias: or ||
-: ^^ ( a b -- aXORb ) postpone 2not postpone ~= ;immed
 alias: xor ^^
-: ~&& ( a b -- !a&&b ) postpone and not ;immed
 alias: nand ~&&
-: ~|| ( a b -- !a||b ) postpone or not ;immed
 alias: nor ~||
+
+alias: & Lua.bit.band
+alias: | Lua.bit.bor
+alias: ^ Lua.bit.bxor
+alias: ~ Lua.bit.bnot
 
 // util and type queries
 alias: type Lua.type
