@@ -24,7 +24,7 @@ local stdout = io.stdout
 
 local ipairs = ipairs
 local print = print
-local tonumber = tonumber
+local tonumber = require "compat.tonumber"
 local type = type
 
 

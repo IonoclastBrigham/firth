@@ -179,8 +179,7 @@ alias: pow **
 	dup 0 > 1 ( -- n b 1 ) && // collapse
 	over 0 < -1 ( -- n 1|#f b -1 ) && // collapse
 	|| ( -- n -1|1|#f )
-	swap ||
-	;
+	swap || ;
 
 alias: greater? >
 alias: less? <

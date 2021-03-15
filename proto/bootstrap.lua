@@ -17,6 +17,13 @@
 
 --! @cond
 
+-- compat defs for different lua versions
+bit = require "compat.bit" -- Lua@5.2/3/4
+loadstring = loadstring or load -- Lua@5.3+
+setfenv = setfenv or require 'compat.compat_env'.setfenv  -- Lua@5.2+
+unpack = unpack or table.unpack  -- Lua@5.2+
+tonumber = require "compat.tonumber" -- Lua@5.2+
+
 -- cache common lua globals before nuking the environment
 local assert, error = assert, error
 local getmetatable, setmetatable = getmetatable, setmetatable
@@ -27,13 +34,13 @@ local os = os
 local print = print
 local rawget = rawget
 local require = require
-local setfenv = setfenv or require 'compat.compat_env'.setfenv
-local select, table, unpack = select, table, unpack or table.unpack
-local tostring = tostring
+local setfenv = setfenv
+local select, table, unpack = select, table, unpack
+local tostring, tonumber = tostring, tonumber
 local type = type
 local pcall, xpcall = pcall, xpcall
 
-local bit = bit or bit32
+local bit = bit
 local bitand, bitor, bitxor, bitnot = bit.band, bit.bor, bit.bxor, bit.bnot
 
 -- firth imports
@@ -83,6 +90,40 @@ local entrymt = {
 entrymt.__index = entrymt
 
 -- Error Handling --------------------------------------------------------------
+
+local function mapstack(f, ...)
+	if height(...) == 0 then return end
+
+	return f((...)), mapstack(f, select(2, ...))
+end
+
+function eachstack(f, ...)
+	if height(...) == 0 then return end
+
+	f((...))
+	return eachstack(f, select(2, ...))
+end
+
+local function _reverse_r(i, ...)
+	local cnt = height(...) - i
+	if cnt > 0 then
+		return select(cnt, ...), _reverse_r(i + 1, ...)
+	end
+end
+
+local function prepstack(...)
+	if select('#', ...) == 0 then return '∅ ' end
+
+	return mapstack(
+		function(x)
+			-- pass through quote before tostring; quote will quote strings
+			-- but leave e.g. numbers untouched.
+			-- then we convert everything for printing.
+			return tostring(quote(x)):gsub('\\\n', '\\n'):gsub('\\9', '\\t').." "
+		end,
+		_reverse_r(0, ...)
+	)
+end
 
 function xperrhandler(msg)
 	stringio.printline(("ERROR: %s"):format(msg))
@@ -162,40 +203,6 @@ end
 
 
 -- core primitives -------------------------------------------------------------
-
-local function mapstack(f, ...)
-	if height(...) == 0 then return end
-
-	return f((...)), mapstack(f, select(2, ...))
-end
-
-function eachstack(f, ...)
-	if height(...) == 0 then return end
-
-	f((...))
-	return eachstack(f, select(2, ...))
-end
-
-local function _reverse_r(i, ...)
-	local cnt = height(...) - i
-	if cnt > 0 then
-		return select(cnt, ...), _reverse_r(i + 1, ...)
-	end
-end
-
-local function prepstack(...)
-	if select('#', ...) == 0 then return '∅ ' end
-
-	return mapstack(
-		function(x)
-			-- pass through quote before tostring; quote will quote strings
-			-- but leave e.g. numbers untouched.
-			-- then we convert everything for printing.
-			return tostring(quote(x)):gsub('\\\n', '\\n'):gsub('\\9', '\\t').." "
-		end,
-		_reverse_r(0, ...)
-	)
-end
 
 -- ( s -- ) ( Out: s )
 dictionary['.raw'] = function(str, ...)
@@ -573,10 +580,9 @@ immediates['end'] = true
 -- ( first last -- )
 dictionary['for'] = function(...)
 	cbeginblock("[[FOR]]", function(forthread, ...)
-		local function _for(limit, i, ...)
-			assert(limit % 1 == 0 and i % 1 == 0, "Arguments must be integers")
-			local step = sign(limit - i)
-			if step ~= step then return ... end
+		return function(limit, start, ...)
+			assert(limit % 1 == 0 and start % 1 == 0, "Arguments must be integers")
+			local step = sign(limit - start)
 			local function _for_r(i, ...)
 				if i == limit then
 					return forthread(i, ...)
@@ -584,9 +590,8 @@ dictionary['for'] = function(...)
 					return _for_r(i + step, forthread(i, ...))
 				end
 			end
-			return _for_r(i, ...)
+			return _for_r(start, ...)
 		end
-		return _for
 	end)
 	return ...
 end
@@ -759,8 +764,7 @@ for k,v in pairs(dictionary) do
 end
 --]]
 
-local skipcore = select(2, ...)
-if not skipcore then runfile "proto/core.firth" end
+runfile "proto/core.firth"
 
 -- Export
 return {
