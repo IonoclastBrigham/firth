@@ -40,7 +40,7 @@ end
 if select("#", ...) > 0 then
     runfile("firth/cli.firth")
     local src = table.concat({...}, " ")
-    runstring(src)
+    REPL(runstring(src.." DOREPL"))
 else
     dictionary.banner()
     REPL(true, ...)

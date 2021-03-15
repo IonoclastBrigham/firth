@@ -17,5 +17,8 @@
 : -v (--) banner 0 exit ;
 alias: --version -v
 
-: -f word runfile ;
+: -f (--)(TS: path) word runfile ;
 alias: --file -f
+
+false ` DOREPL !
+: -i (--) true ` DOREPL ! ;
