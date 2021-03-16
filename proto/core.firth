@@ -158,7 +158,10 @@ const: SPACE "  "
 : .CR (--) \n .raw ;
 : .2CR (--) \n \n .raw .raw ;
 : .line ( x -- ) >string .raw .CR ;
-: TAB (--) \t .raw ;
+: .x ( n -- ) " 0x%x " .fmt ;
+: .X ( n -- ) " 0X%X " .fmt ;
+: .C (C: x -- ) C> . ;
+: .TAB (--) \t .raw ;
 : printstack ( * -- ) .fmt" \n<==[ " .S .char ] .CR ;
 
 // miscellaneous util words and stuff
@@ -176,9 +179,9 @@ alias: pow **
 // : percent ( n p -- n*(p/100) ) postpone 100/  postpone * ;immed
 : isnan? ( n -- b ) dup = not ;
 : sign ( n -- -1|0|1|nan )
-	dup 0 > 1 ( -- n b 1 ) && // collapse
+	dup 0 > 1   ( -- n b 1 )       && // collapse
 	over 0 < -1 ( -- n 1|#f b -1 ) && // collapse
-	|| ( -- n -1|1|#f )
+		||      ( -- n -1|1|#f )
 	swap || ;
 
 alias: greater? >

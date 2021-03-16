@@ -114,17 +114,6 @@ function height(...)
 	return count(...), ...
 end
 
-local function c_from(...)
-	return cstack:pop(), ...
-end
-module['C>'] = c_from
-
-local function to_c(tos, ...)
-	cstack:push(tos)
-	return ...
-end
-module['>C'] = to_c
-
 return module
 
 -- stack method coroutines / continuations --

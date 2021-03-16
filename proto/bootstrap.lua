@@ -205,6 +205,15 @@ end
 
 -- core primitives -------------------------------------------------------------
 
+dictionary['C>'] = function(...)
+	return cstack:pop(), ...
+end
+
+dictionary['>C'] = function(tos, ...)
+	cstack:push(tos)
+	return ...
+end
+
 -- ( s -- ) ( Out: s )
 dictionary['.raw'] = function(str, ...)
 	assert(type(str) == "string", "NOT A STRING")
@@ -605,14 +614,7 @@ end
 
 -- ( -- )
 dictionary['break'] = function(...)
-	cappend('break')
-	return ...
-end
-
--- ( -- )
-dictionary['do'] = function(...)
-	cbeginblock()
-	-- TODO: this doesn't make sense until we have locals?
+	-- TODO
 	return ...
 end
 
