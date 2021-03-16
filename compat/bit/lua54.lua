@@ -1,6 +1,6 @@
 --------------------------------------------------------------------------------
 --! @file
---! @brief Bitwise operations module for Lua 5.2+.
+--! @brief Bitwise operations module for Lua 5.4+.
 --! @author btoskin - <brigham@ionoclast.com>
 --! @copyright © 2021 Brigham Toskin
 --
@@ -14,33 +14,31 @@
 --	utf-8 ; unix ; 80 cols ; tabwidth 4
 --------------------------------------------------------------------------------
 
-local bit = bit or bit32
 
-if not bit then
-	bit = {}
-	function bit.band(a, b)
-		return a & b
-	end
+local bit = {}
 
-	function bit.bor(a, b)
-		return a | b
-	end
+function bit.band(a, b)
+	return a & b
+end
 
-	function bit.bxor(a, b)
-		return a ^ b
-	end
+function bit.bor(a, b)
+	return a | b
+end
 
-	function bit.bnot(x)
-		return ~x
-	end
+function bit.bxor(a, b)
+	return a ^ b
+end
 
-	function bit.lshift(x, n)
-		return x << n
-	end
+function bit.bnot(x)
+	return ~x
+end
 
-	function bit.rshift(x, n)
-		return x >> n
-	end
+function bit.lshift(x, n)
+	return x << n
+end
+
+function bit.rshift(x, n)
+	return x >> n
 end
 
 return bit

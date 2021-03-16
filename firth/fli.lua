@@ -99,7 +99,9 @@ function wrapglobals(globalenv)
 			band = 2,
 			bor = 2,
 			bxor = 2,
-			bnot = 1
+			bnot = 1,
+			lshift = 2,
+			rshift = 2
 		},
 		math = {
 			abs = 1

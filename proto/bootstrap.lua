@@ -18,6 +18,7 @@
 --! @cond
 
 -- compat defs for different lua versions
+package.path = "./?/init.lua;"..package.path
 bit = require "compat.bit" -- Lua@5.2/3/4
 loadstring = loadstring or load -- Lua@5.3+
 setfenv = setfenv or require 'compat.compat_env'.setfenv  -- Lua@5.2+
@@ -577,7 +578,7 @@ dictionary['end'] = function(...)
 end
 immediates['end'] = true
 
--- ( first last -- )
+-- ( nstart nlimit -- )
 dictionary['for'] = function(...)
 	cbeginblock("[[FOR]]", function(forthread, ...)
 		return function(limit, start, ...)
@@ -611,7 +612,7 @@ end
 -- ( -- )
 dictionary['do'] = function(...)
 	cbeginblock()
-	cappend('do')
+	-- TODO: this doesn't make sense until we have locals?
 	return ...
 end
 
