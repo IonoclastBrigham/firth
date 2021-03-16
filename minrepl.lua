@@ -26,13 +26,13 @@ local runstring, runfile, dictionary = firth.runstring, firth.runfile, firth.dic
 
 local function REPL(running, ...)
     if not running then
-        dictionary.exit(1)
+        dictionary.exit(1, ...)
     end
 
     -- prompt and read input
     stringio.print(dictionary.compiling and '      ' or 'ok> ')
     local line = stringio.readline()
-    if line == nil then dictionary.bye() end -- nil => EOF => CTRL+D
+    if line == nil then dictionary.bye(...) end -- nil => EOF => CTRL+D
 
     return REPL(pcall(runstring, line, ...))
 end
