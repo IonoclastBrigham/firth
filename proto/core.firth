@@ -1,4 +1,4 @@
-char @file:prims.firth drop
+char @file:core.firth drop
 char @see:comment_block_below_for_copyright_notice drop
 
 char : create compile
@@ -42,7 +42,10 @@ char : create compile
 // /////////////////////////////////////////////////////////////////////////////
 
 // text and parsing words
-: ( 1 backtrack " %b()" parsematch countlines ;immed ( ( nestable) parentheses)
+: ( 1 backtrack " %b()" parsematch
+	dup countlines
+	compiling if srcappend else drop end
+	;immed ( ( nestable) parentheses)
 : (--) ;immed // empty signature coment
 : (C:  2 backtrack postpone ( ;immed
 : (--)(C: postpone (C: ;immed // empty signature coment
@@ -163,6 +166,16 @@ const: SPACE "  "
 : .C (C: x -- ) C> . ;
 : .TAB (--) \t .raw ;
 : printstack ( * -- ) .fmt" \n<==[ " .S .char ] .CR ;
+: see ( word -- )
+	dup meta swap @@ ( -- word entry? )
+	dup if nip else drop lookup meta swap @@ end ( -- entry? )
+	dup not if
+		drop
+	else
+		.char : dup ` name @@ .
+		` srcbuf @@ each nip . end
+	end ;
+: see: (--)(TS: word ) word see ;immed
 
 // miscellaneous util words and stuff
 : NOP ;immed

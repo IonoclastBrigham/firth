@@ -77,8 +77,8 @@ compiling = false
 compile_target = nil
 cstack = stack.new()
 
-immediates = {} -- immediates[func] = true
-src = {} -- src[func] = src_str (lua src? firth? both?)
+meta = setmetatable({}, { __mode = "k" })
+immediates = {} -- immediates[word] = true
 
 local frozen_stack = {} -- for error reporting
 
@@ -350,27 +350,10 @@ function countlines(str, ...)
 	return ...
 end
 
-
-local function newcompilebuf()
--- 	return {
--- [[local __FIRTH_WORD_NAME__ = %q
--- --%%s
--- --%%s
--- return function(...) ]]
--- 	}
-	return {}
-end
-
-
-
 -- ( s -- entry )
 function create(name, ...)
 	debug("CREATE %q", name)
-	local entry = {
-		-- TODO?
-		name = name --, compilebuf = newcompilebuf(),
-		--calls = { nextidx = 1 }, calledby = {}, upvals = { nextidx = 1 }
-	}
+	local entry = { name = name }
 	setmetatable(entry, entrymt)
 	-- dictionary[name] = entry
 	return entry, ...
@@ -380,8 +363,8 @@ end
 function compile(newtarget, ...)
 	assert(getmetatable(newtarget) == entrymt, "INVALID TARGET ")
 
-	-- print("COMPILING: "..newtarget.name)
-	newtarget.compilebuf = newcompilebuf()
+	newtarget.compilebuf = {}
+	newtarget.srcbuf = {}
 	cstack:push(compile_target)
 	compile_target = newtarget
 	compiling = true
@@ -435,6 +418,8 @@ end
 -- ( entry -- )
 function bindfunc(entry, ...)
 	dictionary[entry.name] = entry.xt
+	meta[entry.name] = entry
+	meta[entry.xt] = entry
 	return ...
 end
 
@@ -446,6 +431,12 @@ end
 -- ( entry -- )
 function immediate(entry, ...)
 	immediates[entry.name] = true
+	return ...
+end
+
+-- ( word -- ) ( SB: word )
+function srcappend(word, ...)
+	table.insert(compile_target.srcbuf, word)
 	return ...
 end
 
@@ -605,18 +596,45 @@ dictionary['for'] = function(...)
 	end)
 	return ...
 end
+immediates['for'] = true
+
+-- ( iterable -- )
+dictionary['each'] = function(...)
+	cbeginblock("[[EACH]]", function(eachthread, ...)
+		return function(iterable, ...)
+			local newitr = getmetatable(iterable) and getmetatable(iterable).__itr
+			assert(
+				itr or type(iterable) == "table",
+				"Argument must be iterable"
+			)
+			newitr = newitr or (#iterable > 0 and ipairs) or pairs
+			local itr, _, idx = newitr(iterable)
+			local function _each_r(...)
+				local val
+				idx, val = itr(iterable, idx)
+				if idx == nil then return ... end
+				return _each_r(eachthread(val, idx, ...))
+			end
+			return _each_r(...)
+		end
+	end)
+	return ...
+end
+immediates['each'] = true
 
 -- ( cond -- )
 dictionary['while'] = function(...)
 	cbeginblock() -- TODO
 	return ...
 end
+immediates['while'] = true
 
 -- ( -- )
 dictionary['break'] = function(...)
-	-- TODO
+	-- TODO???
 	return ...
 end
+immediates['break'] = true
 
 -- ( t k -- t x )
 dictionary['@@'] = function(k, t, ...)
@@ -663,6 +681,7 @@ local function _interpret_r(...)
 
 	-- try dictionary lookup
 	if defined(word) then
+		if compiling then srcappend(word) end
 		local found = lookup(word)
 		if type(found) == "function" then
 			if not compiling or immediates[word] then
@@ -681,6 +700,7 @@ local function _interpret_r(...)
 	-- try to parse it as a literal value
 	local val = stringio.tonumber(word) or stringio.toboolean(word)
 	if val ~= nil or word == 'nil' then
+		if compiling then srcappend(word) end
 		return _interpret_r(cpush(val, ...))
 	end
 
