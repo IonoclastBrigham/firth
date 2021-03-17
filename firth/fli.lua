@@ -112,7 +112,7 @@ function wrapglobals(globalenv)
 		string = {
 			format = nil, -- TODO: vararg; function?
 			gsub = 2,
-			sub = 3
+			sub = 2
 		},
 		table = {
 			concat = 2,

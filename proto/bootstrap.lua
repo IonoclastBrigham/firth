@@ -92,19 +92,6 @@ entrymt.__index = entrymt
 
 -- Error Handling --------------------------------------------------------------
 
-local function mapstack(f, ...)
-	if height(...) == 0 then return end
-
-	return f((...)), mapstack(f, select(2, ...))
-end
-
-function eachstack(f, ...)
-	if height(...) == 0 then return end
-
-	f((...))
-	return eachstack(f, select(2, ...))
-end
-
 local function _reverse_r(i, ...)
 	local cnt = height(...) - i
 	if cnt > 0 then
@@ -204,15 +191,6 @@ end
 
 
 -- core primitives -------------------------------------------------------------
-
-dictionary['C>'] = function(...)
-	return cstack:pop(), ...
-end
-
-dictionary['>C'] = function(tos, ...)
-	cstack:push(tos)
-	return ...
-end
 
 -- ( s -- ) ( Out: s )
 dictionary['.raw'] = function(str, ...)
@@ -542,7 +520,7 @@ end
 
 -- ( cond -- )
 dictionary['if'] = function(...)
-	cbeginblock("[[IF]]", function(thenthread, ...)
+	cbeginblock("[[IF]]", function(thenthread)
 		return function(cond, ...)
 			if cond then return thenthread(...) else return ... end
 		end
@@ -559,7 +537,7 @@ dictionary['else'] = function(...)
 	compiling = cstack:pop()
 
 	-- replacement completion for end
-	cbeginblock("[[IF]]", function(elsethread, ...)
+	cbeginblock("[[IF]]", function(elsethread)
 		return function(cond, ...)
 			if cond then
 				return thenthread(...)
@@ -580,7 +558,7 @@ immediates['end'] = true
 
 -- ( nstart nlimit -- )
 dictionary['for'] = function(...)
-	cbeginblock("[[FOR]]", function(forthread, ...)
+	cbeginblock("[[FOR]]", function(forthread)
 		return function(limit, start, ...)
 			assert(limit % 1 == 0 and start % 1 == 0, "Arguments must be integers")
 			local step = sign(limit - start)
@@ -600,7 +578,7 @@ immediates['for'] = true
 
 -- ( iterable -- )
 dictionary['each'] = function(...)
-	cbeginblock("[[EACH]]", function(eachthread, ...)
+	cbeginblock("[[EACH]]", function(eachthread)
 		return function(iterable, ...)
 			local newitr = getmetatable(iterable) and getmetatable(iterable).__itr
 			assert(
@@ -624,10 +602,39 @@ immediates['each'] = true
 
 -- ( cond -- )
 dictionary['while'] = function(...)
-	cbeginblock() -- TODO
+	cbeginblock("[[WHILE]]", function(whilethread)
+		local function _while_r(cond, ...)
+			if cond then return _while_r(whilethread(...)) end
+			return ...
+		end
+		return _while_r
+	end)
 	return ...
 end
 immediates['while'] = true
+
+function loops(...)
+	cbeginblock("[[LOOPS]]", function(loopsthread)
+		local function _loops_r(count, ...)
+			if count < 1 then return ... end
+			return _loops_r(count - 1, loopsthread(...))
+		end
+		return _loops_r
+	end)
+	return ...
+end
+immediates['loops'] = true
+
+function forever(...)
+	cbeginblock("[[FOREVER]]", function(foreverthread)
+		local function _forever_r(...)
+			return _forever_r(foreverthread(...))
+		end
+		return _forever_r
+	end)
+	return ...
+end
+immediates['forever'] = true
 
 -- ( -- )
 dictionary['break'] = function(...)
@@ -635,6 +642,28 @@ dictionary['break'] = function(...)
 	return ...
 end
 immediates['break'] = true
+
+function mapstack(f, ...)
+	if height(...) == 0 then return end
+
+	return f((...)), mapstack(f, select(2, ...))
+end
+
+function eachstack(f, ...)
+	if height(...) == 0 then return end
+
+	f((...))
+	return eachstack(f, select(2, ...))
+end
+
+dictionary['C>'] = function(...)
+	return cstack:pop(), ...
+end
+
+dictionary['>C'] = function(tos, ...)
+	cstack:push(tos)
+	return ...
+end
 
 -- ( t k -- t x )
 dictionary['@@'] = function(k, t, ...)

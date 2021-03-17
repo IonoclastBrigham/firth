@@ -24,7 +24,9 @@ char : create compile
 : 2skipch -2 backtrack ;
 : " skipch char " parse cpush skipch ;immed
 : parseline " ^[^\n]*" fmt parsematch ;
-: // parseline drop ;immed // There, now we can comment our code!
+: // parseline
+	compiling if srcappend char \n srcappend else drop end
+	;immed // There, now we can comment our code!
 
 // /////////////////////////////////////////////////////////////////////////////
 // core.firth
@@ -44,7 +46,7 @@ char : create compile
 // text and parsing words
 : ( 1 backtrack " %b()" parsematch
 	dup countlines
-	compiling if srcappend else drop end
+	compiling if 2 Lua.string.sub srcappend else drop end
 	;immed ( ( nestable) parentheses)
 : (--) ;immed // empty signature coment
 : (C:  2 backtrack postpone ( ;immed
@@ -190,11 +192,11 @@ alias: div /
 alias: mod %
 alias: pow **
 // : percent ( n p -- n*(p/100) ) postpone 100/  postpone * ;immed
-: isnan? ( n -- b ) dup = not ;
+: isnan? ( n -- b ) dup = not ; // nan ≠ nan
 : sign ( n -- -1|0|1|nan )
 	dup 0 > 1   ( -- n b 1 )       && // collapse
 	over 0 < -1 ( -- n 1|#f b -1 ) && // collapse
-		||      ( -- n -1|1|#f )
+	||          ( -- n -1|1|#f )
 	swap || ;
 
 alias: greater? >
