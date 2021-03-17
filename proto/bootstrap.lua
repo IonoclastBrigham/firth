@@ -17,9 +17,9 @@
 
 --! @cond
 
--- compat defs for different lua versions
+-- compat defs for different versions of PUC-Rio Lua
 package.path = "./?/init.lua;"..package.path
-bit = require "compat.bit" -- Lua@5.2/3/4
+bit = require "compat.bit" -- Lua@5.2 bit32; Lua@5.4 operators
 loadstring = loadstring or load -- Lua@5.3+
 setfenv = setfenv or require 'compat.compat_env'.setfenv  -- Lua@5.2+
 unpack = unpack or table.unpack  -- Lua@5.2+

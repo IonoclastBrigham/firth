@@ -15,7 +15,7 @@
 --------------------------------------------------------------------------------
 
 
-if tonumber((_VERSION:gsub("^Lua ", ""))) >= 5.4 then
+if tonumber(_VERSION:gsub("^Lua ", "")) >= 5.4 then
 	return require "compat.bit.lua54"
 else
 	return bit or bit32
