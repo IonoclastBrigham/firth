@@ -152,6 +152,7 @@ end
 --! @param val a token string to convert.
 --! @return the parsed numeric value of \c val, or \c nil.
 function stringio.tonumber(val)
+	if type(val) == "number" then return val end
 	if type(val) == "string" then
 		val = stringio.trim(val)
 		local radix
@@ -167,7 +168,6 @@ function stringio.tonumber(val)
 		-- hex strings prefixed with '0x' will be recognized
 		return tonumber(val, radix)
 	end
-	if type(val) == "number" then return val end
 	return tonumber(tostring(val))
 end
 
@@ -218,18 +218,38 @@ end
 -- file i/o stuff --
 
 function stringio.stdin()
-	return io.stidin
+	return io.stdin
+end
+
+function stringio.stdout()
+	return io.stdout
+end
+
+function stringio.stderr()
+	return io.stderr
 end
 
 function stringio.input(infile)
-	if type(infile) == "string" and #infile > 0 then
+	if infile == nil then
+		return io.input() -- return current input file
+	elseif type(infile) == "string" and #infile > 0 then
 		return io.input(infile)
 	elseif type(infile) == "userdata" and infile.read then
 		return io.input(infile)
-	elseif infile == nil then
-		return io.input() -- return current input file
 	else
 		error("stringio.input() - INVALID ARGUMENT: "..tostring(infile))
+	end
+end
+
+function stringio.output(outfile)
+	if outfile == nil then
+		return io.output() -- return current output file
+	elseif type(outfile) == "string" and #outfile > 0 then
+		return io.output(outfile)
+	elseif type(outfile.write) == "function" then
+		return io.output(outfile)
+	else
+		error(("stringio.output() - INVALID ARGUMENT: '%s'"):format(tostring(infile)))
 	end
 end
 
@@ -259,36 +279,23 @@ end
 --! The behavior of this function can be modified depending on the first
 --! argument that is passed in.
 --! @param ... a list of arguments to print. If the first argument is:<ul>
---! 		<li>a function, it is called, and the returned value is used as
---!				the separator to concatenate the items of the list;
 --! 		<li>a file descriptor or file-like object, it is treated as the
 --! 			output file, and printing is carried out by calling its
 --! 			\c write() method;
 --! 		<li>anything else, it is printed as a normal value, along with
---! 			all the other arguments.
+--! 			all the other arguments to the current output.
 --! 	</ul>
 --! @see #printline()
 function stringio.print(...)
-	if select('#', ...) == 0 then
-		return
-	end
+	if select('#', ...) == 0 then return end
 
 	local arg1 = (...)
-	local out
-	if type(arg1) == 'function' then
-		out = stdout
-		out:write(table.concat(args, arg1()))
+	local mt = getmetatable(arg1)
+	if mt and type(mt.write) == 'function' then
+		arg1:write(select(2, ...))
 	else
-		local mt = getmetatable(arg1)
-		if mt and type(mt.write) == 'function' then
-			out = arg1
-			out:write(unpack(args))
-		else
-			out = stdout
-			out:write(...)
-		end
+		io.output():write(...)
 	end
-	out:flush()
 end
 
 --! Prints its arguments to its output, with a newline appended.
@@ -299,8 +306,7 @@ end
 --! 		for the paramaters of #print(), for details.
 --! @see #print()
 function stringio.printline(...)
-	local args = {...}
-	if #args > 0 then
+	if select("#", ...) > 0 then
 		stringio.print(...)
 	end
 	stringio.print('\n')

@@ -10,22 +10,31 @@ char : create compile
 : word
 	%s parse
 	interpret buildfunc bindfunc
+: `
+	word cpush
+	interpret buildfunc dup bindfunc immediate
 : postpone
 	word ccall
 	interpret buildfunc dup bindfunc immediate
 : ;
-	postpone interpret buildfunc bindfunc
+	buildfunc bindfunc
 	interpret buildfunc dup bindfunc immediate
 : ;immed
-	postpone interpret buildfunc dup bindfunc immediate
+	buildfunc dup bindfunc immediate
 	interpret buildfunc dup bindfunc immediate
+: :( ` λ create compile ;immed
+: ); buildfunc ` xt @@ cpush ;immed
 
 : skipch  -1 backtrack ;
 : 2skipch -2 backtrack ;
 : " skipch char " parse cpush skipch ;immed
 : parseline " ^[^\n]*" fmt parsematch ;
 : // parseline
-	compiling if 2 Lua.string.sub srcappend char \n srcappend else drop end
+	compiling if
+		2 Lua.string.sub srcappend char \n srcappend
+	else
+		drop
+	end
 	;immed // There, now we can comment our code!
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -55,12 +64,27 @@ char : create compile
 : (--)(TS: postpone (TS: ;immed
 : (CB: 3 backtrack postpone ( ;immed // compile buf
 : (--)(CB: postpone (CB: ;immed
+: (IO: 3 backtrack postpone ( ;immed
+: (--)(IO: postpone (IO: ;immed
 : TODO: (TS: .*\n) postpone // ;immed  TODO: add to list with file/line/word?
-: ` ( -- word )(TS: word ) word cpush ;immed
 : ' ( -- xt )  (TS: word ) word lookup cpush ;immed
 : " skipch ` [^"]* parsematch cpush skipch ;immed // redefine for empty strings
 : "" ( -- s ) ` (.-)"" parsematch trim cpush ;immed
-: >string ( x -- s ) Lua.tostring ;
+
+// error handling
+: throw ( x -- ) 2 Lua.error ;
+: try ( compiles: * -- * )
+	` [[TRY]] :( ( xt -- xt )
+		:( ( [xt] -- *) Lua.pcall )[1]; true
+	); cbeginblock
+	;immed
+: catch ( compiles: * err? b -- * )
+	cendblock ( -- xt )
+	` [[CATCH]] :( ( xt -- xt )
+		:( ( * e? b [xt] -- * ) swap not if execute else drop end )[1];
+		true
+	); cbeginblock
+	;immed
 
 // some basic arithmetic operators
 : + ( a b -- a+b ) char + cbinop ;immed
@@ -121,7 +145,15 @@ char : create compile
 : #! (--)(TS: word) word lookup execute ;immed
 
 // values and variables
+: >string ( x -- s ) Lua.tostring ;
 : >bool ( x -- b ) not not ;
+: >number ( x -- n )
+	dup Lua.type ` boolean = if
+		1 && 0 ||
+	else
+		dup nil = if drop 0 else string>number end
+	end
+	;
 : executable? ( x -- b )
 	dup Lua.type ` function =
 	dup if nip else
@@ -147,6 +179,12 @@ char : create compile
 // : var: ( x -- ) word variable ! ;immed
 // : val: ( x -- ) word variable ! last does> @ ;immed
 
+// cstack
+: C@ ( -- x )(C: x -- x ) cstack []@ ;
+: C> ( -- x )(C: x -- ) cstack []> ;
+: >C ( x -- )(C: -- x ) cstack >[] drop ;
+: Cclear (--)(C: * -- ) cstack []clear ;
+
 // strings and i/o
 const: \r char \r
 const: \n char \n
@@ -154,12 +192,20 @@ const: \t char \t
 const: \v char \v
 const: SPACE "  "
 
+const: iostack []
+: pushinput  ( fd -- )(IO: fd ) input iostack >[] drop useinput ;
+: pushoutput ( fd -- )(IO: fd ) output iostack >[] drop useoutput ;
+: popinput  (--)(IO: fd -- ) iostack []> useinput ;
+: popoutput (--)(IO: fd -- ) iostack []> useoutput ;
+
 : . ( x -- ) >string .raw SPACE .raw ;
 : .. ( x1 x2 -- ) swap . . ;
 : .char (--)(TS: ch) postpone char ' . ccall ;immed
 : ." ( -- )(TS: "s") postpone " ' . ccall ;immed
 : .fmt ( * s -- s' ) fmt .raw ;
 : .fmt" ( * -- )(TS: "s") postpone " ' .fmt ccall ;immed
+: .err ( s -- ) STDERR pushoutput . popoutput ;
+: .err" (--)(TS: "s") postpone " cpush ` .err ccall ;immed
 : .CR (--) \n .raw ;
 : .2CR (--) \n \n .raw .raw ;
 : .line ( x -- ) >string .raw .CR ;
@@ -180,7 +226,7 @@ const: SPACE "  "
 : see: (--)(TS: word ) word see ;immed
 
 // miscellaneous util words and stuff
-: NOP ;immed
+: NOP ;
 alias: NOOP NOP
 // : calls: (--) postpone ` " calledby" @@ nip foreach drop " \tcalledby". . .CR end ;
 // : calledby: (--) postpone ` " calls" @@ nip foreach drop " \tcalls"   . . .CR end ;

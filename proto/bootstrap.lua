@@ -58,29 +58,18 @@ _G.dictionary = _G
 setfenv(1, _G)
 
 fli.wrapglobals(Lua)
-fli.maplua(dictionary, Lua) -- TODO: upon request
+fli.maplua(dictionary, Lua) -- TODO: optional/upon request?
 fli.inject(dictionary, fstack)
+fli.inject(dictionary, fli) -- do we want to do this ???
 
 --! @endcond
 
 
 -- global parser / interpreter / compiler state
--- TODO: put some thought into naming, as they are part of the de facto API
 intptr_running = false
-current_infile = "stdin"
-tok_stream = ""
-line_num = 1
-parse_pos = 1
-next_tmp = 1
-
-compiling = false
-compile_target = nil
 cstack = stack.new()
-
 meta = setmetatable({}, { __mode = "k" })
 immediates = {} -- immediates[word] = true
-
-local frozen_stack = {} -- for error reporting
 
 --! @private
 local entrymt = {
@@ -112,6 +101,8 @@ local function prepstack(...)
 		_reverse_r(0, ...)
 	)
 end
+
+local frozen_stack = {} -- for error reporting
 
 function xperrhandler(msg)
 	stringio.printline(("ERROR: %s"):format(msg))
@@ -184,13 +175,21 @@ debuglogs = false
 local function debug(str, ...)
 	if not debuglogs then return end
 
-	str = "🐛 "..str
 	if select("#", ...) > 0 then str = str:format(...) end
-	stringio.printline(str)
+	stringio.printline("🐛 "..str)
 end
 
 
 -- core primitives -------------------------------------------------------------
+
+dictionary["STDIN"] = fli.wrapfunc(stringio.stdin, 0)
+dictionary["STDOUT"] = fli.wrapfunc(stringio.stdout, 0)
+dictionary["STDERR"] = fli.wrapfunc(stringio.stderr, 0)
+
+dictionary["input"]  = fli.wrapfunc(stringio.input, 0, 1)
+dictionary["output"] = fli.wrapfunc(stringio.output, 0, 1)
+dictionary["useinput"]  = fli.wrapfunc(stringio.input, 1, 0)
+dictionary["useoutput"] = fli.wrapfunc(stringio.output, 1, 0)
 
 -- ( s -- ) ( Out: s )
 dictionary['.raw'] = function(str, ...)
@@ -217,6 +216,9 @@ function trim(str, ...)
 	return stringio.trim(str), ...
 end
 
+-- ( x -- n|nil )
+dictionary["string>number"] = fli.wrapfunc(stringio.tonumber, 1)
+
 -- ( s -- b )
 function defined(name, ...)
 	return (rawget(dictionary, name) ~= nil), ...
@@ -239,10 +241,6 @@ function resolve(word, ...)
 			return val, ...
 		end
 	end
-end
-
-dictionary["not"] = function(b, ...)
-	return not b, ...
 end
 
 --! ( -- c ) ( TS: c ) ;immed
@@ -271,24 +269,6 @@ function fmt(str, ...)
 	str = str:gsub("\\t", "\t"):gsub("\\n", "\n"):gsub('\\"', '"')
 	local _, count = str:gsub("%%[^%%]", "")
 	return str:format(...), select(count + 1, ...)
-end
-
--- ( -- )
-function cclearstate(...)
-	debug("CLEARING COMPILE STATE!!!!!!!")
-	intptr_running = false
-	current_infile = "stdin"
-	stringio.input(stringio.stdin())
-	tok_stream = ""
-	line_num = 1
-	parse_pos = 1
-	next_tmp = 1
-
-	compiling = false
-	compile_target = nil
-	cstack = stack.new()
-
-	return ...
 end
 
 -- ( s1 -- s2 )
@@ -328,6 +308,72 @@ function countlines(str, ...)
 	return ...
 end
 
+-- ( -- )
+function cclearstate(...)
+	debug("CLEARING COMPILE STATE!!!!!!!")
+
+	current_infile = "{STDIN}"
+	stringio.input(stringio.stdin())
+
+	tok_stream = ""
+	intptr_running = false
+	parse_pos = 1
+	line_num = 1
+
+	compiling = false
+	compile_target = nil
+
+	cstack:clear()
+
+	return ...
+end
+
+function pushinputstate(...)
+	cstack:push(current_infile)
+	cstack:push(stringio.input())
+
+	return ...
+end
+
+function popinputstate(...)
+	stringio.input(cstack:pop())
+	current_infile = cstack:pop()
+
+	return ...
+end
+
+function pushparsestate(...)
+	cstack:push(tok_stream)
+	cstack:push(intptr_running)
+	cstack:push(parse_pos)
+	cstack:push(line_num)
+
+	return ...
+end
+
+function popparsestate(...)
+	line_num = cstack:pop()
+	parse_pos = cstack:pop()
+	intptr_running = cstack:pop()
+	tok_stream = cstack:pop()
+
+	return ...
+end
+
+function pushcompilestate(...)
+	cstack:push(compiling)
+	cstack:push(compile_target)
+
+	return ...
+end
+
+function popcompilestate(...)
+	compile_target = cstack:pop()
+	compiling = cstack:pop()
+
+	return ...
+end
+
 -- ( s -- entry )
 function create(name, ...)
 	debug("CREATE %q", name)
@@ -339,15 +385,40 @@ end
 
 -- ( entry -- )
 function compile(newtarget, ...)
-	assert(getmetatable(newtarget) == entrymt, "INVALID TARGET ")
+	assert(getmetatable(newtarget) == entrymt, "Invalid Compile Target")
 
-	newtarget.compilebuf = {}
-	newtarget.srcbuf = {}
-	cstack:push(compile_target)
+	-- TODO: EVERYTHING LIVES ON CSTACK SO LAMBDAS CAN LIVE INSIDE FUNCTIONS??
+	pushcompilestate()
 	compile_target = newtarget
 	compiling = true
+	newtarget.compilebuf = {}
+	newtarget.srcbuf = {}
 	return ...
 end
+
+--! Creates a lambda that (closure) captures `TOS` (i.e. 1 item).
+--!
+--! @returns      * (forwarded return from inner lambda compilation, minus xt).
+--! @compiles     a call to an anonymous function that consumes `TOS`
+--!               and leaves a closure that calls the original compiled
+--!               lambda with th captured values of TOS on the stack.
+--! @immediate
+-- ( x -- * )
+-- debuglogs = false
+dictionary[')[1];'] = function(...)
+	-- _capture is just here to make sure the stack
+	-- is properly forwarded through {:(}.
+	local function _capture(...)
+		return ccall(function(closurethread, val,...)
+			return function(...)
+				return closurethread(val, ...)
+			end, ...
+		end, ...)
+	end
+
+	return _capture(dictionary[');'](...))
+end
+immediates[')[1];'] = true
 
 -- ( -- ) ;immed
 function interpret(...)
@@ -384,7 +455,7 @@ end
 -- ( -- entry )
 function buildfunc(...)
 	local  entry = compile_target
-	compile_target = cstack:pop()
+	popcompilestate()
 
 	local name, compilebuf = entry.name, entry.compilebuf
 	debug("BUILDING %s", name)
@@ -470,6 +541,11 @@ function cbinop(op, ...)
 	end
 end
 
+-- TODO: replace with unop impl.
+dictionary["not"] = function(b, ...)
+	return not b, ...
+end
+
 -- (f -- * ) ( CB: xt ) ;immed
 function ccall(func, ...)
 	local xt
@@ -501,27 +577,27 @@ function cpush(val, ...)
 	end
 end
 
--- this is not meant to be a prim word available to firth code.
--- is there a reasonable usecase for doing so?
+-- NOTE: not a word; we use `fli` to wrap it for :Firth use.
 local function cbeginblock(name, completion)
-	cstack:push(compiling)
-	compile(create(name)) -- compile pushes prev compile_target
+	compile(create(name)) -- compile pushes prev compile state
 	cstack:push(completion)
 end
+dictionary['cbeginblock'] = fli.wrapfunc(cbeginblock, 2, 0)
 
--- this is not meant to be a prim word available to firth code.
--- is there a reasonable usecase for doing so?
-local function cendblock(...)
+function cendblock(...)
 	local completion = cstack:pop()
-	local thread = completion(buildfunc().xt) -- pops prev compile_target
-	compiling = cstack:pop()
-	return ccall(thread, ...)
+	local do_call, thread = completion(buildfunc().xt) -- pops prev compile state
+	if do_call then
+		return ccall(thread, ...)
+	else
+		return thread, ...
+	end
 end
 
 -- ( cond -- )
 dictionary['if'] = function(...)
 	cbeginblock("[[IF]]", function(thenthread)
-		return function(cond, ...)
+		return true, function(cond, ...)
 			if cond then return thenthread(...) else return ... end
 		end
 	end)
@@ -534,11 +610,10 @@ dictionary['else'] = function(...)
 	-- restore compile state for cbeginblock
 	cstack:drop() -- drop basic if-then completion
 	local thenthread = buildfunc().xt
-	compiling = cstack:pop()
 
 	-- replacement completion for end
-	cbeginblock("[[IF]]", function(elsethread)
-		return function(cond, ...)
+	cbeginblock("[[ELSE]]", function(elsethread)
+		return true, function(cond, ...)
 			if cond then
 				return thenthread(...)
 			else
@@ -559,7 +634,7 @@ immediates['end'] = true
 -- ( nstart nlimit -- )
 dictionary['for'] = function(...)
 	cbeginblock("[[FOR]]", function(forthread)
-		return function(limit, start, ...)
+		return true, function(limit, start, ...)
 			assert(limit % 1 == 0 and start % 1 == 0, "Arguments must be integers")
 			local step = sign(limit - start)
 			local function _for_r(i, ...)
@@ -579,7 +654,7 @@ immediates['for'] = true
 -- ( iterable -- )
 dictionary['each'] = function(...)
 	cbeginblock("[[EACH]]", function(eachthread)
-		return function(iterable, ...)
+		return true, function(iterable, ...)
 			local newitr = getmetatable(iterable) and getmetatable(iterable).__itr
 			assert(
 				itr or type(iterable) == "table",
@@ -607,7 +682,7 @@ dictionary['while'] = function(...)
 			if cond then return _while_r(whilethread(...)) end
 			return ...
 		end
-		return _while_r
+		return true, _while_r
 	end)
 	return ...
 end
@@ -619,7 +694,7 @@ function loops(...)
 			if count < 1 then return ... end
 			return _loops_r(count - 1, loopsthread(...))
 		end
-		return _loops_r
+		return true, _loops_r
 	end)
 	return ...
 end
@@ -630,7 +705,7 @@ function forever(...)
 		local function _forever_r(...)
 			return _forever_r(foreverthread(...))
 		end
-		return _forever_r
+		return true, _forever_r
 	end)
 	return ...
 end
@@ -656,12 +731,27 @@ function eachstack(f, ...)
 	return eachstack(f, select(2, ...))
 end
 
-dictionary['C>'] = function(...)
-	return cstack:pop(), ...
+dictionary['[]'] = fli.wrapfunc(stack.new, 0)
+
+-- ( [x] -- [x] x )
+dictionary['[]@'] = function(stk, ...)
+	return stk:top(), ...
 end
 
-dictionary['>C'] = function(tos, ...)
-	cstack:push(tos)
+-- ( [x] -- x )( stk: [] )
+dictionary['[]>'] = function(stk, ...)
+	return stk:pop(), ...
+end
+
+-- ( x [] -- [x] )
+dictionary['>[]'] = function(stk, x, ...)
+	stk:push(x)
+	return stk, ...
+end
+
+-- ( [*] -- [] )
+dictionary['[]clear'] = function(stk, ...)
+	stk:clear()
 	return ...
 end
 
@@ -677,15 +767,6 @@ dictionary['!!'] = function(k, t, x, ...)
 end
 
 -- Token Stream Interpreter ----------------------------------------------------
-
-local function popparsestate()
-	if cstack.height >= 4 then
-		intptr_running = cstack:pop()
-		parse_pos = cstack:pop()
-		line_num = cstack:pop()
-		tok_stream = cstack:pop()
-	end
-end
 
 -- ( * -- * ) ( TS: tok... )
 -- TODO: make this as minimal as possible, and replace with firth impl?
@@ -740,15 +821,11 @@ end
 
 -- ( s -- * )
 function runstring(src, ...)
-	cstack:push(tok_stream)
-	cstack:push(line_num)
-	cstack:push(parse_pos)
-	cstack:push(intptr_running)
-
+	pushparsestate()
 	tok_stream = src
+	intptr_running = nonempty(src)
 	line_num = 1
 	parse_pos  = 1
-	intptr_running = nonempty(src)
 
 	debug("---Line 1---")
 	return _interpret_r(...)
@@ -763,8 +840,7 @@ local function _afterfile(success, ...)
 	end
 
 	if cstack.height >= 2 then -- could have been cleared if error
-		current_infile = cstack:pop()
-		stringio.input(cstack:pop())
+		popinputstate()
 		debug("RETURNING TO COMPILING %s, %d CHARS LEFT", current_infile, #tok_stream - parse_pos)
 	end
 
@@ -778,15 +854,12 @@ end
 --! @return     contents of stack after execution.
 function runfile(path, ...)
 	-- TODO: default/search paths?
-
-	cstack:push(stringio.input())
-	cstack:push(current_infile)
-
+	pushinputstate()
 	stringio.input(path)
 	current_infile = path
 	-- TODO stream a line at a time?
 	-- ...will require holding onto incomplete parse state,
-	-- e.g. matching a close paren.
+	-- e.g. for matching a close paren that hasn't been read yet.
 	local src = stringio.read()
 
 	return _afterfile(pcall(runstring, src, ...))
@@ -816,6 +889,7 @@ for k,v in pairs(dictionary) do
 end
 --]]
 
+cclearstate()
 runfile "proto/core.firth"
 
 -- Export
