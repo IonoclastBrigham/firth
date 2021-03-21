@@ -260,6 +260,7 @@ TAB_SIZE               = 4
 # a double escape (\\{ and \\})
 
 ALIASES                += "compiles=@par Compiles:\n"
+ALIASES                += "immediate=@par <b>Immediate:</b> This function executes <i>immediately</i>, even in compiling context.\n"
 
 # Set the OPTIMIZE_OUTPUT_FOR_C tag to YES if your project consists of C sources
 # only. Doxygen will then generate output that is more tailored for C. For

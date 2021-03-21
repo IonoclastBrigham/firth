@@ -30,7 +30,7 @@ char : create compile
 
 // /////////////////////////////////////////////////////////////////////////////
 // core.firth
-// Core library for low level code and compiler manipulation
+// Core vocabulary for :Firth environments.
 //
 // Copyright © 2015-2021 Brigham Toskin
 // This file is part of the :Firth language reference implementation. Usage

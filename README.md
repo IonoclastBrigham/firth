@@ -36,16 +36,36 @@ to do with it as it develops.
 
 ## Building and Running
 
-Currently, it is implemented completely in the LuaJIT dialect of Lua 5.1. This
-means it has a few Lua 5.2-isms, and should generally run on PUC-Rio 5.2 as well.
-It doesn't depend on any 3rd party libraries or C extensions. That said, it is
-recommended to use [LuaJIT](http://luajit.org/), version 2.x, for optimal performance.
+A working Lua environment is required. LuaJIT 2.0 and PUC-Rio Lua 5.2 are
+officially supported, and some efforts have been made to ensure it will generally
+run on Lua 5.3 and 5.4 as well. That said, it is recommended to use
+[LuaJIT](http://luajit.org/) for optimal performance.
 
-You can require the libraries from Lua code, run the REPL from the command line,
-or load the whole thing at runtime from the Lua C API. Details to follow.
+It doesn't have any other external dependencies.
 
-To build the Doxygen documentation, you need Perl 5 and the `Doxygen::Lua`
-perl module (available on CPAN) installed on your system.
+You can require the libraries from Lua code...
+
+```Lua
+local firth = require "proto.bootstrap"
+print(firth.runstring "3 5 + 2 *")
+-- prints 16
+```
+
+...run the REPL from the command line...
+
+```shell
+$ luajit ./firth.lua # launch the repl
+# or
+$ luajit ./firth.lua 3 5 + 2 * # run code straight from the shell
+<==[ 16 ]
+```
+
+...or load the whole thing at runtime from the Lua C API. Details to follow.
+
+To build the documentation, you need Perl 5 and Doxygen. The included `Doxygen::Lua`
+perl module has been modified from the version on CPAN for compatibility with the
+latest Doxygen and better output. Once it's installed, just run `doxygen` from
+the :Firth repo root.
 
 ## Examples
 
