@@ -32,7 +32,11 @@ local function REPL(running, ...)
     -- prompt and read input
     stringio.print(dictionary.compiling and '      ' or 'ok> ')
     local line = stringio.readline()
-    if line == nil then dictionary.bye(...) end -- nil => EOF => CTRL+D
+    if line == nil then
+        -- nil => EOF => CTRL+D
+        stringio.print("bye")
+        dictionary.bye(...)
+    end
 
     return REPL(pcall(runstring, line, ...))
 end
