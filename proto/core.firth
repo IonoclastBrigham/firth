@@ -1,8 +1,10 @@
-char @file:core.firth drop
-char @see:comment_block_below_for_copyright_notice drop
+char //see:comment_block_below_for_copyright_notice drop
 
 char : create compile
 	char %s parse create compile
+	interpret buildfunc bindfunc
+: immediate
+	compile_target.NAME @@ immediates true pivot !!
 	interpret buildfunc bindfunc
 : %s
 	char %s cpush

@@ -88,9 +88,19 @@ local function revrot(tos, _2nd, _3rd, ... )
 end
 module['-rot'] = revrot
 
+function pivot(tos, _2nd, _3rd, ...)
+	return _3rd, _2nd, tos, ...
+end
+
 function pick(idx, ...)
 	if idx == 1 then return dup(...) end
 	return (select(idx, ...)), ...
+end
+
+function roll(idx, ...)
+	if idx == 0 then return ... end
+	if idx == 1 then return swap(...) end
+	return yank(idx + 1, pick(idx, ...))
 end
 
 function shove(i, x, tos, ...)

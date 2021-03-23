@@ -182,14 +182,14 @@ end
 
 -- core primitives -------------------------------------------------------------
 
-dictionary["STDIN"] = fli.wrapfunc(stringio.stdin, 0)
-dictionary["STDOUT"] = fli.wrapfunc(stringio.stdout, 0)
-dictionary["STDERR"] = fli.wrapfunc(stringio.stderr, 0)
+STDIN = fli.wrapfunc(stringio.stdin, 0)
+STDOUT = fli.wrapfunc(stringio.stdout, 0)
+STDERR = fli.wrapfunc(stringio.stderr, 0)
 
-dictionary["input"]  = fli.wrapfunc(stringio.input, 0, 1)
-dictionary["output"] = fli.wrapfunc(stringio.output, 0, 1)
-dictionary["useinput"]  = fli.wrapfunc(stringio.input, 1, 0)
-dictionary["useoutput"] = fli.wrapfunc(stringio.output, 1, 0)
+input  = fli.wrapfunc(stringio.input, 0, 1)
+output = fli.wrapfunc(stringio.output, 0, 1)
+useinput  = fli.wrapfunc(stringio.input, 1, 0)
+useoutput = fli.wrapfunc(stringio.output, 1, 0)
 
 -- ( s -- ) ( Out: s )
 dictionary['.raw'] = function(str, ...)
@@ -384,6 +384,11 @@ function create(name, ...)
 	return entry, ...
 end
 
+dictionary["compile_target.NAME"] = "name"
+dictionary["compile_target.XT"] = "xt"
+dictionary["compile_target.COMPILEBUF"] = "compilebuf"
+dictionary["compile_target.SRCBUF"] = "srcbuf"
+
 -- ( entry -- )
 function compile(newtarget, ...)
 	assert(getmetatable(newtarget) == entrymt, "Invalid Compile Target")
@@ -476,12 +481,6 @@ end
 -- ( * xt -- * )
 function execute(xt, ...)
 	return xt(...)
-end
-
--- ( entry -- )
-function immediate(entry, ...)
-	immediates[entry.name] = true
-	return ...
 end
 
 -- ( word -- ) ( SB: word )
