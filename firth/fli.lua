@@ -250,7 +250,9 @@ function wrapglobals(globalenv)
 			rshift = 2
 		},
 		math = {
-			abs = 1
+			abs = 1,
+			ceil = 1,
+			floor = 1
 		},
 		os = {
 			exit = { 1, 0 } -- technically, never returns

@@ -234,13 +234,17 @@ alias: NOOP NOP
 // : calls: (--) postpone ` " calledby" @@ nip foreach drop " \tcalledby". . .CR end ;
 // : calledby: (--) postpone ` " calls" @@ nip foreach drop " \tcalls"   . . .CR end ;
 
+alias: abs Lua.math.abs
+alias: ciel Lua.math.ciel
+alias: floor Lua.math.floor
 alias: add +
 alias: sub -
 alias: mul *
 alias: div /
 alias: mod %
 alias: pow **
-// : percent ( n p -- n*(p/100) ) postpone 100/  postpone * ;immed
+: /% ( n1 n2 -- floor(n1/n2) n1%n2) 2dup / floor -rot % ;
+: percent ( n p -- n*(p/100) ) 100 / * ; // e.g. `200 25 percent` => 50
 : isnan? ( n -- b ) dup = not ; // nan ≠ nan
 : sign ( n -- -1|0|1|nan )
 	dup 0 > 1   ( -- n b 1 )       && // collapse
