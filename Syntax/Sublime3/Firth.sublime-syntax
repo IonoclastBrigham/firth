@@ -19,6 +19,7 @@ contexts:
     - include: colon-defs
     - include: word-consumers
     - include: stack-manip
+    - include: stack-values
     - include: strings
     - include: comments
     - include: scalars
@@ -60,14 +61,27 @@ contexts:
       pop: true
 
   colon-defs:
-    - meta_include_prototype: false
     - match: (?<={{stdelim}})(:)\s+(\S+)
       captures:
         1: storage.type.function.begin.firth
         2: entity.name.function.firth
-    - match: (?<={{stdelim}});\S*
-      scope: storage.type.function.end.firth
-      pop: true
+      push:
+        - meta_scope: meta.function.firth
+        - match: (?<={{stdelim}})(;\S*|interpret buildfunc)
+          scope: storage.type.function.end.firth
+          pop: true
+        - include: main
+    - match: (?<={{stdelim}}):\((?={{endelim}})
+      scope: storage.type.function.begin.firth
+      push:
+        - meta_scope: meta.function.lambda.firth
+        - match: (?<={{stdelim}})\);(?={{endelim}})
+          scope: storage.type.function.end.firth
+          pop: true
+        - match: (?<={{stdelim}})\)\[\d+\];(?={{endelim}})
+          scope: storage.type.function.lambda.end.firth
+          pop: true
+        - include: main
 
   word-consumers:
     # not including strings, comments, or colon-defs
@@ -78,8 +92,16 @@ contexts:
         2: entity.name.function.firth
 
   stack-manip:
-    - match: (?<={{stdelim}})([23]?dup|[23]?drop|nip|over|clear|swap|-?rot|pick|shove|yank|chop|height|C>|>C)(?={{endelim}})
+    - match: (?<={{stdelim}})([23]?dup|[23]?drop|nip|over|clear|swap|-?rot|pivot|pick|roll|shove|yank|chop|height|C>|>C)(?={{endelim}})
       scope: keyword.control.firth
+
+  stack-values:
+    - match: (?<={{stdelim}})\[\](?={{endelim}})
+      scope: variable.other.stack.firth
+    - match: (?<={{stdelim}})\[\](@|>|clear)(?={{endelim}})
+      scope: keyword.operator.stack.firth
+    - match: (?<={{stdelim}})>\[\](?={{endelim}})
+      scope: keyword.operator.stack.firth
 
   storage:
     - match: (@@?|!!?)
