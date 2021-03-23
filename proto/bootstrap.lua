@@ -198,9 +198,10 @@ dictionary['.raw'] = function(str, ...)
 	return ...
 end
 
--- ( * -- )
+-- ( -- )
 dictionary[".S"] = function(...)
-	return stringio.print(prepstack(...))
+	stringio.print(prepstack(...))
+	return ...
 end
 
 -- ( s -- s' )

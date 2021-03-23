@@ -200,6 +200,7 @@ const: iostack []
 
 : . ( x -- ) >string .raw SPACE .raw ;
 : .. ( x1 x2 -- ) swap . . ;
+: .s ( * -- ) .S clear ;
 : .char (--)(TS: ch) postpone char ' . ccall ;immed
 : ." ( -- )(TS: "s") postpone " ' . ccall ;immed
 : .fmt ( * s -- s' ) fmt .raw ;

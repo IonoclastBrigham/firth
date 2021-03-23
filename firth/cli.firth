@@ -22,3 +22,4 @@ alias: --file -f
 
 false ` DOREPL !
 : -i (--) true ` DOREPL ! ;
+alias: --interactive -i

@@ -25,9 +25,10 @@ local runstring, runfile, dictionary = firth.runstring, firth.runfile, firth.dic
 
 
 local function REPL(running, ...)
-    if not running then
-        dictionary.exit(1, ...)
-    end
+    if not running then dictionary.exit(1, ...) end
+
+    -- print stack from previous line
+    dictionary['?printstack'](...)
 
     -- prompt and read input
     stringio.print(dictionary.compiling and '      ' or 'ok> ')
@@ -44,8 +45,12 @@ end
 if select("#", ...) > 0 then
     runfile("firth/cli.firth")
     local src = table.concat({...}, " ")
-    REPL(runstring(src.." DOREPL"))
+    REPL(runstring(src.." DOREPL not if printstack end DOREPL"))
 else
+    runstring [[
+        false ` showstack !
+        : ?printstack showstack if printstack end ;
+    ]]
     dictionary.banner()
     REPL(true, ...)
 end
