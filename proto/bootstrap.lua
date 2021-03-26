@@ -27,6 +27,7 @@ tonumber = require "compat.tonumber" -- Lua@5.2+
 
 -- cache common lua globals before nuking the environment
 local assert, error = assert, error
+local debug = debug
 local getmetatable, setmetatable = getmetatable, setmetatable
 local ipairs, pairs = ipairs, pairs
 local loadstring = loadstring
@@ -49,6 +50,7 @@ local fli = require "firth.fli"
 local stringio = require "firth.stringio"
 local stack	= require "firth.stack"
 local fstack   = require "firth.fstack"
+require "firth.luex"
 
 -- set up Lua global namespace as firth dictionary / global environment
 local _lua = fli.inject({}, _G)
@@ -68,6 +70,7 @@ fli.inject(dictionary, fli) -- do we want to do this ???
 -- global parser / interpreter / compiler state
 intptr_running = false
 cstack = stack.new()
+rstack = stack.new()
 meta = setmetatable({}, { __mode = "k" })
 immediates = {} -- immediates[word] = true
 
@@ -110,11 +113,15 @@ function xperrhandler(msg)
 	local stackstring = '[ '..prepstack(unpack(frozen_stack))..' ]'
 	stringio.printline('stack : '..stackstring)
 	stringio.printline('cstack: '..tostring(cstack))
-	-- stringio.printline('dict  :')
-	-- for k, _ in pairs(dictionary) do stringio.printline("	"..k) end
-	-- stringio.printline(stacktrace())
+	stringio.printline('rstack: '..tostring(rstack))
+	stringio.printline(stacktrace(3))
 
-	cclearstate()
+	return cclearstate(false, unpack(frozen_stack))
+end
+
+-- ( n -- s )
+function stacktrace(i, ...)
+	return "call"..debug.traceback("", i or 2):sub(2), ...
 end
 
 -- (n s1 s2 -- 0 )
@@ -167,7 +174,11 @@ local function lookup_err(tok, num, ...)
 			end
 		end
 	end
-	local suffix = "Did You Mean..?\n\t"..table.concat(sortmatches(buckets, tok), "\n\t")
+
+	local suggestions = sortmatches(buckets, tok)
+	local count = math.min(#suggestions, 5)
+	suggestions = table.slice(suggestions, 1, count)
+	local suffix = "Did You Mean..?\n\t"..table.concat(suggestions, "\n\t")
 	return runtime_err(prefix, LOOKUP_ERR_MSG:format(tok, suffix), 2, ...)
 end
 
@@ -205,17 +216,10 @@ dictionary[".S"] = function(...)
 end
 
 -- ( s -- s' )
-function quote(str, ...)
-	if type(str) == "string" then
-		str = ("%q"):format(str)
-	end
-	return str, ...
-end
+quote = fli.wrapfunc(stringio.quote, 1)
 
 -- ( s -- s' )
-function trim(str, ...)
-	return stringio.trim(str), ...
-end
+trim = fli.wrapfunc(stringio.trim, 1)
 
 -- ( x -- n|nil )
 dictionary["string>number"] = fli.wrapfunc(stringio.tonumber, 1)
@@ -230,18 +234,15 @@ function lookup(word, ...)
 	return dictionary[word], ...
 end
 
+-- ( word -- x )
 function resolve(word, ...)
-	if defined(word) then
-		return lookup(word, ...)
-	else
-		local val = stringio.tonumber(word) or stringio.toboolean(val)
-		if val == nil then
-			-- error; use xpcall, so we get the stacktrace
-			xpcall(lookup_err, xperrhandler, word, line_num, ...)
-		else
-			return val, ...
-		end
-	end
+	if defined(word) then return lookup(word, ...) end
+
+	local val = stringio.tonumber(word) or stringio.toboolean(val)
+	if val ~= nil or word == "nil" then return val, ... end
+
+	-- error; use xpcall, so we get the stacktrace
+	xpcall(lookup_err, xperrhandler, word, line_num, ...)
 end
 
 --! ( -- c ) ( TS: c ) ;immed
@@ -309,15 +310,15 @@ function countlines(str, ...)
 	return ...
 end
 
--- ( -- )
-function cclearstate(...)
+-- ( b -- )
+function cclearstate(die, ...)
 	debug("CLEARING COMPILE STATE!!!!!!!")
 
 	current_infile = "{STDIN}"
 	stringio.input(stringio.stdin())
 
 	tok_stream = ""
-	intptr_running = false
+	intptr_running = not die
 	parse_pos = 1
 	line_num = 1
 
@@ -331,12 +332,14 @@ end
 
 function pushinputstate(...)
 	cstack:push(current_infile)
+	stringio.flush()
 	cstack:push(stringio.input())
 
 	return ...
 end
 
 function popinputstate(...)
+	stringio.flush()
 	stringio.input(cstack:pop())
 	current_infile = cstack:pop()
 
@@ -511,14 +514,9 @@ local binopmt = {
 	end,
 	exec = function(self, b, a, ...)
 		local src = ([[
-			-- print(...)
-			-- skip `self`
-			local TOS = select(2, ...)
-			local NOS = select(3, ...)
-			return NOS %s TOS, select(4, ...)
-		]]):format(self.op)
-		debug("COMPILING BINOP FUNC: '%s'", src)
-		self.exec = loadstring(src)
+			return function(_, TOS, NOS, ...) return NOS %s TOS, ... end
+		]])
+		self.exec = loadstring(src:format(self.op))()
 		return self:exec(b, a, ...)
 	end
 }
@@ -652,12 +650,14 @@ end
 immediates['for'] = true
 
 -- ( iterable -- )
-dictionary['each'] = function(...)
+function each(...)
 	cbeginblock("[[EACH]]", function(eachthread)
 		return true, function(iterable, ...)
+			-- TODO: support strings and iterator xts on TOS
+			-- TODO: function spairs(str) return function(str, idx) local c = str:sub(idx+1, idx+1); if  #c == 0 then return nil, nil else return idx+1, c end end, str, 0 end
 			local newitr = getmetatable(iterable) and getmetatable(iterable).__itr
 			assert(
-				itr or type(iterable) == "table",
+				newitr or type(iterable) == "table",
 				"Argument must be iterable"
 			)
 			newitr = newitr or (#iterable > 0 and ipairs) or pairs
@@ -677,6 +677,7 @@ immediates['each'] = true
 
 -- ( cond -- )
 dictionary['while'] = function(...)
+	-- TODO: a coopt the block thread to allow a `WHILE cond DO xxx END` form..?
 	cbeginblock("[[WHILE]]", function(whilethread)
 		local function _while_r(cond, ...)
 			if cond then return _while_r(whilethread(...)) end
@@ -773,7 +774,7 @@ end
 --! @private
 local function _interpret_r(...)
 	if not intptr_running or parse_pos > #tok_stream then
-		popparsestate()
+		if cstack.height > 0 then popparsestate() end -- may have been cleared in error handler
 		return ...
 	end
 
@@ -795,7 +796,8 @@ local function _interpret_r(...)
 		local found = lookup(word)
 		if type(found) == "function" then
 			if not compiling or immediates[word] then
-				-- pass through drop because xpcall returns an error flag, already handled elsewhere
+				-- pass through drop because xpcall returns an boolean flag,
+				-- already handled elsewhere
 				return _interpret_r(drop(xpcall(found, xperrhandler, ...)))
 			end
 			return _interpret_r(ccall(word, ...)) -- pass `found` instead to static-link
@@ -889,7 +891,7 @@ for k,v in pairs(dictionary) do
 end
 --]]
 
-cclearstate()
+cclearstate(false)
 runfile "proto/core.firth"
 
 -- Export

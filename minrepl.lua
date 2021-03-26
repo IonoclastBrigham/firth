@@ -25,7 +25,10 @@ local runstring, runfile, dictionary = firth.runstring, firth.runfile, firth.dic
 
 
 local function REPL(running, ...)
-    if not running then dictionary.exit(1, ...) end
+    if not running then
+        dictionary.printstack(...)
+        dictionary.exit(1, ...)
+    end
 
     -- print stack from previous line
     dictionary['?printstack'](...)

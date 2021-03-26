@@ -24,16 +24,14 @@ char : create compile
 : ;immed
 	buildfunc dup bindfunc immediate
 	interpret buildfunc dup bindfunc immediate
-: :( ` λ create compile ;immed
-: ); buildfunc ` xt @@ cpush ;immed
 
 : skipch  -1 backtrack ;
 : 2skipch -2 backtrack ;
-: " skipch char " parse cpush skipch ;immed
+: " skipch ` [^"]* parsematch cpush skipch ;immed
 : parseline " ^[^\n]*" fmt parsematch ;
 : // parseline
 	compiling if
-		2 Lua.string.sub srcappend char \n srcappend
+		2 -1 Lua.string.sub srcappend char \n srcappend
 	else
 		drop
 	end
@@ -57,11 +55,13 @@ char : create compile
 // text and parsing words
 : ( 1 backtrack " %b()" parsematch
 	dup countlines
-	compiling if 3 Lua.string.sub srcappend else drop end
+	compiling if 3 -1 Lua.string.sub srcappend else drop end
 	;immed ( ( nestable) parentheses)
 : (--) ;immed // empty signature coment
 : (C:  2 backtrack postpone ( ;immed
-: (--)(C: postpone (C: ;immed // empty signature coment
+: (--)(C: postpone (C: ;immed
+: (R:  2 backtrack postpone ( ;immed
+: (--)(R: postpone (R: ;immed
 : (TS: 3 backtrack postpone ( ;immed
 : (--)(TS: postpone (TS: ;immed
 : (CB: 3 backtrack postpone ( ;immed // compile buf
@@ -70,8 +70,20 @@ char : create compile
 : (--)(IO: postpone (IO: ;immed
 : TODO: (TS: .*\n) postpone // ;immed  TODO: add to list with file/line/word?
 : ' ( -- xt )  (TS: word ) word lookup cpush ;immed
-: " skipch ` [^"]* parsematch cpush skipch ;immed // redefine for empty strings
 : "" ( -- s ) ` (.-)"" parsematch trim cpush ;immed
+: clips ( s -- s' ) 2 -2 Lua.string.sub ;
+
+// Lambdas, functions, etc.
+: :( (--) ` λ create compile ;immed
+: ); ( -- xt ) buildfunc ` xt @@ cpush ;immed
+: lua{ ( * -- * )
+	1 backtrack " %b{}" parsematch clips
+	Lua.loadstring ccall
+	;immed
+: lua:( ( -- xt )
+	1 backtrack " %b()" parsematch clips
+	Lua.loadstring cpush
+	;immed
 
 // error handling
 : throw ( x -- ) 2 Lua.error ;
@@ -143,28 +155,11 @@ char : create compile
 : xt ( {word} -- xt ) ` xt @@ nip ;
 : xt? ( x -- b ) Lua.type ` function = ;
 : xt?exec ( * x -- * ) dup xt? if execute end ;
-: 2word ( -- s1 s2 ) word word ;
-: #! (--)(TS: word) word lookup execute ;immed
+: 2word ( -- s1 s2 )(TS: word word ) word word ;
+: #! ( * -- * )(TS: word) word lookup execute ;immed
 
 // values and variables
-: >string ( x -- s ) Lua.tostring ;
-: >bool ( x -- b ) not not ;
-: >number ( x -- n )
-	dup Lua.type ` boolean = if
-		1 && 0 ||
-	else
-		dup nil = if drop 0 else string>number end
-	end
-	;
-: executable? ( x -- b )
-	dup Lua.type ` function =
-	dup if nip else
-		drop Lua.getmetatable
-		dup if ` __call @@ >bool else drop false end
-	end
-	;
 : ! ( x name -- ) dictionary swap !! drop ;
-// : @ ( entry -- x ) DATA @@ nip ;  TODO: is this a thing anymore?
 : const ( x name -- )
 	create compile
 	cpush ' cpush ccall
@@ -177,15 +172,45 @@ char : create compile
 	( "new" "old" ) immediates swap @@
 	( "new"  imm? ) immediates rot !! drop
 	;immed
+alias: type Lua.type
+const: type.xt ` function
+const: type.number ` number
+const: type.string ` string
+const: type.table ` table
+const: type.boolean ` boolean
+const: type.nil ` nil
+: >string ( x -- s ) Lua.tostring ;
+: >bool ( x -- b ) not not ;
+: >number ( x -- n )
+	dup type type.boolean = if
+		1 && 0 ||
+	else
+		dup nil = if drop 0 else string>number end
+	end
+	;
+: {} ( -- {} ) lua{ return {}, ... } ;
+: # ( s|t -- n ) lua{ return #..., select(2, ...) } ;
+: executable? ( x -- b )
+	dup xt? if
+		drop true
+	else
+		Lua.getmetatable
+		dup if ` __call @@ >bool else drop false end
+	end
+	;
 // : variable ( name -- entry ) create dup does> NOP ;
 // : var: ( x -- ) word variable ! ;immed
 // : val: ( x -- ) word variable ! last does> @ ;immed
 
-// cstack
+// auxiliary stacks
 : C@ ( -- x )(C: x -- x ) cstack []@ ;
 : C> ( -- x )(C: x -- ) cstack []> ;
 : >C ( x -- )(C: -- x ) cstack >[] drop ;
 : Cclear (--)(C: * -- ) cstack []clear ;
+: R@ ( -- x )(C: x -- x ) rstack []@ ;
+: R> ( -- x )(C: x -- ) rstack []> ;
+: RC ( x -- )(C: -- x ) rstack >[] drop ;
+: Rclear (--)(C: * -- ) rstack []clear ;
 
 // strings and i/o
 const: \r char \r
@@ -202,24 +227,27 @@ const: iostack []
 
 : . ( x -- ) >string .raw SPACE .raw ;
 : .. ( x1 x2 -- ) swap . . ;
-: .s ( * -- ) .S clear ;
 : .char (--)(TS: ch) postpone char ' . ccall ;immed
 : ." ( -- )(TS: "s") postpone " ' . ccall ;immed
 : .fmt ( * s -- s' ) fmt .raw ;
 : .fmt" ( * -- )(TS: "s") postpone " ' .fmt ccall ;immed
 : .err ( s -- ) STDERR pushoutput . popoutput ;
-: .err" (--)(TS: "s") postpone " cpush ` .err ccall ;immed
+: .err" (--)(TS: "s") postpone " ' .err ccall ;immed
 : .CR (--) \n .raw ;
 : .2CR (--) \n \n .raw .raw ;
 : .line ( x -- ) >string .raw .CR ;
 : .x ( n -- ) " 0x%x " .fmt ;
 : .X ( n -- ) " 0X%X " .fmt ;
-: .C (C: x -- ) C> . ;
 : .TAB (--) \t .raw ;
+: .C (C: * -- * ) cstack . ;
+: .c (C: * -- ) .C Cclear ;
+: .R (R: * -- * ) rstack . ;
+: .r (R: * -- ) .R Rclear ;
+: .s ( * -- ) .S clear ;
 : printstack ( * -- ) .fmt" \n<==[ " .S .char ] .CR ;
 : see ( word -- )
-	dup meta swap @@ ( -- word entry? )
-	dup if nip else drop lookup meta swap @@ end ( -- entry? )
+	meta over @@ ( -- word entry? )
+	dup if nip else drop meta swap lookup @@ end ( -- entry? )
 	dup not if
 		drop
 	else
@@ -269,9 +297,6 @@ alias: & Lua.bit.band
 alias: | Lua.bit.bor
 alias: ^ Lua.bit.bxor
 alias: ~ Lua.bit.bnot
-
-// util and type queries
-alias: type Lua.type
 
 // control and os words
 alias: exit Lua.os.exit

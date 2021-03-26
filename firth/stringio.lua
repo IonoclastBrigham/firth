@@ -98,10 +98,10 @@ end
 --! function differs from #nexttoken() in that it finds a positive match, rather
 --! than the first thing it finds that doesn't match a delimiter pattern.
 --!
---! @param str the string to tokenize
+--! @param str     the string to tokenize
 --! @param pattern the pattern to match against
---! @param start the starting char position to start searching, defaults to 1
---! @return the token, 1 past the end index of the token in the input string
+--! @param start   the starting char position to start searching, defaults to 1
+--! @return        the token, 1 past the end index of the token in the input string
 --! @see #nexttoken()
 function stringio.matchtoken(str, pattern, start)
 	start = start or 1
@@ -112,9 +112,20 @@ function stringio.matchtoken(str, pattern, start)
 end
 
 --! @param str a string to trim whitespace from.
---! @return the input string with leading and trailing whitespace removed.
+--! @return    the input string with leading and trailing whitespace removed.
 function stringio.trim(str)
 	return string.match(str,'^()%s*$') and '' or string.match(str,'^%s*(.*%S)')
+end
+
+--! Wraps string arguments in quotes, and returns any others untouched.
+--!
+--! @param str string to wrap, or any other value.
+--! @return    `"str"`, or `str` untouched.
+function stringio.quote(str)
+	if type(str) == "string" then
+		str = ("%q"):format(str)
+	end
+	return str
 end
 
 --! Tries to convert a string into a number.
@@ -310,6 +321,10 @@ function stringio.printline(...)
 		stringio.print(...)
 	end
 	stringio.print('\n')
+end
+
+function stringio.flush()
+	io.output():flush()
 end
 
 --! @private

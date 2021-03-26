@@ -24,6 +24,8 @@ local setfenv = setfenv or require 'compat.compat_env'.setfenv
 local string = string
 local type = type
 
+require "firth.luex"
+
 local module = {}
 setfenv(1, module)
 
@@ -260,11 +262,12 @@ function wrapglobals(globalenv)
 		string = {
 			-- format = nil, -- TODO: returns 1, but could take any number
 			gsub = { 2, 2 },
-			sub = 2
+			sub = 3
 		},
 		table = {
 			concat = 2,
-			insert = { 2, 0}
+			insert = { 2, 0},
+			push = { 1, 0 }
 		}
 	})
 end

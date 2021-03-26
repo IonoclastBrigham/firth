@@ -18,7 +18,10 @@
 --! @cond
 local table = table
 
-local mt
+local stringio = require "firth.stringio"
+require "firth.luex"
+
+
 local stack = {
 	__FIRTH_INTERNAL__ = "   <stack>" -- used for stacktraces
 }
@@ -152,11 +155,15 @@ end
 function stack:__tostring()
 	local height = self.height
 	local buf = {}
-	for i = 1, height do
-		buf[i] = tostring(self[i])
+	if height == 0 then
+		buf[1] = '∅'
+	else
+		for i = 1, height do
+			buf[i] = tostring(stringio.quote(self[i]))
+		end
 	end
 
-	return "["..table.concat(buf, ' ').."]"
+	return "[ "..table.concat(buf, ' ').." ]"
 end
 
 function stack:__itr()
@@ -171,7 +178,7 @@ end
 
 -- set up metatable and library table --
 --! @cond
-mt = stack
+local mt = stack
 mt.__index = mt
 stack = {}
 --! @endcond
