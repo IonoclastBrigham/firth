@@ -2,17 +2,22 @@ Ideas / TODOs
 -------------
 proto branch tasks
 	loops, conditional, blocks
-	error handling/reporting
-		' foo try ' . catch
-		try{ foo 2 + }catch{ quote .S }
-		xpcall return value is return from xphandler; forward to repl somehow?
-		handler appears to be crashing
-	once conditionals work, get ;defer working and use instead of ad hoc cbinop
-	fix up remaining core words
+	`defer word` and `defer{ word word word }`
+		needs to be immediate to collect the words that follow
+		must compile so at runtime, xt gets pushed to rstack
+		must compile so skipped branches don't push defered xt
+		needs to call function body through pcall so deferreds are always called
+		will require some additional compile state so it doesn't trigger on bolcks?
+	guard, ?., and ??/?:
+		how exactly do these concepts map to forthy stack flow?
+		can we make guard work without early-exit flow?
+		are these really helpful? I only ever see nils when there's an error
+	replace ;defer with ;inline ..?
+	minimal testing words, run as port of compilation of module
 	vocabs.firth
-	move all possible lua prims to firth core
+	fix up remaining core words & move all possible lua prims to firth core
 		move any that can just work
-		minimal functionality + redefine "real" version if firth
+		minimal functionality + redefine "real" version in firth
 	loops
 		create a "break continuation" that is called if user invokes break?
 	threading
