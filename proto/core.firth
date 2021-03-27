@@ -4,7 +4,9 @@ char : create compile
 	char %s parse create compile
 	interpret buildfunc bindfunc
 : immediate
-	compile_target.NAME @@ immediates true pivot !!
+	dup
+	compile_target.NAME @@ immediates true pivot !! drop
+	compile_target.XT   @@ immediates true pivot !! drop
 	interpret buildfunc bindfunc
 : %s
 	char %s cpush
@@ -70,6 +72,7 @@ char : create compile
 : (--)(IO: postpone (IO: ;immed
 : TODO: (TS: .*\n) postpone // ;immed  TODO: add to list with file/line/word?
 : ' ( -- xt )  (TS: word ) word lookup cpush ;immed
+: immediate? ( word -- b ) immediates swap @@ not not ;
 : "" ( -- s ) ` (.-)"" parsematch trim cpush ;immed
 : clips ( s -- s' ) 2 -2 Lua.string.sub ;
 

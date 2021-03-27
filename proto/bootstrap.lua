@@ -72,7 +72,7 @@ intptr_running = false
 cstack = stack.new()
 rstack = stack.new()
 meta = setmetatable({}, { __mode = "k" })
-immediates = {} -- immediates[word] = true
+immediates = setmetatable({}, { __mode = "k" })
 
 --! @private
 local entrymt = {
