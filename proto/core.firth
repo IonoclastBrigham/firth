@@ -141,9 +141,8 @@ char : create compile
 
 // a few parser/interpreter/compiler control words
 (
-: ccall: word cpush " ccall" ccall ;immed
 : ?deferred ( entry -- )
-	" name" @@ dup
+	` name @@ dup
 	create compile // create and start compiling overriding def
 		` compiling cpush `lookup ccall postpone if
 			lookup ccall // encode a call to original word
@@ -154,7 +153,6 @@ char : create compile
 	;
 : ;defer   postpone interpret buildfunc dup bindfunc ?deferred ;immed
 )
-// : eval: ( -- i*x )(TS: word ) postpone ' execute  ;immed
 : xt ( {word} -- xt ) ` xt @@ nip ;
 : xt? ( x -- b ) Lua.type ` function = ;
 : xt?exec ( * x -- * ) dup xt? if execute end ;
