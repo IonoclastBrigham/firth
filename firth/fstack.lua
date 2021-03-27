@@ -93,8 +93,8 @@ function pivot(tos, _2nd, _3rd, ...)
 end
 
 function pick(idx, ...)
-	if idx == 1 then return dup(...) end
-	return (select(idx, ...)), ...
+	if idx == 0 then return dup(...) end
+	return (select(idx + 1, ...)), ...
 end
 
 function roll(idx, ...)
