@@ -12,7 +12,15 @@ proto branch tasks
 		how exactly do these concepts map to forthy stack flow?
 		can we make guard work without early-exit flow?
 		are these really helpful? I only ever see nils when there's an error
+		usecase:
+			: __tostring ( x -- xt? ) ` __tostring @@ ;
+			: foo    ( x -- ) dup Lua.getmetatable ?. __tostring ?. execute ?? >string ;
+			// need to resolve needing to dup on the left and drop if not taking the right...
 	replace ;defer with ;inline ..?
+		The point of it was to make compiling words that work in interpret mode
+		inlining will attack from the opposite direction;
+			write as if interpreted-only
+			but when compiling just appends its thread list
 	minimal testing words, run as port of compilation of module
 	vocabs.firth
 	fix up remaining core words & move all possible lua prims to firth core
