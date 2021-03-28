@@ -15,10 +15,12 @@
 --------------------------------------------------------------------------------
 
 
-local error = error
-local getmetatable = getmetatable
 local string = require("string")
 local table = require("table")
+
+local error = error
+local getmetatable = getmetatable
+local select = select
 local type = type
 
 
@@ -64,3 +66,27 @@ end
 --! @param t   target array-style table.
 --! @param val value to insert at end of table.
 table.push = table.insert
+
+--! Assigns all fields of sebsequent args to `t`.
+--!
+--! Very similar to JavaScript's `Object.assign(obj, ...)`. Modifies the first
+--! argument `t`, but also returns it, to support the very common usecase:
+--! ```Lua
+--! local foo = table.assign({ name = "foo" }, bar, baz)
+--! ```
+--!
+--! @note This is not a deep copy operation. For each `v` in `ti[k]`,
+--!       it is simply assigned `t[k] = v`.
+--!
+--! @todo `table.iassign()` variant that uses `ipairs()`?
+--!
+--! @param[out] t   table to assing fields to.
+--! @param      ... varag list of tables to assign to `t`.
+--! @return         `t`, modified with any fields from the following args.
+table.assign = function(t, ...)
+	for i = 1, select('#', ...) do
+		local t2 = select(i, ...)
+		for k, v in pairs(t2) do t[k] = v end
+	end
+	return t
+end
