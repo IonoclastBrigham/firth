@@ -150,7 +150,7 @@ char : create compile
 	;
 : ;defer   postpone interpret buildfunc dup bindfunc ?deferred ;immed
 )
-: xt ( {word} -- xt ) ` xt @@ nip ;
+: xt ( {word} -- xt ) ` xt @@ ;
 : xt? ( x -- b ) Lua.type ` function = ;
 : xt?exec ( * x -- * ) dup xt? if execute end ;
 : immediate ( xt|entry -- )
