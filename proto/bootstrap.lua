@@ -270,7 +270,7 @@ function char(...)
 
 	return cpush(ch, ...)
 end
-immediates['char'] = true
+immediates[char] = true
 
 -- ( n*x s1 -- s2)
 function fmt(str, ...)
@@ -433,14 +433,14 @@ dictionary[')[1];'] = function(...)
 
 	return _capture(dictionary[');'](...))
 end
-immediates[')[1];'] = true
+immediates[dictionary[')[1];']] = true
 
 -- ( -- ) ;immed
 function interpret(...)
 	compiling = false
 	return ...
 end
-immediates['interpret'] = true
+immediates[interpret] = true
 
 -- Can't be a word because recursion depends on params in chronological order
 local function _thread_r(xt1, xt2, ...)
@@ -607,7 +607,7 @@ dictionary['if'] = function(...)
 	end)
 	return ...
 end
-immediates['if'] = true
+immediates[dictionary['if']] = true
 
 -- ( -- )
 dictionary['else'] = function(...)
@@ -627,13 +627,13 @@ dictionary['else'] = function(...)
 	end)
 	return ...
 end
-immediates['else'] = true
+immediates[dictionary['else']] = true
 
 -- ( -- )
 dictionary['end'] = function(...)
 	return cendblock(...)
 end
-immediates['end'] = true
+immediates[dictionary['end']] = true
 
 -- ( nstart nlimit -- )
 dictionary['for'] = function(...)
@@ -653,7 +653,7 @@ dictionary['for'] = function(...)
 	end)
 	return ...
 end
-immediates['for'] = true
+immediates[dictionary['for']] = true
 
 -- ( iterable -- )
 function each(...)
@@ -679,7 +679,7 @@ function each(...)
 	end)
 	return ...
 end
-immediates['each'] = true
+immediates[each] = true
 
 -- ( cond -- )
 dictionary['while'] = function(...)
@@ -693,7 +693,7 @@ dictionary['while'] = function(...)
 	end)
 	return ...
 end
-immediates['while'] = true
+immediates[dictionary['while']] = true
 
 function loops(...)
 	cbeginblock("[[LOOPS]]", function(loopsthread)
@@ -705,7 +705,7 @@ function loops(...)
 	end)
 	return ...
 end
-immediates['loops'] = true
+immediates[loops] = true
 
 function forever(...)
 	cbeginblock("[[FOREVER]]", function(foreverthread)
@@ -716,14 +716,14 @@ function forever(...)
 	end)
 	return ...
 end
-immediates['forever'] = true
+immediates[forever] = true
 
 -- ( -- )
 dictionary['break'] = function(...)
 	-- TODO???
 	return ...
 end
-immediates['break'] = true
+immediates[dictionary['break']] = true
 
 function mapstack(f, ...)
 	if height(...) == 0 then return end
@@ -801,7 +801,7 @@ local function _interpret_r(...)
 		if compiling then srcappend(word) end
 		local found = lookup(word)
 		if type(found) == "function" then
-			if not compiling or immediates[word] then
+			if not compiling or immediates[found] then
 				-- pass through drop because xpcall returns an boolean flag,
 				-- already handled elsewhere
 				return _interpret_r(drop(xpcall(found, xperrhandler, ...)))

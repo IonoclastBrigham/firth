@@ -4,9 +4,7 @@ char : create compile
 	char %s parse create compile
 	interpret buildfunc bindfunc
 : immediate
-	dup
-	compile_target.NAME @@ immediates true pivot !! drop
-	compile_target.XT   @@ immediates true pivot !! drop
+	compile_target.XT @@ immediates true pivot !! drop
 	interpret buildfunc bindfunc
 : %s
 	char %s cpush
@@ -59,20 +57,19 @@ char : create compile
 	dup countlines
 	compiling if 3 -1 Lua.string.sub srcappend else drop end
 	;immed ( ( nestable) parentheses)
-: (--) ;immed // empty signature coment
-: (C:  2 backtrack postpone ( ;immed
+: (--) ;immed // shortcut, no stack effects
+: (C:  2 backtrack postpone ( ;immed // cstack effects
 : (--)(C: postpone (C: ;immed
-: (R:  2 backtrack postpone ( ;immed
+: (R:  2 backtrack postpone ( ;immed // rstack effects
 : (--)(R: postpone (R: ;immed
-: (TS: 3 backtrack postpone ( ;immed
-: (--)(TS: postpone (TS: ;immed
-: (CB: 3 backtrack postpone ( ;immed // compile buf
-: (--)(CB: postpone (CB: ;immed
-: (IO: 3 backtrack postpone ( ;immed
+: (IO: 3 backtrack postpone ( ;immed // iostack effects
 : (--)(IO: postpone (IO: ;immed
+: (TS: 3 backtrack postpone ( ;immed // token stream effects
+: (--)(TS: postpone (TS: ;immed
+: (CB: 3 backtrack postpone ( ;immed // compile buf effects
+: (--)(CB: postpone (CB: ;immed
 : TODO: (TS: .*\n) postpone // ;immed  TODO: add to list with file/line/word?
 : ' ( -- xt )  (TS: word ) word lookup cpush ;immed
-: immediate? ( word -- b ) immediates swap @@ not not ;
 : "" ( -- s ) ` (.-)"" parsematch trim cpush ;immed
 : clips ( s -- s' ) 2 -2 Lua.string.sub ;
 
@@ -156,23 +153,25 @@ char : create compile
 : xt ( {word} -- xt ) ` xt @@ nip ;
 : xt? ( x -- b ) Lua.type ` function = ;
 : xt?exec ( * x -- * ) dup xt? if execute end ;
+: immediate ( xt|entry -- )
+	// redefining to allow making raw XTs immediate i.e. lambdas
+	dup xt? not if compile_target.XT @@ end
+	immediates true pivot !! drop
+	;
 : 2word ( -- s1 s2 )(TS: word word ) word word ;
 : #! ( * -- * )(TS: word) word lookup execute ;immed
 
 // values and variables
 : ! ( x name -- ) dictionary swap !! drop ;
 : const ( x name -- )
+	TODO: implement as a closure
 	create compile
 	cpush ' cpush ccall
 	postpone ;immed
 	TODO: guard against re-binding `name`?
 	;
 : const: (--)(TS: word x ) 2word resolve xt?exec swap cpush const ;immed
-: alias: (--)(TS: new old )
-	2word 2dup lookup swap !
-	( "new" "old" ) immediates swap @@
-	( "new"  imm? ) immediates rot !! drop
-	;immed
+: alias: (--)(TS: new old ) 2word lookup swap ! ;immed
 alias: type Lua.type
 const: type.xt ` function
 const: type.number ` number
@@ -190,7 +189,7 @@ const: type.nil ` nil
 	end
 	;
 : {} ( -- {} ) lua{ return {}, ... } ;
-: # ( s|t -- n ) lua{ return #..., select(2, ...) } ;
+: # ( s|t -- n ) lua{ return #(...), select(2, ...) } ;
 : executable? ( x -- b )
 	dup xt? if
 		drop true
@@ -198,6 +197,10 @@ const: type.nil ` nil
 		Lua.getmetatable
 		dup if ` __call @@ >bool else drop false end
 	end
+	;
+: immediate? ( word -- b )
+	dup executable? not if lookup end
+	immediates swap @@ >bool // will be nil if not immediate, so cast to bool
 	;
 // : variable ( name -- entry ) create dup does> NOP ;
 // : var: ( x -- ) word variable ! ;immed
