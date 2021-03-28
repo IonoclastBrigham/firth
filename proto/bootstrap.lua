@@ -156,13 +156,12 @@ end
 local LOOKUP_ERR_MSG = "%s is undefined\n%s"
 
 -- ( n s -- 0 )
-local function lookup_err(tok, num, ...)
+local function lookup_err(tok, throw, ...)
 	local __FIRTH_DUMPTRACE__ = true -- TODO ???
 
-	num = num or line_num
 	local path = current_infile--:gsub("^(.-)(/?)([^/]*)$", "%1%2")
 	if not path or #path == 0 then path = "./" end
-	local prefix = path..':'..num
+	local prefix = path..':'..line_num
 	local buckets = {}
 	for k,v in pairs(dictionary) do
 		for i = 1, #tok do
@@ -179,8 +178,15 @@ local function lookup_err(tok, num, ...)
 	local count = math.min(#suggestions, 5)
 	suggestions = table.slice(suggestions, 1, count)
 	local suffix = "Did You Mean..?\n\t"..table.concat(suggestions, "\n\t")
-	return runtime_err(prefix, LOOKUP_ERR_MSG:format(tok, suffix), 2, ...)
+	local msg = LOOKUP_ERR_MSG:format(tok, suffix)
+	if throw then
+		return runtime_err(prefix, msg, 2, ...)
+	else
+		stringio.stderr():write(msg.."\n")
+		return ...
+	end
 end
+dictionary['lookup_err'] = fli.wrapfunc(lookup_err, 2, 0)
 
 debuglogs = false
 local function debug(str, ...)
@@ -242,7 +248,7 @@ function resolve(word, ...)
 	if val ~= nil or word == "nil" then return val, ... end
 
 	-- error; use xpcall, so we get the stacktrace
-	xpcall(lookup_err, xperrhandler, word, line_num, ...)
+	xpcall(lookup_err, xperrhandler, word, true, ...)
 end
 
 --! ( -- c ) ( TS: c ) ;immed
@@ -817,7 +823,7 @@ local function _interpret_r(...)
 	end
 
 	-- error; use xpcall, so we get the stacktrace
-	xpcall(lookup_err, xperrhandler, word, line_num, ...)
+	xpcall(lookup_err, xperrhandler, word, true, ...)
 	return ...
 end
 

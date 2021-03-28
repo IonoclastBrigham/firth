@@ -247,14 +247,16 @@ const: iostack []
 : .s ( * -- ) .S clear ;
 : printstack ( * -- ) .fmt" \n<==[ " .S .char ] .CR ;
 : see ( word -- )
-	meta over @@ ( -- word entry? )
+	dup meta over @@ ( -- word entry? )
 	dup if nip else drop meta swap lookup @@ end ( -- entry? )
 	dup not if
-		drop
+		drop false lookup_err
 	else
 		.char : dup ` name @@ .
 		` srcbuf @@ each nip . end
-	end ;
+		drop
+	end
+	;
 : see: (--)(TS: word ) word see ;immed
 
 // miscellaneous util words and stuff
