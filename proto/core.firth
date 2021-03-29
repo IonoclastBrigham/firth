@@ -100,6 +100,9 @@ char : create compile
 	); cbeginblock
 	;immed
 
+: {} ( -- {} ) lua{ return {}, ... } ;
+: # ( s|t -- n ) lua{ return #(...), select(2, ...) } ;
+
 // some basic arithmetic operators
 : + ( a b -- a+b ) char + cbinop ;immed
 : - ( a b -- a-b ) char - cbinop ;immed
@@ -123,8 +126,6 @@ char : create compile
 : ~&& ( a b -- !a&&b ) postpone and not ;immed
 : ~|| ( a b -- !a||b ) postpone or not ;immed
 
-// loop and iteration
-// : loops ( n -- ) 1 push " swap" call postpone for " drop" call ;immed
 
 // some higher level stack manipulations
 : nip ( a b -- b ) swap drop ;
@@ -135,6 +136,19 @@ char : create compile
 : 3drop ( a b c -- ) drop drop drop ;
 // : ndrop ( n*x n -- ) loops drop end ;
 : ?drop ( x b -- x? ) if drop end ;
+
+// auxiliary stacks
+: C@ ( -- x )(C: x -- x ) cstack []@ ;
+: C> ( -- x )(C: x -- ) cstack []> ;
+: >C ( x -- )(C: -- x ) cstack >[] drop ;
+: Cclear (--)(C: * -- ) cstack []clear ;
+: R@ ( -- x )(C: x -- x ) rstack []@ ;
+: R> ( -- x )(C: x -- ) rstack []> ;
+: >R ( x -- )(C: -- x ) rstack >[] drop ;
+: Rclear (--)(C: * -- ) rstack []clear ;
+: R?> rstack # 0 > if R> else nil end ;
+: R# rstack # ;
+: R#? R# 0 > ;
 
 // a few parser/interpreter/compiler control words
 (
@@ -157,6 +171,15 @@ char : create compile
 	// redefining to allow making raw XTs immediate i.e. lambdas
 	dup xt? not if compile_target.XT @@ end
 	immediates true pivot !! drop
+	;
+: jmpcont (--)(R: xt --)
+	R#? if
+		R> dup xt? if
+			execute
+		else
+			drop " ILLEGAL RSTACK STATE" throw
+		end
+	end
 	;
 : 2word ( -- s1 s2 )(TS: word word ) word word ;
 : #! ( * -- * )(TS: word) word lookup execute ;immed
@@ -188,8 +211,6 @@ const: type.nil ` nil
 		dup nil = if drop 0 else string>number end
 	end
 	;
-: {} ( -- {} ) lua{ return {}, ... } ;
-: # ( s|t -- n ) lua{ return #(...), select(2, ...) } ;
 : executable? ( x -- b )
 	dup xt? if
 		drop true
@@ -205,16 +226,8 @@ const: type.nil ` nil
 // : variable ( name -- entry ) create dup does> NOP ;
 // : var: ( x -- ) word variable ! ;immed
 // : val: ( x -- ) word variable ! last does> @ ;immed
-
-// auxiliary stacks
-: C@ ( -- x )(C: x -- x ) cstack []@ ;
-: C> ( -- x )(C: x -- ) cstack []> ;
-: >C ( x -- )(C: -- x ) cstack >[] drop ;
-: Cclear (--)(C: * -- ) cstack []clear ;
-: R@ ( -- x )(C: x -- x ) rstack []@ ;
-: R> ( -- x )(C: x -- ) rstack []> ;
-: RC ( x -- )(C: -- x ) rstack >[] drop ;
-: Rclear (--)(C: * -- ) rstack []clear ;
+: ?. dup nil ~= if word resolve xt?exec else word drop end ;immed
+: ?? dup nil = if drop word resolve xt?exec else word drop end ;immed
 
 // strings and i/o
 const: \r char \r

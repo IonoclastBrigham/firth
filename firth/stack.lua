@@ -44,7 +44,7 @@ end
 
 local function pushv(self, ...)
 	if select("#", ...) == 0 then return end
-	self:push(...)
+	self:push((...))
 	return pushv(self, select(2, ...))
 end
 stack.pushv = pushv
@@ -75,14 +75,14 @@ end
 function stack:drop()
 	assertsize(self, 1, "UNDERFLOW")
 	local top = self.height
-	rawset(self, top, 0)
+	rawset(self, top, nil)
 	self.height = top - 1
 end
 
 --! Removes all items from the stack.
 function stack:clear()
 	local top = self.height
-	for i = top, 1, -1 do rawset(self, i, 0) end
+	for i = top, 1, -1 do rawset(self, i, nil) end
 	self.height = 0
 end
 
@@ -166,6 +166,7 @@ function stack:__tostring()
 	return "[ "..table.concat(buf, ' ').." ]"
 end
 
+-- TODO: replace with standard `__ipairs`?
 function stack:__itr()
 	return function(height, current)
 				if current < height then
@@ -173,6 +174,10 @@ function stack:__itr()
 					return current, self[current]
 				end
 			end, self.height, 0
+end
+
+function stack:__len()
+	return self.height
 end
 
 
@@ -196,9 +201,7 @@ stack = {}
 --! </pre>
 --! @return a newly initialized stack object.
 function stack.new()
-	local s = setmetatable({ height = 0 }, mt)
-	for i = 32,1,-1 do s[i] = 0 end -- poke in some null data to pre-reserve array
-	return s
+	return setmetatable({ height = 0 }, mt)
 end
 
 return stack

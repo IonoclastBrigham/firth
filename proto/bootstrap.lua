@@ -244,7 +244,7 @@ end
 function resolve(word, ...)
 	if defined(word) then return lookup(word, ...) end
 
-	local val = stringio.tonumber(word) or stringio.toboolean(val)
+	local val = stringio.tonumber(word) or stringio.toboolean(word)
 	if val ~= nil or word == "nil" then return val, ... end
 
 	-- error; use xpcall, so we get the stacktrace
@@ -472,6 +472,7 @@ function buildfunc(...)
 	local  entry = compile_target
 	popcompilestate()
 
+	if jmpcont then ccall(jmpcont) end
 	local name, compilebuf = entry.name, entry.compilebuf
 	debug("BUILDING %s", name)
 	entry.xt = (#compilebuf > 0) and _thread_r(unpack(compilebuf)) or function(...) return ... end
