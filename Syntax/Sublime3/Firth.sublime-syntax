@@ -140,6 +140,7 @@ contexts:
         - include: escapes
         - match: '""'
           scope: punctuation.definition.string.quoted.double.end.firth
+          pop: true
 
   scalars:
     # numbers

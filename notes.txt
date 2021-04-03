@@ -8,14 +8,12 @@ proto branch tasks
 		must compile so skipped branches don't push defered xt
 		needs to call function body through pcall so deferreds are always called
 		will require some additional compile state so it doesn't trigger on bolcks?
-	guard, ?., and ??/?:
-		how exactly do these concepts map to forthy stack flow?
+	guard
 		can we make guard work without early-exit flow?
-		are these really helpful? I only ever see nils when there's an error
+		is this really helpful?
 		usecase:
-			: __tostring ( x -- xt? ) ` __tostring @@ ;
-			: foo    ( x -- ) dup Lua.getmetatable ?. __tostring ?. execute ?? >string ;
-			// need to resolve needing to dup on the left and drop if not taking the right...
+			Lua.getmetatable guard RETURN end // how does return work?
+			` __call @@ execute
 	replace ;defer with ;inline ..?
 		The point of it was to make compiling words that work in interpret mode
 		inlining will attack from the opposite direction;
@@ -36,7 +34,7 @@ proto branch tasks
 				return xthread(idx + 1, th[idx](...))
 			end
 	get some of that badass reflection/debugging stuff working again
-	scripting
+	shell scripting
 		':' script for defining shell scripts in firth
 		expects a new "word" name as first arg, like normal firth
 		compiles subsequent args
@@ -57,21 +55,7 @@ experimental optimization branch
 	inline functions
 		compiles to an immediate that compiles the firth code in the body inline
 		implies immediate
-		explicit?
-			: ;inline postpone interpret compilebuf inlinefunc bindfunc immediate ;immed
-		automatic?
-			fewer than x words in def?
-			fewer than y lines of generate lua in compilebuf?
-	pre-cache used lua library functions as locals and close over them
-		string
-		io
-		stringio
-		table
-	stack cache?
-		use closed-over locals for quick-access to top stack elements?
-		what kind of bookkeeping and calculations are needed to make this work?
-		does the overhead dominate the possible savings?
-		where do these values live? the compiler? the prims file?
+		: ;inline postpone interpret buildfunc inlinefunc bindfunc immediate ;immed
 	compile time optimization module
 		likely to be complicated
 			load as a separate, optional module

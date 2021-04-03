@@ -28,8 +28,7 @@ local stack = {
 
 -- throw if stack is too short for operation
 local function assertsize(st, min, msg)
-	local __FIRTH_DUMPTRACE__ = true -- used for stacktraces
-	assert(min <= st.height, msg)
+	assert(min <= rawget(st, "height"), msg)
 end
 --! @endcond
 
@@ -52,9 +51,8 @@ stack.pushv = pushv
 --! Pops an item off the stack
 --! @return the former top stack item.
 function stack:pop()
-	assertsize(self, 1, "UNDERFLOW")
 	local val = rawget(self, self.height)
-	self:drop()
+	self:drop() -- assert happens here
 	return val
 end
 

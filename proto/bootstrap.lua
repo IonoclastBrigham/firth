@@ -34,7 +34,7 @@ local loadstring = loadstring
 local math = math
 local os = os
 local print = print
-local rawget = rawget
+local rawget, rawset = rawget, rawset
 local require = require
 local setfenv = setfenv
 local select, table, unpack = select, table, unpack
@@ -58,6 +58,15 @@ _lua._G, _lua.arg = nil, nil
 local _G  = { Lua =  _lua }
 _G.dictionary = _G
 setfenv(1, _G)
+setmetatable(dictionary, {
+	__newindex = function(d, k, v)
+		if type(k) ~= "string" then error("Invalid Name: "..tostring(k)) end
+		rawset(d, k, v)
+	end,
+	__tostring = function()
+		return "{dictionary...}"
+	end
+})
 
 fli.wrapglobals(Lua)
 fli.maplua(dictionary, Lua) -- TODO: optional/upon request?
@@ -71,6 +80,29 @@ fli.inject(dictionary, fli) -- do we want to do this ???
 intptr_running = false
 cstack = stack.new()
 rstack = stack.new()
+local rmt = table.assign({}, getmetatable(rstack))
+local tostr = rmt.__tostring
+function rmt:__tostring()
+	local height = self.height
+	local buf = {}
+	if height == 0 then
+		buf[1] = '∅'
+	else
+		for i = 1, height do
+			local element = rawget(self, i)
+			if type(element) == 'function' then
+				local metadata = meta[element]
+				-- TODO: debug lib to extract xt closure, if not found
+				buf[i] = metadata and metadata.name or tostring(element)
+			else
+				buf[i] = tostring(stringio.quote(element))
+			end
+		end
+	end
+
+	return "[ "..table.concat(buf, ' ').." ]"
+end
+setmetatable(rstack, rmt)
 meta = setmetatable({}, { __mode = "k" })
 immediates = setmetatable({}, { __mode = "k" })
 
@@ -110,7 +142,7 @@ local frozen_stack = {} -- for error reporting
 function xperrhandler(msg)
 	stringio.printline(("ERROR: %s"):format(msg))
 	stringio.printline(("while running %s:%d"):format(current_infile, line_num))
-	local stackstring = '[ '..prepstack(unpack(frozen_stack))..' ]'
+	local stackstring = '[ '..prepstack(unpack(frozen_stack))..']'
 	stringio.printline('stack : '..stackstring)
 	stringio.printline('cstack: '..tostring(cstack))
 	stringio.printline('rstack: '..tostring(rstack))
@@ -124,12 +156,11 @@ function stacktrace(i, ...)
 	return "call"..debug.traceback("", i or 2):sub(2), ...
 end
 
--- (n s1 s2 -- 0 )
 local function runtime_err(name, msg, level, ...)
 	local __FIRTH_DUMPTRACE__ = true
 
 	frozen_stack = {...}
-	error("in "..name..': '..msg, level or 2)
+	error(("in %s: %s"):format(name, msg), level or 2)
 end
 
 local function sortmatches(buckets, tok)
@@ -265,6 +296,8 @@ function char(...)
 			ch = "\t"
 		elseif ch == '\\"' then
 			ch = '"'
+		elseif ch == "\\ " then
+			ch = " "
 		end
 	end
 
@@ -299,7 +332,7 @@ end
 -- ( n -- ) ( TS: -n )
 function backtrack(n, ...)
 	parse_pos = math.max(parse_pos - n, 0)
-	debug("BACKTRACKING TO '%s'...", tok_stream:sub(parse_pos, parse_pos + 10))
+	debug("BACKTRACKING TO ...%q...", tok_stream:sub(parse_pos, parse_pos + 10))
 	return ...
 end
 
@@ -411,7 +444,7 @@ function compile(newtarget, ...)
 	return ...
 end
 
---! Creates a lambda that (closure) captures `TOS` (i.e. 1 item).
+--! Creates a closure that captures `TOS` (i.e. 1 item).
 --!
 --! @returns      * (forwarded return from inner lambda compilation, minus xt).
 --! @compiles     a call to an anonymous function that consumes `TOS`
@@ -419,7 +452,6 @@ end
 --!               lambda with th captured values of TOS on the stack.
 --! @immediate
 -- ( x -- * )
--- debuglogs = false
 dictionary[')[1];'] = function(...)
 	-- _capture is just here to make sure the stack
 	-- is properly forwarded through {:(}.
@@ -442,46 +474,67 @@ function interpret(...)
 end
 immediates[interpret] = true
 
--- Can't be a word because recursion depends on params in chronological order
-local function _thread_r(xt1, xt2, ...)
-	-- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	-- TODO: normalize cappend to always use a metatable, always use xt:thread()
-	-- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+-- ( n -- )(R: * )
+function jmpcont(refheight,...)
+	if rstack.height > refheight then
+		local cont = rstack:pop()
+		return jmpcont(refheight, cont(...))
+	end
 
-	if not xt2 then
-		if getmetatable(xt1) then
-			return xt1:thread()
+	return ...
+end
+
+local function _thread(entry)
+	local name, compilebuf = entry.name, entry.compilebuf
+	debug("BUILDING %s", name)
+	if #compilebuf == 0 then
+		entry.xt = function(...) return ... end
+		return
+	end
+
+	-- shared function scope
+	local rstack = rstack
+	local __initialheight
+	local __exit = compilebuf[threadcount]
+
+	-- append the end-thread return suffix
+	local thr = function(...)
+		return jmpcont(__initialheight, ...)
+	end
+
+	-- link up thread continuations
+	local threadcount = #compilebuf
+	for i = threadcount, 1, -1 do
+		local xt = compilebuf[i]
+		if getmetatable(xt) then xt = xt:compile() end
+
+		local __next = thr
+		if i == 1 then
+			-- special handling for thread entry point
+			thr = function(...)
+				__initialheight = rstack.height
+				return __next(xt(...))
+			end
 		else
-			return xt1
+			thr = function(...)
+				return __next(xt(...))
+			end
 		end
 	end
-
-	local next = _thread_r(xt2, ...)
-	local thr
-	if getmetatable(xt1) then
-		thr = xt1:thread(next)
-	else
-		thr = function(...) return next(xt1(...)) end
-	end
-
-	return thr
+	entry.xt = thr
 end
 
 -- ( -- entry )
 function buildfunc(...)
+	_thread(compile_target)
 	local  entry = compile_target
 	popcompilestate()
-
-	if jmpcont then ccall(jmpcont) end
-	local name, compilebuf = entry.name, entry.compilebuf
-	debug("BUILDING %s", name)
-	entry.xt = (#compilebuf > 0) and _thread_r(unpack(compilebuf)) or function(...) return ... end
-
 	return entry, ...
 end
 
 -- ( entry -- )
 function bindfunc(entry, ...)
+	debug("ADDING %s '%s' TO DICTIONARY", entry.xt, entry.name)
 	dictionary[entry.name] = entry.xt
 	meta[entry.name] = entry
 	meta[entry.xt] = entry
@@ -506,18 +559,16 @@ function cappend(xt, ...)
 end
 
 local binopmt = {
-	thread = function(self, next)
-		local src = next and [[
-			local next = ...
-			return function(TOS, NOS, ...)
-				return next(NOS %s TOS, ...)
-			end
-		]] or [[
+	compile = function(self)
+		if self.xt then return self.xt end
+
+		local src = ([[
 			return function(TOS, NOS, ...)
 				return NOS %s TOS, ...
 			end
-		]]
-		return loadstring(src:format(self.op))(next)
+		]]):format(self.op)
+		self.xt = loadstring(src)()
+		return self.xt
 	end,
 	exec = function(self, b, a, ...)
 		local src = ([[
@@ -763,6 +814,19 @@ dictionary['[]clear'] = function(stk, ...)
 	return ...
 end
 
+-- ( -- x)(R: x -- )
+-- R-from is a prim to avoid mucking with stack ops as they happen.
+dictionary['R>'] = function(...)
+	return rstack:pop(), ...
+end
+
+-- ( x -- )(R: -- x )
+-- to-R is a prim to avoid mucking with stack ops as they happen.
+dictionary['>R'] = function(tos, ...)
+	rstack:push(tos)
+	return ...
+end
+
 -- ( t k -- t x )
 dictionary['@@'] = function(k, t, ...)
 	return t[k], ...
@@ -770,6 +834,7 @@ end
 
 -- ( x t k -- t )
 dictionary['!!'] = function(k, t, x, ...)
+	debug("%s[%s] = %s", t, quote(k), quote(x))
 	t[k] = x
 	return t, ...
 end
@@ -798,21 +863,26 @@ local function _interpret_r(...)
 	end
 
 	-- try dictionary lookup
+	debug("RESOLVING INPUT WORD '%s'", word)
 	if defined(word) then
 		if compiling then srcappend(word) end
 		local found = lookup(word)
 		if type(found) == "function" then
 			if not compiling or immediates[found] then
+				debug("EXECUTING %s", word)
 				-- pass through drop because xpcall returns an boolean flag,
 				-- already handled elsewhere
-				return _interpret_r(drop(xpcall(found, xperrhandler, ...)))
+				return _interpret_r(drop(xpcall(execute, xperrhandler, found, ...)))
 			end
+			debug("COMPILING CALL TO %s", word)
 			return _interpret_r(ccall(word, ...)) -- pass `found` instead to static-link
 		end
 
 		if compiling then
+			debug("COMPILING PUSH %s", word)
 			return _interpret_r(ccall(lookup, cpush(word, ...)))
 		end
+		debug("PUSHING %s", word)
 		return _interpret_r(found, ...)
 	end
 
@@ -841,11 +911,11 @@ function runstring(src, ...)
 end
 
 local function _afterfile(success, ...)
-	debug("FILE COMPLETED %sSUCCESSFULLY", success and "" or "UN")
+	debug("FILE COMPLETED: %sSUCCESSFULLY", success and "👍 " or "💀 UN")
 	if not success then
-		runtime_err("runfile", top(...))
+		runtime_err("runfile", ...)
 	elseif compiling then
-		runtime_err("runfile", "UNEXPECTED EOF WILE COMPILING")
+		runtime_err("runfile", "UNEXPECTED EOF WILE COMPILING", ...)
 	end
 
 	if cstack.height >= 2 then -- could have been cleared if error
@@ -897,6 +967,13 @@ for k,v in pairs(dictionary) do
 	end
 end
 --]]
+
+-- prepare lua prims for Export
+for k, v in pairs(dictionary) do
+	if type(v) == 'function' then
+		meta[v] = { name = k, xt = v }
+	end
+end
 
 cclearstate(false)
 runfile "proto/core.firth"

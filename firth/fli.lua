@@ -236,7 +236,7 @@ function wrapglobals(globalenv)
 	return wrapmodule(globalenv, {
 		-- assert = nil, -- NOWRAP: returns all args
 		error = { 2, 0 },
-		loadstring = 1,
+		loadstring = 1, -- TODO: change to 2 and pass in function or file name
 		print = { 1, 0 }, -- TODO: allow varargs in some structured way?
 		require = 1,
 		tostring = 1,

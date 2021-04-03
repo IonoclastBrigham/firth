@@ -68,22 +68,84 @@ char : create compile
 : (--)(TS: postpone (TS: ;immed
 : (CB: 3 backtrack postpone ( ;immed // compile buf effects
 : (--)(CB: postpone (CB: ;immed
+: (EX: 3 backtrack postpone ( ;immed // execution effects for compiling words
+: (--)(EX: postpone (EX: ;immed
 : TODO: (TS: .*\n) postpone // ;immed  TODO: add to list with file/line/word?
 : ' ( -- xt )  (TS: word ) word lookup cpush ;immed
 : "" ( -- s ) ` (.-)"" parsematch trim cpush ;immed
 : clips ( s -- s' ) 2 -2 Lua.string.sub ;
+: eachword ( * s xt -- *) ; TODO: parse words from string and hand to xt
+: .. (EX: s1 s2 -- s1..s2) " .." cbinop ;immed
+
+// some basic arithmetic operators
+: + (EX: a b -- a+b ) char + cbinop ;immed
+: - (EX: a b -- a-b ) char - cbinop ;immed
+: * (EX: a b -- a*b ) char * cbinop ;immed
+: / (EX: a b -- a/b ) char / cbinop ;immed
+: % (EX: a b -- a%b ) char % cbinop ;immed
+: ** (EX: a b -- a^b ) char ^ cbinop ;immed // use ** because ^ is bit-wise xor
+
+: 1+ ( n -- n' ) 1 + ;
+
+: cpushvar ( name -- )(CB: push(dict[name])) cpush ' lookup ccall ;
+: cstorevar ( name -- )(CB: dict[name]=x)
+	cpush dictionary cpush ' swap ccall (EX: x -- x dict name)
+	' !! ccall ' drop ccall
+	;
+: ++ (EX: -- n+1 )(TS: nvar )
+	word dup cpushvar ' 1+ ccall ( -- name )(EX: -- n+1 )
+	' dup ccall cstorevar
+	;immed
+
+// some basic boolean operators
+: > ( a b -- a>b ) char > cbinop ;immed
+: < ( a b -- a<b ) char < cbinop ;immed
+: = ( a b -- a==b ) " ==" cbinop ;immed
+: >= ( a b -- a>=b ) " >=" cbinop ;immed
+: <= ( a b -- a<=b ) " <=" cbinop ;immed
+: ~= ( a b -- a!=b ) " ~=" cbinop ;immed
+: 2not ( a b -- ~a ~b) swap not swap not ;
+: && ( a b -- a&&b ) " and" cbinop ;immed
+: || ( a b -- a||b ) " or" cbinop ;immed
+: ^^ ( a b -- aXORb ) postpone 2not postpone ~= ;immed
+: ~&& ( a b -- !a&&b ) postpone and not ;immed
+: ~|| ( a b -- !a||b ) postpone or not ;immed
+
+// compile stack
+: C@ ( -- x )(C: x -- x ) cstack []@ ;
+: C> ( -- x )(C: x -- ) cstack []> ;
+: >C ( x -- )(C: -- x ) cstack >[] drop ;
+: Cclear (--)(C: * -- ) cstack []clear ;
 
 // Lambdas, functions, etc.
-: :( (--) ` λ create compile ;immed
+0 dictionary ` __firth_lambdaID !! drop
+` __λ_0x%08X__ dictionary ` __firth_lambdaID_fmt !! drop
+: nextλID ( -- s ) ++ __firth_lambdaID __firth_lambdaID_fmt fmt ;
+: :( (--) nextλID create compile ;immed
 : ); ( -- xt ) buildfunc ` xt @@ cpush ;immed
 : lua{ ( * -- * )
-	1 backtrack " %b{}" parsematch clips
+	dictionary cpush
+	" local dictionary = (...)\n"
+	" local function lua(...)\n" ..
+	1 backtrack " %b{}" parsematch clips ..
+	" \nend\n" ..
+	" return lua(select(2, ...))" .. fmt
 	Lua.loadstring ccall
 	;immed
 : lua:( ( -- xt )
-	1 backtrack " %b()" parsematch clips
-	Lua.loadstring cpush
+	dictionary
+	" local dictionary = (...)\n"
+	" local function lua(...)\n" ..
+	1 backtrack " %b();" parsematch clips ..
+	" \nend\n" ..
+	" return lua, ..." .. fmt
+	Lua.loadstring execute cpush
 	;immed
+: R@ ( -- x )(C: x -- x ) rstack []@ ;
+: Rclear (--)(C: * -- ) rstack []clear ;
+// : R?> rstack # 0 > if R> else nil end ;
+// : R# rstack # ;
+// : R#? R# 0 > ;
 
 // error handling
 : throw ( x -- ) 2 Lua.error ;
@@ -99,33 +161,26 @@ char : create compile
 		true
 	); cbeginblock
 	;immed
+: assert" ( b -- )(TS: "msg")
+	// grab the assert string and squirrel it away
+	skipch ` [^"]* parsematch >C skipch // " compiles a push to the wrong stack
+	// then start compiling the assert cleanup body
+	` [[ASSERT]] :( ( xt -- )
+		// pass compiled body thread along
+		false
+	); cbeginblock
+	;immed
+: ?throw
+	cendblock ( -- cleanupthread)
+	C>        ( -- cleanupthread msg)
+	postpone if ( b -- )
+		swap ccall          // compile call to cleanup thread
+		cpush ' throw ccall // compile push message and call to throw
+	postpone end
+	;immed
 
 : {} ( -- {} ) lua{ return {}, ... } ;
 : # ( s|t -- n ) lua{ return #(...), select(2, ...) } ;
-
-// some basic arithmetic operators
-: + ( a b -- a+b ) char + cbinop ;immed
-: - ( a b -- a-b ) char - cbinop ;immed
-: * ( a b -- a*b ) char * cbinop ;immed
-: / ( a b -- a/b ) char / cbinop ;immed
-: % ( a b -- a%b ) char % cbinop ;immed
-: ** ( a b -- a^b ) char ^ cbinop ;immed // use ** because ^ is bit-wise xor
-
-// some basic boolean operators
-: > ( a b -- a>b ) char > cbinop ;immed
-: < ( a b -- a<b ) char < cbinop ;immed
-: = ( a b -- a==b ) " ==" cbinop ;immed
-: >= ( a b -- a>=b ) " >=" cbinop ;immed
-: <= ( a b -- a<=b ) " <=" cbinop ;immed
-: ~= ( a b -- a!=b ) " ~=" cbinop ;immed
-
-: 2not ( a b -- ~a ~b) swap not swap not ;
-: && ( a b -- a&&b ) " and" cbinop ;immed
-: || ( a b -- a||b ) " or" cbinop ;immed
-: ^^ ( a b -- aXORb ) postpone 2not postpone ~= ;immed
-: ~&& ( a b -- !a&&b ) postpone and not ;immed
-: ~|| ( a b -- !a||b ) postpone or not ;immed
-
 
 // some higher level stack manipulations
 : nip ( a b -- b ) swap drop ;
@@ -136,19 +191,6 @@ char : create compile
 : 3drop ( a b c -- ) drop drop drop ;
 // : ndrop ( n*x n -- ) loops drop end ;
 : ?drop ( x b -- x? ) if drop end ;
-
-// auxiliary stacks
-: C@ ( -- x )(C: x -- x ) cstack []@ ;
-: C> ( -- x )(C: x -- ) cstack []> ;
-: >C ( x -- )(C: -- x ) cstack >[] drop ;
-: Cclear (--)(C: * -- ) cstack []clear ;
-: R@ ( -- x )(C: x -- x ) rstack []@ ;
-: R> ( -- x )(C: x -- ) rstack []> ;
-: >R ( x -- )(C: -- x ) rstack >[] drop ;
-: Rclear (--)(C: * -- ) rstack []clear ;
-: R?> rstack # 0 > if R> else nil end ;
-: R# rstack # ;
-: R#? R# 0 > ;
 
 // a few parser/interpreter/compiler control words
 (
@@ -171,15 +213,6 @@ char : create compile
 	// redefining to allow making raw XTs immediate i.e. lambdas
 	dup xt? not if compile_target.XT @@ end
 	immediates true pivot !! drop
-	;
-: jmpcont (--)(R: xt --)
-	R#? if
-		R> dup xt? if
-			execute
-		else
-			drop " ILLEGAL RSTACK STATE" throw
-		end
-	end
 	;
 : 2word ( -- s1 s2 )(TS: word word ) word word ;
 : #! ( * -- * )(TS: word) word lookup execute ;immed
@@ -243,7 +276,6 @@ const: iostack []
 : popoutput (--)(IO: fd -- ) iostack []> useoutput ;
 
 : . ( x -- ) >string .raw SPACE .raw ;
-: .. ( x1 x2 -- ) swap . . ;
 : .char (--)(TS: ch) postpone char ' . ccall ;immed
 : ." ( -- )(TS: "s") postpone " ' . ccall ;immed
 : .fmt ( * s -- s' ) fmt .raw ;
@@ -328,7 +360,7 @@ alias: exit Lua.os.exit
 // copyright, version, banner
 : Copyright (--)
 	` Copyright create compile
-		` Copyright cpush parseline trim cpush ' .. ccall ' .2CR ccall
+		` Copyright cpush ' . ccall parseline trim cpush ' . ccall ' .2CR ccall
 		buildfunc dup bindfunc
 	xt ccall
 	false immediates ` Copyright !! drop

@@ -24,7 +24,7 @@ local select = select
 local type = type
 
 
--- strings --
+---------------- strings ----------------
 
 --! Makes strings indexible like an immutable array of characters.
 --!
@@ -39,7 +39,7 @@ getmetatable("").__index = function(s, idx)
 	return string[idx]
 end
 
--- tables --
+---------------- tables ----------------
 
 --! Slices an array-style table; similar to a substring operation.
 --!
@@ -48,7 +48,7 @@ end
 --! @param iEnd   end index to finish slicing to; negative values are relative
 --!               to the end of the table.
 --! @return       a table, with values copied from the requested range of `t`.
-table.slice = function(t, iStart, iEnd)
+function table.slice(t, iStart, iEnd)
 	-- allow negative end indices from end of list
 	iEnd = iEnd or -1
 	if iEnd < 0 then iEnd = (#t + 1) - iEnd end
@@ -83,10 +83,32 @@ table.push = table.insert
 --! @param[out] t   table to assing fields to.
 --! @param      ... varag list of tables to assign to `t`.
 --! @return         `t`, modified with any fields from the following args.
-table.assign = function(t, ...)
+function table.assign(t, ...)
 	for i = 1, select('#', ...) do
 		local t2 = select(i, ...)
 		for k, v in pairs(t2) do t[k] = v end
 	end
 	return t
+end
+
+function table.freeze(t)
+	local mt = table.assign({}, t)
+	-- TODO: some way to iterate values
+	function mt.__newindex()
+		error("Attemped to mutate a frozen table")
+	end
+	mt.__index = mt
+	return setmetatable({}, mt)
+end
+
+function table.map(t, f)
+	local out = {}
+	for i, v in ipairs(t) do out[i] = f(t[i]) end
+	return out
+end
+
+function table.kmap(t, f)
+	local out = {}
+	for k, v in pairs(t) do out[k] = f(t[k]) end
+	return out
 end
