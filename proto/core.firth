@@ -244,12 +244,14 @@ const: type.nil ` nil
 		dup nil = if drop 0 else string>number end
 	end
 	;
+: ?. dup nil ~= if word resolve xt?exec else word drop end ;immed
+: ?? dup nil = if drop word resolve xt?exec else word drop end ;immed
+: .__call ( mt -- xt ) ` __call @@ ;
 : executable? ( x -- b )
 	dup xt? if
 		drop true
 	else
-		Lua.getmetatable
-		dup if ` __call @@ >bool else drop false end
+		Lua.getmetatable ?. .__call >bool
 	end
 	;
 : immediate? ( word -- b )
@@ -259,8 +261,6 @@ const: type.nil ` nil
 // : variable ( name -- entry ) create dup does> NOP ;
 // : var: ( x -- ) word variable ! ;immed
 // : val: ( x -- ) word variable ! last does> @ ;immed
-: ?. dup nil ~= if word resolve xt?exec else word drop end ;immed
-: ?? dup nil = if drop word resolve xt?exec else word drop end ;immed
 
 // strings and i/o
 const: \r char \r
