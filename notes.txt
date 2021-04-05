@@ -1,6 +1,10 @@
 Ideas / TODOs
 -------------
 proto branch tasks
+	NEXT: decompose / make parse-interpret-compile loop more extensible
+		need this for locals, loop counters, etc.
+		will be necessary for more structured DSLs and extended literals
+	THEN: proper guarded defer, locals
 	loops, conditional, blocks
 	`defer word` and `defer{ word word word }`
 		needs to be immediate to collect the words that follow

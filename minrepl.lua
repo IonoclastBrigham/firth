@@ -21,7 +21,7 @@ local table = table
 
 local stringio = require "firth.stringio"
 local firth = require "proto.bootstrap"
-local runstring, runfile, dictionary = firth.runstring, firth.runfile, firth.dictionary
+local dictionary = firth.dictionary
 
 
 local function REPL(running, ...)
@@ -42,16 +42,16 @@ local function REPL(running, ...)
         dictionary.bye(...)
     end
 
-    return REPL(pcall(runstring, line, ...))
+    return REPL(pcall(firth.runstring, line, ...))
 end
 
 if select("#", ...) > 0 then
-    runfile("firth/cli.firth")
+    firth.runfile("firth/cli.firth")
     local src = table.concat({...}, " ")
-    REPL(runstring(src.." DOREPL not if printstack end DOREPL"))
+    REPL(firth.runstring(src.." DOREPL not if printstack end DOREPL"))
 else
-    runstring [[
-        false ` showstack !
+    firth [[
+        false =: showstack
         : ?printstack showstack if printstack end ;
     ]]
     dictionary.banner()

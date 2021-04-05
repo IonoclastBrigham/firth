@@ -84,28 +84,34 @@ contexts:
         - include: main
 
   word-consumers:
-    # not including strings, comments, or colon-defs
+    # not including strings, comments, variable declarations, or colon-defs
     - meta_include_prototype: false
-    - match: (?<={{stdelim}})(postpone|#!|'|const:|alias:)\s+(\S+)
+    - match: (?<={{stdelim}})(postpone|#!|'|alias:)\s+(\S+)
       captures:
         1: keyword.firth
         2: entity.name.function.firth
 
   stack-manip:
-    - match: (?<={{stdelim}})([23]?dup|[23]?drop|nip|over|clear|swap|-?rot|pivot|pick|roll|shove|yank|chop|height|C>|>C)(?={{endelim}})
+    - match: (?<={{stdelim}})([23]?dup|[23]?drop|nip|over|clear|swap|-?rot|pivot|pick|roll|shove|yank|chop|height|C>|>C|Cswap)(?={{endelim}})
       scope: keyword.control.firth
 
   stack-values:
     - match: (?<={{stdelim}})\[\](?={{endelim}})
       scope: variable.other.stack.firth
-    - match: (?<={{stdelim}})\[\](@|>|clear)(?={{endelim}})
+    - match: (?<={{stdelim}})\[\](@|>|swap|clear)(?={{endelim}})
       scope: keyword.operator.stack.firth
     - match: (?<={{stdelim}})>\[\](?={{endelim}})
       scope: keyword.operator.stack.firth
 
   storage:
-    - match: (@@?|!!?)
+    - match: (?<={{stdelim}})(@@?)(?={{endelim}})
       scope: keyword.operator.accessor.firth
+    - match: (?<={{stdelim}})(=:?|va[lr]:|const:|delete)\s(\S+)(?={{endelim}})
+      captures:
+        1: keyword.operator.assign.firth
+        2: entity.name.variable.firth
+    - match: (?<={{stdelim}})(\?[?.])(?={{endelim}})
+      scope: keyword.operator.optional-chaining.firth
 
   escapes:
     - match: ({{escapechar}})

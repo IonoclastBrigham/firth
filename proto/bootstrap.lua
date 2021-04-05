@@ -797,7 +797,7 @@ dictionary['[]@'] = function(stk, ...)
 	return stk:top(), ...
 end
 
--- ( [x] -- x )( stk: [] )
+-- ( [x] -- x )
 dictionary['[]>'] = function(stk, ...)
 	return stk:pop(), ...
 end
@@ -806,6 +806,12 @@ end
 dictionary['>[]'] = function(stk, x, ...)
 	stk:push(x)
 	return stk, ...
+end
+
+-- ( [] -- )(stk: x y -- y x)
+dictionary['[]swap'] = function(stk, ...)
+	stk:swap()
+	return ...
 end
 
 -- ( [*] -- [] )
@@ -979,8 +985,15 @@ cclearstate(false)
 runfile "proto/core.firth"
 
 -- Export
-return {
+local firth = {
 	runstring = runstring,
 	runfile = runfile,
 	dictionary = dictionary
 }
+
+return setmetatable(firth, {
+	__call = function(dict, str, ...)
+		return runstring(str, ...)
+	end,
+	__index = firth
+})

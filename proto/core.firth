@@ -75,7 +75,8 @@ char : create compile
 : "" ( -- s ) ` (.-)"" parsematch trim cpush ;immed
 : clips ( s -- s' ) 2 -2 Lua.string.sub ;
 : eachword ( * s xt -- *) ; TODO: parse words from string and hand to xt
-: .. (EX: s1 s2 -- s1..s2) " .." cbinop ;immed
+: .. (EX: s1 s2 -- s1..s2) " .." cbinop ;immed // string concat
+: peekch tok_stream parse_pos dup Lua.string.sub ;
 
 // some basic arithmetic operators
 : + (EX: a b -- a+b ) char + cbinop ;immed
@@ -86,6 +87,7 @@ char : create compile
 : ** (EX: a b -- a^b ) char ^ cbinop ;immed // use ** because ^ is bit-wise xor
 
 : 1+ ( n -- n' ) 1 + ;
+: 1- ( n -- n' ) 1 - ;
 
 : cpushvar ( name -- )(CB: push(dict[name])) cpush ' lookup ccall ;
 : cstorevar ( name -- )(CB: dict[name]=x)
@@ -100,7 +102,7 @@ char : create compile
 // some basic boolean operators
 : > ( a b -- a>b ) char > cbinop ;immed
 : < ( a b -- a<b ) char < cbinop ;immed
-: = ( a b -- a==b ) " ==" cbinop ;immed
+: == ( a b -- a==b ) " ==" cbinop ;immed
 : >= ( a b -- a>=b ) " >=" cbinop ;immed
 : <= ( a b -- a<=b ) " <=" cbinop ;immed
 : ~= ( a b -- a!=b ) " ~=" cbinop ;immed
@@ -110,12 +112,6 @@ char : create compile
 : ^^ ( a b -- aXORb ) postpone 2not postpone ~= ;immed
 : ~&& ( a b -- !a&&b ) postpone and not ;immed
 : ~|| ( a b -- !a||b ) postpone or not ;immed
-
-// compile stack
-: C@ ( -- x )(C: x -- x ) cstack []@ ;
-: C> ( -- x )(C: x -- ) cstack []> ;
-: >C ( x -- )(C: -- x ) cstack >[] drop ;
-: Cclear (--)(C: * -- ) cstack []clear ;
 
 // Lambdas, functions, etc.
 0 dictionary ` __firth_lambdaID !! drop
@@ -141,11 +137,23 @@ char : create compile
 	" return lua, ..." .. fmt
 	Lua.loadstring execute cpush
 	;immed
+
+// tables, arrays
+: {} ( -- {} ) lua{ return {}, ... } ;
+: # ( s|t -- n ) lua{ return #(...), select(2, ...) } ;
+
+// auxiliary stacks
+: C@ ( -- x )(C: x -- x ) cstack []@ ;
+: C> ( -- x )(C: x -- ) cstack []> ;
+: >C ( x -- )(C: -- x ) cstack >[] drop ;
+: Cswap (--)(C: x y - y x ) cstack []swap ;
+: Cclear (--)(C: * -- ) cstack []clear ;
+
 : R@ ( -- x )(C: x -- x ) rstack []@ ;
 : Rclear (--)(C: * -- ) rstack []clear ;
-// : R?> rstack # 0 > if R> else nil end ;
-// : R# rstack # ;
-// : R#? R# 0 > ;
+: R?> rstack # 0 > if R> else nil end ;
+: R# rstack # ;
+: R#? R# 0 > ;
 
 // error handling
 : throw ( x -- ) 2 Lua.error ;
@@ -173,41 +181,25 @@ char : create compile
 : ?throw
 	cendblock ( -- cleanupthread)
 	C>        ( -- cleanupthread msg)
-	postpone if ( b -- )
-		swap ccall          // compile call to cleanup thread
-		cpush ' throw ccall // compile push message and call to throw
+	' not ccall postpone if ( b -- )
+		swap ccall                      // compile call to cleanup thread
+		cpush ' fmt ccall ' throw ccall // compile push message and call to throw
 	postpone end
 	;immed
-
-: {} ( -- {} ) lua{ return {}, ... } ;
-: # ( s|t -- n ) lua{ return #(...), select(2, ...) } ;
 
 // some higher level stack manipulations
 : nip ( a b -- b ) swap drop ;
 : 2dup ( a b -- a b a b ) over over ;
 : 3dup ( a b c -- a b c a b c ) 2 pick 2 pick 2 pick ;
-// : ndup ( n*x n -- 2n*x ) dup loops dup pick swap end drop ;
+: ndup ( n*x n -- 2n*x ) dup loops dup pick swap end drop ;
 : 2drop ( a b -- ) drop drop ;
 : 3drop ( a b c -- ) drop drop drop ;
-// : ndrop ( n*x n -- ) loops drop end ;
+: ndrop ( n*x n -- ) loops drop end ;
 : ?drop ( x b -- x? ) if drop end ;
 
 // a few parser/interpreter/compiler control words
-(
-: ?deferred ( entry -- )
-	` name @@ dup
-	create compile // create and start compiling overriding def
-		` compiling cpush `lookup ccall postpone if
-			lookup ccall // encode a call to original word
-		postpone else
-			xt execute // exec compiling word, so it can compile to new def
-		postpone end
-	postpone ;immed
-	;
-: ;defer   postpone interpret buildfunc dup bindfunc ?deferred ;immed
-)
 : xt ( {word} -- xt ) ` xt @@ ;
-: xt? ( x -- b ) Lua.type ` function = ;
+: xt? ( x -- b ) Lua.type ` function == ;
 : xt?exec ( * x -- * ) dup xt? if execute end ;
 : immediate ( xt|entry -- )
 	// redefining to allow making raw XTs immediate i.e. lambdas
@@ -218,7 +210,17 @@ char : create compile
 : #! ( * -- * )(TS: word) word lookup execute ;immed
 
 // values and variables
-: ! ( x name -- ) dictionary swap !! drop ;
+: store ( x name -- ) dictionary swap !! drop ;
+: =: ( x -- )(TS: name)
+	word dup lookup nil == assert" Variable redefinition: %s" ?throw
+	cpush ' store ccall
+	;immed
+: ! ( x name -- )
+	dup lookup nil ~= assert" Attempting to modify undefined variable %s" ?throw
+	store
+	;
+: = ( x -- )(TS: name ) word cpush ' ! ccall ;immed
+: delete (--)(TS: name) nil cpush word cpush ' ! ccall ;immed
 : const ( x name -- )
 	TODO: implement as a closure
 	create compile
@@ -227,7 +229,7 @@ char : create compile
 	TODO: guard against re-binding `name`?
 	;
 : const: (--)(TS: word x ) 2word resolve xt?exec swap cpush const ;immed
-: alias: (--)(TS: new old ) 2word lookup swap ! ;immed
+: alias: (--)(TS: new old ) 2word lookup swap store ;immed
 alias: type Lua.type
 const: type.xt ` function
 const: type.number ` number
@@ -238,20 +240,20 @@ const: type.nil ` nil
 : >string ( x -- s ) Lua.tostring ;
 : >bool ( x -- b ) not not ;
 : >number ( x -- n )
-	dup type type.boolean = if
+	dup type type.boolean == if
 		1 && 0 ||
 	else
-		dup nil = if drop 0 else string>number end
+		dup nil == if drop 0 else string>number end
 	end
 	;
 : ?. dup nil ~= if word resolve xt?exec else word drop end ;immed
-: ?? dup nil = if drop word resolve xt?exec else word drop end ;immed
-: .__call ( mt -- xt ) ` __call @@ ;
+: ?? dup nil == if drop word resolve xt?exec else word drop end ;immed
+: __call@@ ( mt -- xt ) ` __call @@ ;
 : executable? ( x -- b )
 	dup xt? if
 		drop true
 	else
-		Lua.getmetatable ?. .__call >bool
+		Lua.getmetatable ?. __call@@ >bool
 	end
 	;
 : immediate? ( word -- b )
@@ -324,7 +326,7 @@ alias: mod %
 alias: pow **
 : /% ( n1 n2 -- floor(n1/n2) n1%n2) 2dup / floor -rot % ;
 : percent ( n p -- n*(p/100) ) 100 / * ; // e.g. `200 25 percent` => 50
-: isnan? ( n -- b ) dup = not ; // nan ≠ nan
+: isnan? ( n -- b ) dup == not ; // nan ≠ nan
 : sign ( n -- -1|0|1|nan )
 	dup 0 > 1   ( -- n b 1 )       && // collapse
 	over 0 < -1 ( -- n 1|#f b -1 ) && // collapse
@@ -333,7 +335,7 @@ alias: pow **
 
 alias: greater? >
 alias: less? <
-alias: equal? =
+alias: eq? ==
 alias: greatereq? >=
 alias: lesseq? <=
 alias: noteq? ~=
@@ -363,7 +365,6 @@ alias: exit Lua.os.exit
 		` Copyright cpush ' . ccall parseline trim cpush ' . ccall ' .2CR ccall
 		buildfunc dup bindfunc
 	xt ccall
-	false immediates ` Copyright !! drop
 	;immed
 " LICENSE.firth" runfile
 alias: © Copyright
