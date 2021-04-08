@@ -4,6 +4,13 @@ proto branch tasks
 	NEXT: decompose / make parse-interpret-compile loop more extensible
 		need this for locals, loop counters, etc.
 		will be necessary for more structured DSLs and extended literals
+		stack of parse/lookup xts, execute top-down, so user overrides are first
+		push a "lookup word in this table" func => BOOM, VOCABULARIES!
+		also value-handler words, to validate or transform found value?
+			extend firthy execute-or-push-raw-val semantics
+			arrays/structs with data + a __call metamathod -> BOOM, FORTHY VARS!
+			interpret: sentinel value for "declared but uninitialized" vars -> throw
+			could detect e.g. a coroutine or channel and automatically pump it
 	THEN: proper guarded defer, locals
 	loops, conditional, blocks
 	`defer word` and `defer{ word word word }`
