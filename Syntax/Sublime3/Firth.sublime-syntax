@@ -3,7 +3,7 @@
 # https://www.sublimetext.com/docs/3/syntax.html
 # https://github.com/IonoclastBrigham/firth
 name: :Firth
-file_extensions: [firth, flurth]
+file_extensions: [firth]
 scope: source.firth
 
 variables:
@@ -24,6 +24,7 @@ contexts:
     - include: comments
     - include: scalars
     - include: storage
+    - include: control-flow
     - include: fallback-words
 
   comments:
@@ -168,6 +169,40 @@ contexts:
     # refs
     - match: (?<={{stdelim}})nil(?={{endelim}})
       scope: constant.language.nil.firth
+
+  control-flow:
+    - match: (?<={{stdelim}})if(?={{endelim}})
+      scope: keyword.control.conditional.firth
+      push:
+        - meta_scope: meta.block.control.firth
+        - match: (?=else)
+          pop: true
+        - include: main
+    - match: (?<={{stdelim}})else(?={{endelim}})
+      scope: keyword.control.conditional.firth
+      push:
+        - meta_scope: meta.block.control.firth
+        - include: main
+    - match: (?<={{stdelim}})for|forever|while|each|eachstack|mapstack(?={{endelim}})
+      scope: keyword.control.loop.firth
+      push:
+        - meta_scope: meta.block.control.firth
+        - include: main
+    - match: (?<={{stdelim}})try(?={{endelim}})
+      scope: keyword.control.trycatch.firth
+      push:
+        - meta_scope: meta.block.control.firth
+        - match: (?=catch)
+          pop: true
+        - include: main
+    - match: (?<={{stdelim}})catch(?={{endelim}})
+      scope: keyword.control.loop.firth
+      push:
+        - meta_scope: meta.block.control.firth
+        - include: main
+    - match: (?<={{stdelim}})end(?={{endelim}})
+      scope: keyword.control.end.firth
+      pop: true
 
   fallback-words:
     - match: (?<={{stdelim}})\S+(?={{endelim}})
