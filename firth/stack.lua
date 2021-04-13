@@ -16,6 +16,8 @@
 
 
 --! @cond
+local rawget, rawset = rawget, rawset
+local select = select
 local table = table
 
 local stringio = require "firth.stringio"
@@ -28,7 +30,7 @@ local stack = {
 
 -- throw if stack is too short for operation
 local function assertsize(st, min, msg)
-	assert(min <= rawget(st, "height"), msg)
+	return assert(min <= rawget(st, "height"), msg)
 end
 --! @endcond
 
@@ -166,12 +168,12 @@ end
 
 -- TODO: replace with standard `__ipairs`?
 function stack:__itr()
-	return function(height, current)
-				if current < height then
-					current = current + 1
-					return current, self[current]
-				end
-			end, self.height, 0
+	return function(_, current)
+		current = current - 1
+		if current > 0 then
+			return current, rawget(self, current)
+		end
+	end, nil, self.height + 1
 end
 
 function stack:__len()

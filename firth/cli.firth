@@ -20,6 +20,6 @@ alias: --version -v
 : -f (--)(TS: path) word runfile ;
 alias: --file -f
 
-false ` DOREPL !
+false =: DOREPL
 : -i (--) true ` DOREPL ! ;
 alias: --interactive -i

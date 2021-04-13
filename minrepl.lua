@@ -24,25 +24,26 @@ local firth = require "proto.bootstrap"
 local dictionary = firth.dictionary
 
 
-local function REPL(running, ...)
-    if not running then
-        dictionary.printstack(...)
-        dictionary.exit(1, ...)
-    end
-
+local function REPL(clean, ...)
     -- print stack from previous line
     dictionary['?printstack'](...)
 
-    -- prompt and read input
-    stringio.print(dictionary.compiling and '      ' or 'ok> ')
+    -- error output / prompt
+    firth([[
+        if ." ok" else fmt" %s\n" .err end
+        ` ➤ .
+    ]], clean, ...)
+    if dictionary.compiling then stringio.print('      ') end
+
+    -- read input
     local line = stringio.readline()
     if line == nil then
         -- nil => EOF => CTRL+D
         stringio.print("bye")
-        dictionary.bye(...)
+        dictionary.bye(select(clean and 1 or 2, ...))
     end
 
-    return REPL(pcall(firth.runstring, line, ...))
+    return REPL(pcall(firth.runstring, line, select(clean and 1 or 2, ...)))
 end
 
 if select("#", ...) > 0 then

@@ -71,7 +71,7 @@ char : create compile
 : (EX: 3 backtrack postpone ( ;immed // execution effects for compiling words
 : (--)(EX: postpone (EX: ;immed
 : TODO: (TS: .*\n) postpone // ;immed  TODO: add to list with file/line/word?
-: ' ( -- xt )  (TS: word ) word lookup cpush ;immed
+: ' ( -- xt )  (TS: word ) word find cpush ;immed
 : "" ( -- s ) ` (.-)"" parsematch trim cpush ;immed
 : clips ( s -- s' ) 2 -2 Lua.string.sub ;
 : eachword ( * s xt -- *) ; TODO: parse words from string and hand to xt
@@ -89,7 +89,7 @@ char : create compile
 : 1+ ( n -- n' ) 1 + ;
 : 1- ( n -- n' ) 1 - ;
 
-: cpushvar ( name -- )(CB: push(dict[name])) cpush ' lookup ccall ;
+: cpushvar ( name -- )(CB: push(dict[name])) cpush ' find ccall ;
 : cstorevar ( name -- )(CB: dict[name]=x)
 	cpush dictionary cpush ' swap ccall (EX: x -- x dict name)
 	' !! ccall ' drop ccall
@@ -207,16 +207,16 @@ char : create compile
 	immediates true pivot !! drop
 	;
 : 2word ( -- s1 s2 )(TS: word word ) word word ;
-: #! ( * -- * )(TS: word) word lookup execute ;immed
+: #! ( * -- * )(TS: word) word find execute ;immed
 
 // values and variables
 : store ( x name -- ) dictionary swap !! drop ;
 : =: ( x -- )(TS: name)
-	word dup lookup nil == assert" Variable redefinition: %s" ?throw
+	word dup find nil == assert" Variable redefinition: %s" ?throw
 	cpush ' store ccall
 	;immed
 : ! ( x name -- )
-	dup lookup nil ~= assert" Attempting to modify undefined variable %s" ?throw
+	dup find nil ~= assert" Attempting to modify undefined variable %s" ?throw
 	store
 	;
 : = ( x -- )(TS: name ) word cpush ' ! ccall ;immed
@@ -229,7 +229,7 @@ char : create compile
 	TODO: guard against re-binding `name`?
 	;
 : const: (--)(TS: word x ) 2word resolve xt?exec swap cpush const ;immed
-: alias: (--)(TS: new old ) 2word lookup swap store ;immed
+: alias: (--)(TS: new old ) 2word find swap store ;immed
 alias: type Lua.type
 const: type.xt ` function
 const: type.number ` number
@@ -257,7 +257,7 @@ const: type.nil ` nil
 	end
 	;
 : immediate? ( word -- b )
-	dup executable? not if lookup end
+	dup executable? not if find end
 	immediates swap @@ >bool // will be nil if not immediate, so cast to bool
 	;
 // : variable ( name -- entry ) create dup does> NOP ;
@@ -282,6 +282,7 @@ const: iostack []
 : ." ( -- )(TS: "s") postpone " ' . ccall ;immed
 : .fmt ( * s -- s' ) fmt .raw ;
 : .fmt" ( * -- )(TS: "s") postpone " ' .fmt ccall ;immed
+: fmt" ( * -- )(TS: "s") postpone " ' fmt ccall ;immed
 : .err ( s -- ) STDERR pushoutput . popoutput ;
 : .err" (--)(TS: "s") postpone " ' .err ccall ;immed
 : .CR (--) \n .raw ;
@@ -298,7 +299,7 @@ const: iostack []
 : printstack ( * -- ) .fmt" \n<==[ " .S .char ] .CR ;
 : see ( word -- )
 	dup meta over @@ ( -- word entry? )
-	dup if nip else drop meta swap lookup @@ end ( -- entry? )
+	dup if nip else drop meta swap find @@ end ( -- entry? )
 	dup not if
 		drop false lookup_err
 	else

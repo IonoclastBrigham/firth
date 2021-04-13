@@ -78,6 +78,7 @@ fli.inject(dictionary, fli) -- do we want to do this ???
 
 -- global parser / interpreter / compiler state
 intptr_running = false
+parserules = stack.new()
 cstack = stack.new()
 rstack = stack.new()
 local rmt = table.assign({}, getmetatable(rstack))
@@ -139,16 +140,29 @@ end
 
 local frozen_stack = {} -- for error reporting
 
-function xperrhandler(msg)
+function recover(...)
+	local stk = frozen_stack
+	frozen_stack = nil
+	return unpack(stk)
+end
+
+function errhandler(success, ...)
+	if success then return ... end
+
+	local msg = (...)
+	stringio.output(stringio.stderr())
 	stringio.printline(("ERROR: %s"):format(msg))
 	stringio.printline(("while running %s:%d"):format(current_infile, line_num))
-	local stackstring = '[ '..prepstack(unpack(frozen_stack))..']'
+	-- local stackstring = '[ '..prepstack(unpack(frozen_stack))..']'
+	local stackstring = '[ '..prepstack(select(2, ...))..']'
 	stringio.printline('stack : '..stackstring)
 	stringio.printline('cstack: '..tostring(cstack))
 	stringio.printline('rstack: '..tostring(rstack))
 	stringio.printline(stacktrace(3))
+	stringio.output(stringio.stdout())
 
-	return cclearstate(false, unpack(frozen_stack))
+	-- return cclearstate(false, recover())
+	return cclearstate(false)
 end
 
 -- ( n -- s )
@@ -162,6 +176,7 @@ local function runtime_err(name, msg, level, ...)
 	frozen_stack = {...}
 	error(("in %s: %s"):format(name, msg), level or 2)
 end
+dictionary['runtime_err'] = fli.wrapfunc(runtime_err, 3, 0)
 
 local function sortmatches(buckets, tok)
 	local result = {}
@@ -267,19 +282,19 @@ function defined(name, ...)
 end
 
 -- ( word -- x )
-function lookup(word, ...)
+function find(word, ...)
 	return dictionary[word], ...
 end
 
 -- ( word -- x )
 function resolve(word, ...)
-	if defined(word) then return lookup(word, ...) end
+	-- TODO: move the rule stack loop here and call from _interpret_r
+	if defined(word) then return find(word, ...) end
 
 	local val = stringio.tonumber(word) or stringio.toboolean(word)
 	if val ~= nil or word == "nil" then return val, ... end
 
-	-- error; use xpcall, so we get the stacktrace
-	xpcall(lookup_err, xperrhandler, word, true, ...)
+	lookup_err(word, true, ...)
 end
 
 --! ( -- c ) ( TS: c ) ;immed
@@ -323,6 +338,7 @@ end
 
 --! ( pattern -- tok )
 function parsematch(pattern, ...)
+	-- TODO: seems redundant to pcall and then assert??
 	local success, word, endpos = pcall(stringio.matchtoken, tok_stream, pattern, parse_pos)
 	assert(success, word)
 	parse_pos = endpos
@@ -777,12 +793,14 @@ dictionary['break'] = function(...)
 end
 immediates[dictionary['break']] = true
 
+-- ( *x -- *x' )
 function mapstack(f, ...)
 	if height(...) == 0 then return end
 
 	return f((...)), mapstack(f, select(2, ...))
 end
 
+-- ( * -- )
 function eachstack(f, ...)
 	if height(...) == 0 then return end
 
@@ -847,61 +865,89 @@ end
 
 -- Token Stream Interpreter ----------------------------------------------------
 
+-- fallback rule; error
+parserules:push(function(word, ...)
+	lookup_err(word, true, ...)
+	-- NO RETURN
+end)
+
+-- try to parse it as a literal value
+parserules:push(function(word, ...)
+	return word == "nil" and "literal", nil, ...
+end)
+parserules:push(function(word, ...)
+	local val = stringio.toboolean(word)
+	if val ~= nil then debug("PARSED BOOLEAN %s", val) end
+	return val ~= nil and "literal", val, ...
+end)
+parserules:push(function(word, ...)
+	local val = stringio.tonumber(word)
+	return val ~= nil and "literal", val, ...
+end)
+
+parserules:push(function(word, ...)
+	if not defined(word) then return false, word, ... end
+
+	local found = find(word)
+	return found ~= nil, found
+end)
+
 -- ( * -- * ) ( TS: tok... )
 -- TODO: make this as minimal as possible, and replace with firth impl?
 --! @private
 local function _interpret_r(...)
+	-- bail if we're done
 	if not intptr_running or parse_pos > #tok_stream then
 		if cstack.height > 0 then popparsestate() end -- may have been cleared in error handler
 		return ...
 	end
 
-	if tok_stream:sub(parse_pos, parse_pos):match("%s") then
+	-- count any leading newlines
+	if tok_stream[parse_pos]:match("%s") then
 		local space = parsematch('^%s+')
 		local oldline = line_num
 		countlines(space)
 		if line_num > oldline then debug("---Line %d---", line_num) end
 	end
+
+	-- parse out the next word
 	local word = parse('%s')
 	if not nonempty(word) then
 		popparsestate()
 		return ...
 	end
+	if compiling then srcappend(word) end
 
-	-- try dictionary lookup
+	-- loop through parse rules here
 	debug("RESOLVING INPUT WORD '%s'", word)
-	if defined(word) then
-		if compiling then srcappend(word) end
-		local found = lookup(word)
-		if type(found) == "function" then
-			if not compiling or immediates[found] then
-				debug("EXECUTING %s", word)
-				-- pass through drop because xpcall returns an boolean flag,
-				-- already handled elsewhere
-				return _interpret_r(drop(xpcall(execute, xperrhandler, found, ...)))
-			end
-			debug("COMPILING CALL TO %s", word)
-			return _interpret_r(ccall(word, ...)) -- pass `found` instead to static-link
-		end
-
-		if compiling then
-			debug("COMPILING PUSH %s", word)
-			return _interpret_r(ccall(lookup, cpush(word, ...)))
-		end
-		debug("PUSHING %s", word)
-		return _interpret_r(found, ...)
+	local success, found
+	for _, rule in parserules:__itr() do
+		success, found = rule(word)
+		if success then break end
 	end
 
-	-- try to parse it as a literal value
-	local val = stringio.tonumber(word) or stringio.toboolean(word)
-	if val ~= nil or word == 'nil' then
-		if compiling then srcappend(word) end
-		return _interpret_r(cpush(val, ...))
+	-- TODO: decompose these into a stack of compile rules? --
+
+	-- interpret/compile?
+	if type(found) == "function" then
+		if not compiling or immediates[found] then
+			debug("EXECUTING %s", word)
+			return _interpret_r(errhandler(pcall(execute, found, ...)))
+		end
+		debug("COMPILING CALL TO %s", word)
+		return _interpret_r(ccall(found, ...)) -- pass `word` instead to dynamic-link
 	end
 
-	-- error; use xpcall, so we get the stacktrace
-	xpcall(lookup_err, xperrhandler, word, true, ...)
-	return ...
+	-- push
+	debug("PUSHING (%s): %s", success, found)
+	if success == "literal" then
+		return _interpret_r(cpush(found, ...))
+	elseif compiling then
+		debug("COMPILING PUSH %s (%s)", word, found)
+		return _interpret_r(ccall(find, cpush(word, ...)))
+	end
+	debug("PUSHING %s", word)
+	return _interpret_r(found, ...)
 end
 
 -- ( s -- * )
