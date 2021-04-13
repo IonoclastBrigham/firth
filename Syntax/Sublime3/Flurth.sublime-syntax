@@ -1,0 +1,28 @@
+%YAML 1.2
+---
+# https://www.sublimetext.com/docs/3/syntax.html
+# https://github.com/IonoclastBrigham/firth
+name: Flurth
+file_extensions: [flurth]
+scope: source.lua
+
+contexts:
+  main:
+    # operate as Lua by default
+    - match: ""
+      push: Packages/Lua/Lua.sublime-syntax
+      with_prototype:
+        - match: (firth)([( ]?)(?=\[\[)
+          captures:
+            1: variable.function.lua
+            2: punctuation.section.group.begin.lua
+          push: firth
+
+  firth:
+    - match: (?=\]\])
+      pop: true
+    - match: ""
+      push: Packages/Firth/Firth.sublime-syntax
+      with_prototype:
+        - match: (?=\]\])
+          pop: true
