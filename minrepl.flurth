@@ -42,14 +42,13 @@ local function REPL(clean, ...)
         stringio.print("bye")
         dictionary.bye(select(clean and 1 or 2, ...))
     end
-
     return REPL(pcall(firth.runstring, line, select(clean and 1 or 2, ...)))
 end
 
 if select("#", ...) > 0 then
     firth.runfile("firth/cli.firth")
     local src = table.concat({...}, " ")
-    REPL(firth.runstring(src.." DOREPL not if printstack end DOREPL"))
+    REPL(firth.runstring(src.." DOREPL not if printstack 0 exit end DOREPL"))
 else
     firth [[
         false =: showstack

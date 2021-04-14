@@ -12,14 +12,16 @@ contexts:
     - match: ""
       push: Packages/Lua/Lua.sublime-syntax
       with_prototype:
-        - match: (firth)([( ]?)(?=\[\[)
+        - match: (firth)([( ]?)(\[\[)
           captures:
             1: variable.function.lua
             2: punctuation.section.group.begin.lua
+            3: punctuation.definition.string.begin.lua
           push: firth
 
   firth:
-    - match: (?=\]\])
+    - match: \]\]
+      scope: punctuation.definition.string.end.lua
       pop: true
     - match: ""
       push: Packages/Firth/Firth.sublime-syntax
