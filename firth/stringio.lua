@@ -130,14 +130,15 @@ end
 
 --! Tries to convert a string into a number.
 --!
--- <p>This function attempts to parse a string as a numeric value, and convert
+--! <p>This function attempts to parse a string as a numeric literal, and convert
 --! it to the corresponding number. Surrounding whitespace is ignored, but any
 --! other non-contiguous or invalid characters mean this string is not a number.
 --! </p>
 --!
 --! <p>If the argument is not of type string or number, it will attempt to first
 --! convert it to a string, and then convert that to a number. If that fails,
---! the result is \c nil.</p>
+--! the result is \c nil. If a \c number is passed in, it will be returned
+--! unmodified.</p>
 --!
 --! <p>Some examples of valid numeric strings:</p>
 --! <ul>
@@ -161,7 +162,9 @@ end
 --! </ul>
 --!
 --! @param val a token string to convert.
---! @return the parsed numeric value of \c val, or \c nil.
+--! @return    the parsed numeric value of \c val, or \c nil.
+--!
+--! @see https://www.lua.org/manual/5.1/manual.html#pdf-tonumber
 function stringio.tonumber(val)
 	if type(val) == "number" then return val end
 	if type(val) == "string" then

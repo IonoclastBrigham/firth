@@ -26,18 +26,26 @@ local type = type
 
 ---------------- strings ----------------
 
---! Makes strings indexible like an immutable array of characters.
+--! Metamethod to make strings indexible like an immutable array of characters.
+--!
+--! <p>Example usage:</p>
+--! ```Lua
+--! local foo = "12345*7890"
+--! if foo[6] ~= '*' then print "Asterisk NOT found!" end
+--! ```
 --!
 --! @param s   target string.
 --! @param idx index or key to look up.
 --! @return    substring containing char at `idx`,
 --!            requested metatable entry,
 --!            or `nil` if `idx` isn't in-range/found.
---! @see       string.sub
-getmetatable("").__index = function(s, idx)
+--! @see       https://www.lua.org/manual/5.1/manual.html#pdf-string.sub
+--! @see       https://www.lua.org/manual/5.1/manual.html#2.8
+local function string__index(s, idx)
 	if type(idx) == "number" then return string.sub(s, idx, idx) end
 	return string[idx]
 end
+getmetatable("").__index = string_index
 
 ---------------- tables ----------------
 
