@@ -852,7 +852,7 @@ end
 dictionary['!!'] = function(k, t, x, ...)
 	debug("%s[%s] = %s", t, quote(k), quote(x))
 	t[k] = x
-	return t, ...
+	return ...
 end
 
 -- Token Stream Interpreter ----------------------------------------------------

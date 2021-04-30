@@ -4,7 +4,7 @@ char : create compile
 	char %s parse create compile
 	interpret buildfunc bindfunc
 : immediate
-	compile_target.XT @@ immediates true pivot !! drop
+	compile_target.XT @@ immediates true pivot !!
 	interpret buildfunc bindfunc
 : %s
 	char %s cpush
@@ -92,7 +92,7 @@ char : create compile
 : cpushvar ( name -- )(CB: push(dict[name])) cpush ' find ccall ;
 : cstorevar ( name -- )(CB: dict[name]=x)
 	cpush dictionary cpush ' swap ccall (EX: x -- x dict name)
-	' !! ccall ' drop ccall
+	' !! ccall
 	;
 : ++ (EX: -- n+1 )(TS: nvar )
 	word dup cpushvar ' 1+ ccall ( -- name )(EX: -- n+1 )
@@ -110,12 +110,12 @@ char : create compile
 : && ( a b -- a&&b ) " and" cbinop ;immed
 : || ( a b -- a||b ) " or" cbinop ;immed
 : ^^ ( a b -- aXORb ) postpone 2not postpone ~= ;immed
-: ~&& ( a b -- !a&&b ) postpone and not ;immed
-: ~|| ( a b -- !a||b ) postpone or not ;immed
+: ~&& ( a b -- !a&&b ) postpone && not ;immed
+: ~|| ( a b -- !a||b ) postpone || not ;immed
 
 // Lambdas, functions, etc.
-0 dictionary ` __firth_lambdaID !! drop
-` __λ_0x%08X__ dictionary ` __firth_lambdaID_fmt !! drop
+0 dictionary ` __firth_lambdaID !!
+` __λ_0x%08X__ dictionary ` __firth_lambdaID_fmt !!
 : nextλID ( -- s ) ++ __firth_lambdaID __firth_lambdaID_fmt fmt ;
 : :( (--) nextλID create compile ;immed
 : ); ( -- xt ) buildfunc ` xt @@ cpush ;immed
@@ -204,13 +204,13 @@ char : create compile
 : immediate ( xt|entry -- )
 	// redefining to allow making raw XTs immediate i.e. lambdas
 	dup xt? not if compile_target.XT @@ end
-	immediates true pivot !! drop
+	immediates true pivot !!
 	;
 : 2word ( -- s1 s2 )(TS: word word ) word word ;
 : #! ( * -- * )(TS: word) word find execute ;immed
 
 // values and variables
-: store ( x name -- ) dictionary swap !! drop ;
+: store ( x name -- ) dictionary swap !! ;
 : =: ( x -- )(TS: name)
 	word dup find nil == assert" Variable redefinition: %s" ?throw
 	cpush ' store ccall
