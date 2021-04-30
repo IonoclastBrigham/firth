@@ -493,8 +493,8 @@ immediates[interpret] = true
 -- ( n -- )(R: * )
 function jmpcont(refheight,...)
 	if rstack.height > refheight then
-		local cont = rstack:pop()
-		return jmpcont(refheight, cont(...))
+		local __cont = rstack:pop()
+		return jmpcont(refheight, __cont(...))
 	end
 
 	return ...
@@ -504,40 +504,32 @@ local function _thread(entry)
 	local name, compilebuf = entry.name, entry.compilebuf
 	debug("BUILDING %s", name)
 	if #compilebuf == 0 then
+		-- catch NOOP definitions
 		entry.xt = function(...) return ... end
 		return
 	end
 
-	-- shared function scope
-	local rstack = rstack
-	local __initialheight
-	local __exit = compilebuf[threadcount]
-
-	-- append the end-thread return suffix
-	local thr = function(...)
-		return jmpcont(__initialheight, ...)
-	end
-
 	-- link up thread continuations
-	local threadcount = #compilebuf
-	for i = threadcount, 1, -1 do
-		local xt = compilebuf[i]
-		if getmetatable(xt) then xt = xt:compile() end
+	local __thr
+	for i = #compilebuf, 1, -1 do
+		local __xt = compilebuf[i]
+		if getmetatable(__xt) then __xt = __xt:compile() end
 
-		local __next = thr
-		if i == 1 then
-			-- special handling for thread entry point
-			thr = function(...)
-				__initialheight = rstack.height
-				return __next(xt(...))
-			end
+		if not __thr then
+			__thr = __xt
 		else
-			thr = function(...)
-				return __next(xt(...))
+			local __next = __thr
+			__thr = function(...)
+				return __next(__xt(...))
 			end
 		end
 	end
-	entry.xt = thr
+
+	-- wrap thread for stack effects (and locals??)
+	entry.xt = function(...)
+		local initialheight = rstack.height
+		return jmpcont(initialheight, __thr(...))
+	end
 end
 
 -- ( -- entry )
