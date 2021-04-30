@@ -105,7 +105,7 @@ contexts:
       scope: keyword.operator.stack.firth
 
   storage:
-    - match: (?<={{stdelim}})(@@?)(?={{endelim}})
+    - match: (?<={{stdelim}})(@@?|!!?)(?={{endelim}})
       scope: keyword.operator.accessor.firth
     - match: (?<={{stdelim}})(=:?|va[lr]:|const:|delete)\s(\S+)(?={{endelim}})
       captures:
@@ -147,6 +147,17 @@ contexts:
         - include: escapes
         - match: '""'
           scope: punctuation.definition.string.quoted.double.end.firth
+          pop: true
+    - match: (?<={{stdelim}})(assert)(")(?={{endelim}})
+      captures:
+        1: keyword.assert.firth
+        2: punctuation.definition.string.quoted.begin.firth
+      push:
+        - meta_include_prototype: false
+        - meta_scope: string.quoted.firth
+        - include: escapes
+        - match: '"'
+          scope: punctuation.definition.string.quoted.end.firth
           pop: true
 
   scalars:
