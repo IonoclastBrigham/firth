@@ -45,7 +45,7 @@ local function string__index(s, idx)
 	if type(idx) == "number" then return string.sub(s, idx, idx) end
 	return string[idx]
 end
-getmetatable("").__index = string_index
+getmetatable("").__index = string__index
 
 ---------------- tables ----------------
 
