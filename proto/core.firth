@@ -16,7 +16,7 @@ char : create compile
 	word cpush
 	interpret buildfunc dup bindfunc immediate
 : postpone
-	word ccall
+	word find ccall
 	interpret buildfunc dup bindfunc immediate
 : ;
 	buildfunc bindfunc
