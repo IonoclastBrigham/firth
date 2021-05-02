@@ -87,7 +87,7 @@ contexts:
   word-consumers:
     # not including strings, comments, variable declarations, or colon-defs
     - meta_include_prototype: false
-    - match: (?<={{stdelim}})(postpone|#!|'|alias:)\s+(\S+)
+    - match: (?<={{stdelim}})(postpone|#!|'|alias:|local:)\s+(\S+)
       captures:
         1: keyword.firth
         2: entity.name.function.firth

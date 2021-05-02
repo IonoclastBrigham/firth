@@ -221,6 +221,15 @@ char : create compile
 	;
 : = ( x -- )(TS: name ) word cpush ' ! ccall ;immed
 : delete (--)(TS: name) nil cpush word cpush ' ! ccall ;immed
+: local: ( x -- )(TS: name)
+	compiling assert" Local declared outside of a definition." ?throw
+	// add to locals list for this definition
+	true
+	compile_target compile_target.LOCALS @@
+	word !!
+	// compile code to consume stack and load into local slot
+	TODO: the thing
+	;immed
 : const ( x name -- )
 	TODO: implement as a closure
 	create compile

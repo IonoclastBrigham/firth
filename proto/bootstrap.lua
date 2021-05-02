@@ -446,17 +446,19 @@ dictionary["compile_target.NAME"] = "name"
 dictionary["compile_target.XT"] = "xt"
 dictionary["compile_target.COMPILEBUF"] = "compilebuf"
 dictionary["compile_target.SRCBUF"] = "srcbuf"
+dictionary["compile_target.LOCALS"] = "locals"
 
 -- ( entry -- )
 function compile(newtarget, ...)
 	assert(getmetatable(newtarget) == entrymt, "Invalid Compile Target")
 
-	-- TODO: EVERYTHING LIVES ON CSTACK SO LAMBDAS CAN LIVE INSIDE FUNCTIONS??
+	-- TODO: EVERYTHING LIVES ON CSTACK
 	pushcompilestate()
 	compile_target = newtarget
 	compiling = true
 	newtarget.compilebuf = {}
 	newtarget.srcbuf = {}
+	newtarget.locals = {}
 	return ...
 end
 
@@ -565,6 +567,12 @@ function cappend(xt, ...)
 	table.insert(compile_target.compilebuf, xt)
 	return ...
 end
+
+-- local localsmt = {
+-- 	compile = function(self)
+
+-- 	end
+-- }
 
 local binopmt = {
 	compile = function(self)
@@ -877,12 +885,21 @@ parserules:push(function(word, ...)
 	return val ~= nil and "literal", val, ...
 end)
 
+-- globals
 parserules:push(function(word, ...)
 	if not defined(word) then return false, word, ... end
 
 	local found = find(word)
 	return found ~= nil, found
 end)
+
+-- locals
+-- parserules:push(function(name, ...)
+-- 	if not compile_target.locals[name] then return false, name, ... end
+
+-- 	-- TODO: return the local that corresponds to name
+-- 	return true, found
+-- end)
 
 -- ( * -- * ) ( TS: tok... )
 -- TODO: make this as minimal as possible, and replace with firth impl?
