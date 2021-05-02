@@ -47,6 +47,26 @@ proto branch tasks
 		compiles subsequent args
 		';' means "write executable script to disk and exit"
 		if reaches end of shell args without ";", goes into line-edit mode
+first project: beep-dooter
+	rogue-op + firth project, prove-out and expand language, framework, integrations
+	graphically simple, some combo of turdle and imgui (replace or re-implement alacarte)
+	possible mid-leve synth primitives bound to firth
+		// good for generating/serializing output from a program
+		4 harmonics sine
+		A4 freq 1 beat sync
+		envelope 4 attack 2 decay 80 percent sustain 16 hold 10 release trigger
+		C4 freq 2 beat sync
+		envelope 4 attack 2 decay 60 percent sustain 2 hold 8 release trigger
+		C4 freq 2.5 beat sync
+		envelope 4 attack 2 decay 60 percent sustain 2 hold 8 release trigger
+		E4 freq 3 beat sync
+		envelope 4 attack 2 decay 80 percent sustain 32 hold 10 release trigger
+	something a little more turdlish for manual haxxing
+		I'm kinda envisioning actually drawing an envelope, but I'm not sure that's quite the right abstraction
+		a dynamic envelope may be right after all? Because that can be input to any aspect of a stage... amplitude, frequency, phase, etc.
+		if we think of a musical staff as a 2D plane, you could totally Turdle that
+		moving straight up or down would define a chord
+		If you changed what the positive X represented you could Turdle filters and parametric EQ
 full plugin for sublime
 	syntax
 	completion
