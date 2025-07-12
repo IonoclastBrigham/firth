@@ -1,38 +1,46 @@
 Ideas / TODOs
 -------------
 proto branch tasks
-	NEXT: proper guarded defer, locals
-		`defer word` and `defer{ word word word }`
-			needs to be immediate to collect the words that follow
-			must compile so at runtime, xt gets pushed to rstack
-			must compile so skipped branches don't push defered xt
-			needs to call function body through pcall so deferreds are always called
-			will require some additional compile state so it doesn't trigger on bolcks?
-		1 2 3 local{ x y z } // pre-counts and pulls them out as a chunk
+	deferred execution
+		defer word
+		defer{ word word word }
+		could be LATER or ONEXIT or FINALLY or whatever
+		needs to be immediate to collect the words that follow
+		must compile so at runtime, xt gets pushed to rstack
+		must compile so skipped branches don't push defered xt
+		needs to call function body through pcall so deferreds are always called
+		do we want to trigger on exiting blocks?
+			this is the golang model: DEFER in an IF triggers on leaving then block
+			is reasonable if it's understood to be the rule
+			but zig model is powerful: choose func cleanup based on condition
+			will require some additional compile state
+				mark compiling functions as branch-or-block vs proper func?
+				don't exec until outer word returns
 	using the parserules stack
 		locals, loop counters, etc.
 		possibilities for more structured DSLs and extended literals
 		push a "lookup word in this table" func => BOOM, VOCABULARIES!
-	expand, refine loops
-	figure out elseif and some kinda multi-cond
+	expand/refine loops, conditionals, and matching
+		figure out elseif and some kinda multi-cond
 	guard
 		can we make guard work without early-exit flow?
 		is this really helpful?
 		usecase:
-			Lua.getmetatable guard RETURN end // how does return work?
-			` __call @@ execute
+			: invoke ( t -- * )
+				Lua.getmetatable guard RETURN end // how does return work?
+				` __call @@ execute ;
 	replace ;defer with ;inline ..?
 		The point of it was to make compiling words that work in interpret mode
 		inlining will attack from the opposite direction;
 			write as if interpreted-only
 			but when compiling just appends its thread list
-	minimal testing words, run as port of compilation of module
-	vocabs.firth
+	minimal testing words, run as part of compilation of module?
+	vocabs.firth?
 	fix up remaining core words & move all possible lua prims to firth core
 		move any that can just work
-		minimal functionality + redefine "real" version in firth
+		minimal bootstrap functionality in Lua then redefine "real" version in firth
 	loops
-		create a "break continuation" that is called if user invokes break?
+		create a "break continuation" that is called if user invokes BREAK?
 	threading
 		whatever it ends up being, need to figure out SEE / src
 		calls and callers
@@ -47,19 +55,19 @@ proto branch tasks
 		compiles subsequent args
 		';' means "write executable script to disk and exit"
 		if reaches end of shell args without ";", goes into line-edit mode
-first project: beep-dooter
+first "in-game" project: beep-dooter
 	rogue-op + firth project, prove-out and expand language, framework, integrations
-	graphically simple, some combo of turdle and imgui (replace or re-implement alacarte)
-	possible mid-leve synth primitives bound to firth
+	graphically simple, some combo of turdle and imgui (replace or re-implement alacarte?)
+	possible mid-level synth primitives bound to firth
 		// good for generating/serializing output from a program
 		4 harmonics sine
-		A4 freq 1 beat sync
+		A4 freq 1 beats sync
 		envelope 4 attack 2 decay 80 percent sustain 16 hold 10 release trigger
-		C4 freq 2 beat sync
+		C4 freq 2 beats sync
 		envelope 4 attack 2 decay 60 percent sustain 2 hold 8 release trigger
-		C4 freq 2.5 beat sync
+		C4 freq 2.5 beats sync
 		envelope 4 attack 2 decay 60 percent sustain 2 hold 8 release trigger
-		E4 freq 3 beat sync
+		E4 freq 3 beats sync
 		envelope 4 attack 2 decay 80 percent sustain 32 hold 10 release trigger
 	something a little more turdlish for manual haxxing
 		I'm kinda envisioning actually drawing an envelope, but I'm not sure that's quite the right abstraction
@@ -71,6 +79,7 @@ full plugin for sublime
 	syntax
 	completion
 	goto def
+	mouseover decl/doc comment/lint warnings
 	execute code/re-run file/repl
 	linter?
 	debugger?
@@ -98,6 +107,7 @@ experimental optimization branch
 			transform and optimize tree is possible
 			generate lua code from optimized tree
 		stack elision
+			(is this needed if we're using the lua stack?)
 			use locals wherever possible
 			commit stack changes lazily
 			pre-calculate results when literals are arguments?
@@ -126,8 +136,8 @@ loops
 		1 10 range		// -> 1 2 3 4 5 6 7 8 9 10
 		1 10 range: 2	// -> 1 3 5 7 9
 	reference forth loops
-		end start DO xxx LOOP			// for i=start,end-1 ...
-		end start DO xxx step +LOOP		// for i=start,end-1,step ...
+		iend istart DO xxx LOOP			// for i=istart,iend-1 ...
+		iend istart DO xxx step +LOOP	// for i=istart,iend-1,step ...
 		BEGIN xxx cond UNTIL			// do ... while(!cond)
 		BEGIN cond WHILE yyy REPEAT		// while(cond) yyy end
 		LEAVE							// break

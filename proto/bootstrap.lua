@@ -81,29 +81,30 @@ intptr_running = false
 parserules = stack.new()
 cstack = stack.new()
 rstack = stack.new()
-local rmt = table.assign({}, getmetatable(rstack))
-local tostr = rmt.__tostring
-function rmt:__tostring()
-	local height = self.height
-	local buf = {}
-	if height == 0 then
-		buf[1] = '∅'
-	else
-		for i = 1, height do
-			local element = rawget(self, i)
-			if type(element) == 'function' then
-				local metadata = meta[element]
-				-- TODO: debug lib to extract xt closure, if not found
-				buf[i] = metadata and metadata.name or tostring(element)
-			else
-				buf[i] = tostring(stringio.quote(element))
+do
+	local rmt = table.assign({}, getmetatable(rstack))
+	function rmt:__tostring()
+		local height = self.height
+		local buf = {}
+		if height == 0 then
+			buf[1] = '∅'
+		else
+			for i = 1, height do
+				local element = rawget(self, i)
+				if type(element) == 'function' then
+					local metadata = meta[element]
+					-- TODO: debug lib to extract xt closure, if not found
+					buf[i] = metadata and metadata.name or tostring(element)
+				else
+					buf[i] = tostring(stringio.quote(element))
+				end
 			end
 		end
-	end
 
-	return "[ "..table.concat(buf, ' ').." ]"
+		return "[ "..table.concat(buf, ' ').." ]"
+	end
+	setmetatable(rstack, rmt)
 end
-setmetatable(rstack, rmt)
 meta = setmetatable({}, { __mode = "k" })
 immediates = setmetatable({}, { __mode = "k" })
 
@@ -345,6 +346,15 @@ function parsematch(pattern, ...)
 	return word, ...
 end
 
+local function _split_r(...)
+	-- body
+end
+
+-- ( str -- array )
+function split(str, ...)
+	return stringio.split(str), ...
+end
+
 -- ( n -- ) ( TS: -n )
 function backtrack(n, ...)
 	parse_pos = math.max(parse_pos - n, 0)
@@ -513,7 +523,7 @@ local function _thread(entry)
 	local __thr
 	for i = #compilebuf, 1, -1 do
 		local __xt = compilebuf[i]
-		if getmetatable(__xt) then __xt = __xt:compile() end
+		if getmetatable(__xt) then __xt = __xt:compile(entry) end
 
 		if not __thr then
 			__thr = __xt
@@ -527,8 +537,8 @@ local function _thread(entry)
 
 	-- wrap thread for stack effects (and locals??)
 	entry.xt = function(...)
-		local initialheight = rstack.height
-		return jmpcont(initialheight, __thr(...))
+		local __initialheight = rstack.height
+		return jmpcont(__initialheight, __thr(...))
 	end
 end
 
@@ -581,8 +591,8 @@ local binopmt = {
 	exec = function(self, b, a, ...)
 		local src = ([[
 			return function(_, TOS, NOS, ...) return NOS %s TOS, ... end
-		]])
-		self.exec = loadstring(src:format(self.op))()
+		]]):format(self.op)
+		self.exec = loadstring(src)()
 		return self:exec(b, a, ...)
 	end
 }

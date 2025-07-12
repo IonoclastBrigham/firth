@@ -43,9 +43,13 @@ local stringio = {
 
 
 --! Creates a Lua-style iterator to loop over tokens in string.
---! Tokens are any consecutive printable chars broken up by white space.
---! @param str the string of tokens to iterate over.
---! @param delim the string or pattern that delimits the tokens.
+--!
+--! A token is one or more consecutive printable chars possibly surrounded by
+--! zero or more `delim`s.
+--!
+--! @param str   the string of tokens to iterate over.
+--! @param delim the string or pattern that delimits the tokens;
+--!              defaults to `"([^%s]+)"` (one or more whitespace chars).
 --! @return an iterator function suitable for a for loop.
 --! @see #split()
 function stringio.tokens(str, delim)
@@ -53,10 +57,14 @@ function stringio.tokens(str, delim)
 	return string.gmatch(str, delim)
 end
 
---! Splits a string into an array, tokenized on whitespace.
---! Tokens are any consecutive printable chars broken up by white space.
+--! Splits a string into an array of tokens.
+--!
+--! A token is one or more consecutive printable chars possibly surrounded by
+--! zero or more `delim`s.
+--!
 --! @param str   the string of tokens to split.
---! @param delim the string or pattern that delimits the tokens.
+--! @param delim the string or pattern that delimits the tokens;
+--!              defaults to `"([^%s]+)"` (one or more whitespace chars).
 --! @return an array of tokenized substrings.
 --! @see #tokens()
 function stringio.split(str, delim)

@@ -89,7 +89,7 @@ table.push = table.insert
 --! @todo `table.iassign()` variant that uses `ipairs()`?
 --!
 --! @param[out] t   table to assing fields to.
---! @param      ... varag list of tables to assign to `t`.
+--! @param      ... vararg list of tables to assign to `t`.
 --! @return         `t`, modified with any fields from the following args.
 function table.assign(t, ...)
 	for i = 1, select('#', ...) do

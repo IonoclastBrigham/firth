@@ -48,12 +48,12 @@ end
 if select("#", ...) > 0 then
     firth.runfile("firth/cli.firth")
     local src = table.concat({...}, " ")
-    REPL(firth.runstring(src.." DOREPL not if printstack 0 exit end DOREPL"))
+    return REPL(firth.runstring(src.." DOREPL not if printstack 0 exit end DOREPL"))
 else
     firth [[
         false =: showstack
         : ?printstack showstack if printstack end ;
     ]]
     dictionary.banner()
-    REPL(true, ...)
+    return REPL(true, ...)
 end

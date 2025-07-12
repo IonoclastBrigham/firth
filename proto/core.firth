@@ -222,10 +222,7 @@ char : create compile
 : = ( x -- )(TS: name ) word cpush ' ! ccall ;immed
 : delete (--)(TS: name) nil cpush word cpush ' ! ccall ;immed
 : const ( x name -- )
-	TODO: implement as a closure
-	create compile
-	cpush ' cpush ccall
-	postpone ;immed
+	swap :( cpush )[1]; dup immediate swap store
 	TODO: guard against re-binding `name`?
 	;
 : const: (--)(TS: word x ) 2word resolve xt?exec swap cpush const ;immed
