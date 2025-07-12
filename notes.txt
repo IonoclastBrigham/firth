@@ -2,8 +2,8 @@ Ideas / TODOs
 -------------
 proto branch tasks
 	locals
-		local: foo // eats TOS
-		1 2 3 local{ x y z } // pre-counts and pulls them out as a chunk
+		3.14 local: foo // eats TOS
+		1 2 3 local{ x y z } // pre-counts, so x == 1, y == 2, z == 3
 		intent is generally to give names to params with low overhead
 		but, should also allow creation of local temp variables
 		automatically local to a block, like you'd expect

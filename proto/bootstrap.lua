@@ -502,6 +502,10 @@ function jmpcont(refheight,...)
 	return ...
 end
 
+local function _enterscope(...)
+
+end
+
 local function _thread(entry)
 	local name, compilebuf = entry.name, entry.compilebuf
 	debug("BUILDING %s", name)
@@ -568,11 +572,37 @@ function cappend(xt, ...)
 	return ...
 end
 
--- local localsmt = {
--- 	compile = function(self)
+local localscopemt = {
+	compile = function(self, entry)
+		if self.xt then return self.xt end
+		
+		-- TODO: return the getter for the named local!
+	end
+}
 
--- 	end
--- }
+function clocalscope(scope, ...)
+	local locals = scope
+	if type(locals) == "string" then
+		locals = { scope }
+	end
+
+	-- TODO: the below is wrong; we need to cappend code that calls set(...)??
+	for _, name in ipairs(locals) do
+		compile_target.locals[name] = function()
+			local value
+			return {
+				set = function(newval, ...)
+					value = newval
+					return ...
+				end,
+				get = function(...)
+					return value, ...
+				end
+			}
+		end
+	end
+	return cappend(setmetatable(locals, localscopemt),...)
+end
 
 local binopmt = {
 	compile = function(self)
@@ -894,12 +924,12 @@ parserules:push(function(word, ...)
 end)
 
 -- locals
--- parserules:push(function(name, ...)
--- 	if not compile_target.locals[name] then return false, name, ... end
+parserules:push(function(name, ...)
+	local found = compile_target and compile_target.locals[name]
+	if not found then return false, name, ... end
 
--- 	-- TODO: return the local that corresponds to name
--- 	return true, found
--- end)
+	return true, found.get(), ...
+end)
 
 -- ( * -- * ) ( TS: tok... )
 -- TODO: make this as minimal as possible, and replace with firth impl?
