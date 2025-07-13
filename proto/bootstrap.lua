@@ -812,53 +812,31 @@ end
 
 dictionary['[]'] = fli.wrapfunc(stack.new, 0)
 
--- ( [x] -- [x] x )
-dictionary['[]@'] = function(stk, ...)
-	return stk:top(), ...
-end
-
--- ( [x] -- x )
-dictionary['[]>'] = function(stk, ...)
-	return stk:pop(), ...
-end
-
--- ( x [] -- [x] )
-dictionary['>[]'] = function(stk, x, ...)
-	stk:push(x)
-	return stk, ...
-end
-
--- ( [] -- )(stk: x y -- y x)
-dictionary['[]swap'] = function(stk, ...)
-	stk:swap()
-	return ...
-end
-
--- ( [*] -- [] )
-dictionary['[]clear'] = function(stk, ...)
-	stk:clear()
-	return ...
-end
-
 -- ( -- x)(R: x -- )
 -- R-from is a prim to avoid mucking with stack ops as they happen.
+-- ⚠️ DO NOT DELETE THIS FUNCTION
 dictionary['R>'] = function(...)
 	return rstack:pop(), ...
 end
 
 -- ( x -- )(R: -- x )
 -- to-R is a prim to avoid mucking with stack ops as they happen.
+-- ⚠️ DO NOT DELETE THIS FUNCTION
 dictionary['>R'] = function(tos, ...)
 	rstack:push(tos)
 	return ...
 end
 
 -- ( t k -- t x )
+-- This is used very early in the bootstrapping process to
+-- implement `immediate`.
 dictionary['@@'] = function(k, t, ...)
 	return t[k], ...
 end
 
 -- ( x t k -- t )
+-- This is used very early in the bootstrapping process to
+-- implement `immediate`.
 dictionary['!!'] = function(k, t, x, ...)
 	debug("%s[%s] = %s", t, quote(k), quote(x))
 	t[k] = x

@@ -41,7 +41,7 @@ char : create compile
 // core.firth
 // Core vocabulary for :Firth environments.
 //
-// Copyright © 2015-2021 Brigham Toskin
+// Copyright © 2015-2025 Brigham Toskin
 // This file is part of the :Firth language reference implementation. Usage
 // and redistribution of this software is governed by the terms of a modified
 // MIT-style license. You should have received a copy of the license with the
@@ -141,6 +141,13 @@ char : create compile
 // tables, arrays
 : {} ( -- {} ) lua{ return {}, ... } ;
 : # ( s|t -- n ) lua{ return #(...), select(2, ...) } ;
+
+// Minimal stack operations
+: []@    ( stk -- x stk ) lua{ local stk = (...); return stk:top(), ... } ;
+: []>    ( stk -- x )     lua{ local stk = (...); return stk:pop(), select(2, ...) } ;
+: >[]    ( x stk -- stk ) lua{ local stk, x = ...; stk:push(x); return stk, select(3, ...) } ;
+: []swap ( stk -- )       lua{ local stk = (...); stk:swap(); return select(2, ...) } ;
+: []clear ( stk -- )      lua{ local stk = (...); stk:clear(); return select(2, ...) } ;
 
 // auxiliary stacks
 : C@ ( -- x )(C: x -- x ) cstack []@ ;
