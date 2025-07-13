@@ -21,7 +21,7 @@ local st
 local initialcount = 5
 
 -- prints stack contents with error message
-local function assert(bool, msg, level)
+local function assert_true(bool, msg, level)
 	level = level or 2
 	if not bool then
 		error(msg.."\nstack: "..table.concat(st, ', '), level)
@@ -30,12 +30,12 @@ end
 
 local function assertstack(name, ...)
 	local items = {...}
-	assert(#items == st.height,
+	assert_true(#items == st.height,
 		string.format("%s(): stack height %d (expected %d)",
 			name, st.height, #items),
 		3)
 	for i = 1, st.height do
-		assert(st[i] == items[i],
+		assert_true(st[i] == items[i],
 			string.format("%s(): stack[%d] == %s (expected %s)",
 				name, i, tostring(st[i]), tostring(items[i])),
 			3)
@@ -46,14 +46,14 @@ return {
 
 	function()
 		st = stack.new() -- ()
-		assert(st, "Error creating new stack")
-		assert(st.height == 0, "Error creating new stack")
+		assert_true(st, "Error creating new stack")
+		assert_true(st.height == 0, "Error creating new stack")
 	end,
 
 	function()
 		for i = 1, initialcount do
 			st:push(i)
-			assert(st[st.height] == i, "Error pushing "..i.." onto stack")
+			assert_true(st[st.height] == i, "Error pushing "..i.." onto stack")
 		end
 		assertstack("push", 1, 2, 3, 4, 5)
 	end,
@@ -62,7 +62,7 @@ return {
 		local top = st.height
 		local topitem = st:pop()
 		assertstack("pop", 1, 2, 3, 4)
-		assert(topitem == top, "pop() returned incorrect TOS val: "..topitem)
+		assert_true(topitem == top, "pop() returned incorrect TOS val: "..topitem)
 	end,
 
 	function()
@@ -75,7 +75,7 @@ return {
 		local top = st.height
 		local topitem = st:top()
 		assertstack("top", 1, 2, 3)
-		assert(topitem == top, "top() returned incorrect TOS val: "..top)
+		assert_true(topitem == top, "top() returned incorrect TOS val: "..top)
 	end,
 
 	function()
@@ -140,14 +140,14 @@ return {
 	function()
 		local top = st.height
 		st:push(nil)
-		assert(st.height == top + 1, "push(nil) did not increment size")
-		assert(st:pop() == nil, "pop() didn't properly return nil")
-		assert(st.height == top, "pop() didn't properly return nil")
+		assert_true(st.height == top + 1, "push(nil) did not increment size")
+		assert_true(st:pop() == nil, "pop() didn't properly return nil")
+		assert_true(st.height == top, "pop() didn't properly return nil")
 	end,
 
 	function()
 		st:clear() -- ()
-		assert(st.height == 0, "clear() did not empty stack")
+		assert_true(st.height == 0, "clear() did not empty stack")
 	end,
 
 	function()
@@ -160,11 +160,11 @@ return {
 		st:push(nil)
 		st:push(123.456)
 		st:push(nil)
-		assert(st.height == 3, "didn't push nils")
+		assert_true(st.height == 3, "didn't push nils")
 
 		-- we can't use assertstack() because it will count nils wrong
-		assert(st:pop() == nil, "didn't push nil correctly")
-		assert(st:pop() == 123.456, "didn't push nil correctly")
-		assert(st:pop() == nil, "didn't push nil correctly")
+		assert_true(st:pop() == nil, "didn't push nil correctly")
+		assert_true(st:pop() == 123.456, "didn't push nil correctly")
+		assert_true(st:pop() == nil, "didn't push nil correctly")
 	end,
 }

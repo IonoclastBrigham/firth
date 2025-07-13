@@ -150,20 +150,22 @@ end
 function errhandler(success, ...)
 	if success then return ... end
 
-	local msg = (...)
-	stringio.output(stringio.stderr())
-	stringio.printline(("ERROR: %s"):format(msg))
-	stringio.printline(("while running %s:%d"):format(current_infile, line_num))
-	-- local stackstring = '[ '..prepstack(unpack(frozen_stack))..']'
-	local stackstring = '[ '..prepstack(select(2, ...))..']'
-	stringio.printline('stack : '..stackstring)
-	stringio.printline('cstack: '..tostring(cstack))
-	stringio.printline('rstack: '..tostring(rstack))
-	stringio.printline(stacktrace(3))
-	stringio.output(stringio.stdout())
+	if PRINT_ERRS then
+		local msg = (...)
+		stringio.output(stringio.stderr())
+		stringio.printline(("ERROR: %s"):format(msg))
+		stringio.printline(("while running %s:%d"):format(current_infile, line_num))
+		-- local stackstring = '[ '..prepstack(unpack(frozen_stack))..']'
+		local stackstring = '[ '..prepstack(select(2, ...))..']'
+		stringio.printline('stack : '..stackstring)
+		stringio.printline('cstack: '..tostring(cstack))
+		stringio.printline('rstack: '..tostring(rstack))
+		stringio.printline(stacktrace(3))
+		stringio.output(stringio.stdout())
+	end
 
 	-- return cclearstate(false, recover())
-	return cclearstate(false)
+	return cclearstate(false, ...)
 end
 
 -- ( n -- s )

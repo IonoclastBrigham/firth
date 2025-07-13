@@ -363,6 +363,7 @@ alias: exit Lua.os.exit
 	.fmt" Goodbye 🖤\n"
 	0 exit
 	;
+false =: PRINT_ERRS
 
 // copyright, version, banner
 : Copyright (--)

@@ -2,7 +2,7 @@
 --! @file
 --! @brief Text io and manipulation routines test module.
 --! @author btoskin - <brigham@ionoclast.com>
---! @copyright © 2015-2021 Brigham Toskin
+--! @copyright © 2015-2025 Brigham Toskin
 --
 -- <p>This file is part of the :Firth language reference implementation. Usage
 -- and redistribution of this software is governed by the terms of a modified
@@ -39,32 +39,33 @@ return {
 
 	function()
 		local str = "\t1 2   \t 3:4::::"
-		local tok
+		local tok, parsepos = "", 1
 		for i = 1, 2 do
-			tok, str = stringio.nexttoken(str)
+			tok, parsepos = stringio.nexttoken(str, nil, parsepos)
 			assert(i == stringio.tonumber(tok),
 				string.format("Incorrect token value parsed: '%s'", tok))
 		end
 		for i = 3, 4 do
-			tok, str = stringio.nexttoken(str, ':')
+			tok, parsepos = stringio.nexttoken(str, ':', parsepos)
 			assert(i == stringio.tonumber(tok),
 				string.format("Incorrect token value parsed: '%s'", tok))
 		end
-		assert(str == ":::", "Expected ':::' after last token; got '"..str.."'")
+		assert_eq(str:sub(parsepos), "::::", "Should leave remaining unconsumed string suffix")
 	end,
 
 	function()
 		local nested = "(I'd like to talk to you about a thing (you know... the thing))"
 		local str = "  \t"..nested.."123"
-		local tok
-		tok, str = stringio.matchtoken(str, "%b()")
-		assert(tok == nested,
-			string.format("Incorrect token value parsed: '%s'", tok))
-		assert(str == "123", "Expected '123' after last token; got '"..str.."'")
-		tok, str = stringio.matchtoken(str, '2')
-		assert(tok == '2',
-			string.format("Incorrect token value parsed: '%s'", tok))
-		assert(str == "3", "Expected '3' after last token; got '"..str.."'")
+
+		local tok, parsepos = stringio.matchtoken(str, "%b()")
+		assert_eq(tok, nested, "Should parse out entire nested parentheses.")
+
+		tok = stringio.matchtoken(str, ".+", parsepos)
+		assert_eq(tok, "123", "Remaining string after nested parentheses should be '123'.")
+
+		tok, parsepos = stringio.matchtoken(str, '2')
+		assert_eq(tok, '2', "Should find substring")
+		assert_eq(str:sub(parsepos), "3", "Expected '3' after last token")
 	end,
 
 	function()

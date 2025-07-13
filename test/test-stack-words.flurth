@@ -1,0 +1,74 @@
+--------------------------------------------------------------------------------
+--! @file
+--! @brief Stack object manipulation routines test module.
+--! @author btoskin - <brigham@ionoclast.com>
+--! @copyright © 2025 Brigham Toskin
+--
+-- <p>This file is part of the :Firth language reference implementation. Usage
+-- and redistribution of this software is governed by the terms of a modified
+-- MIT-style license. You should have received a copy of the license with the
+-- source distribution; if not, you may find it online at:
+-- <https://github.com/IonoclastBrigham/firth/blob/master/LICENSE.firth></p>
+--
+-- Formatting:
+--	utf-8 ; unix ; 80 cols ; tabwidth 4
+--------------------------------------------------------------------------------
+
+
+local firth = require 'proto.bootstrap'
+
+
+-- Automated tests for Firth stack object words ([]@, []>, >[], []swap, []clear, etc.)
+-- Uses firth([[ ... ]]) to run Firth code and check results
+return {
+    -- Create stack and push values
+    function()
+        local stk = firth([[ [] ]])
+        assert_eq(type(stk), 'table', '[] should create a stack object')
+        assert_eq(stk.height, 0, '[] should create a stack object')
+    end,
+    -- Test []@ (top element)
+    function()
+        local top, stk = firth([[ [] 1 swap >[] 2 swap >[] 3 swap >[] dup []@ ]])
+        assert_eq(top, 3, '[]@ should return top element')
+        assert_eq(stk.height, 3, 'Stack object should have 3 elements')
+    end,
+    -- Test []> (pop)
+    function()
+        local popped, stk = firth([[ [] 1 swap >[] 2 swap >[] 3 swap >[] dup []> ]])
+        assert_eq(popped, 3, '[]> should pop top element')
+		assert_eq(stk.height, 2, 'Stack object should have 2 elements left')
+    end,
+    -- Test >[] (push)
+    function()
+        local pushed, stk = firth([[ 42 [] >[] dup []@ ]])
+        assert_eq(pushed, 42, '>[] should push element')
+		assert_eq(stk.height, 1, 'Stack object should have 2 elements left')
+    end,
+    -- Test []swap
+    function()
+        local swapped = firth([[ [] 1 swap >[] 2 swap >[] dup []swap []@ ]])
+        assert_eq(swapped, 1, '[]swap should swap top two elements')
+    end,
+    -- Test []clear
+    function()
+        local size, stk = firth([[ [] 1 swap >[] 2 swap >[] dup []clear dup # ]])
+        assert_eq(size, 0, '[]clear should empty the stack')
+		assert_eq(stk.height, 0, '[]clear should empty the stack') -- make sure they match
+    end,
+    -- Edge case: Pop from empty stack
+    function()
+        local err = firth([[ [] []> height ]])
+        assert_eq(err:find(".+: UNDERFLOW$"), 1, '[]> on empty stack should error')
+    end,
+	-- Edge case: Swap with one element
+    function()
+        local err = firth([[ [] 1 swap >[] []swap ]])
+		assert_eq(err:find(".+: INSUFFICIENT HEIGHT$"), 1, '[]swap with one element should error')
+    end,
+	-- Edge case: Clear already empty stack
+    function()
+        local height = firth([[ [] dup []clear # ]])
+        assert_eq(height, 0, '[]clear on empty stack should still be empty')
+    end
+}

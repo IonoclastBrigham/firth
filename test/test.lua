@@ -19,6 +19,9 @@ local io = require 'io'
 local output = io.output()
 local table = require 'table'
 
+local stringio = require 'firth/stringio'
+local firth = require 'proto.bootstrap'
+firth.dictionary.PRINT_ERRS = false
 
 local failures = 0
 local mt = { insert = table.insert }
@@ -43,12 +46,19 @@ local function failed(msg)
 end
 
 local function dotests(path)
+	output:write(string.format("\nRunning tests in %s: ", path))
 	local tests, err = loadfile(path)
 	if tests and not err then
+		local oldfailed = failures
 		success, tests = pcall(tests)
 		if success then
 			for _, test in ipairs(tests) do
 				try(test)
+			end
+			if failures == oldfailed then
+				output:write("✅")
+			else
+				output:write("❌")
 			end
 		else
 			failed(tests)
@@ -56,18 +66,28 @@ local function dotests(path)
 	else
 		local me = ""
 		if err:sub(1, 11) == "cannot open" then
-			me = debug.getinfo(dotests, "S").source..": dotests(): "
+			me = debug.getinfo(dotests, "S").source .. ": dotests(): "
 			if me:sub(1, 1) == '@' then me = me:sub(2) end
 		end
-		failed(me..err)
+		failed(me .. err)
 	end
-	output:write('\n')
 end
 
+-- export globally so it's accessible from test cases
+function assert_eq(actual, expected, msg)
+	if actual ~= expected then
+		error((msg or 'Assertion failed!')
+			.. '\n   Expected: '
+			.. stringio.quote(expected)
+			.. '\n   Actual  : '
+			.. stringio.quote(actual), 2)
+	end
+end
 
 -- export globally so it's accessible from tests.conf
 function testlist(list)
 	for _, path in ipairs(list) do dotests(path) end
+	output:write('\nDONE!\n')
 end
 
 local succ, msg = pcall(dofile, "test/tests.conf")
@@ -76,7 +96,9 @@ if not succ then failed(msg) end
 if failures > 0 then
 	output:write(string.format("\n%d failed tests.\n", failures))
 	for _, msg in ipairs(messages) do
-		output:write(string.format("%s\n", msg))
+		output:write(string.format("❌ %s\n", msg))
 	end
 	os.exit(failures)
+else
+	output:write("\n✅ All tests passed!\n")
 end
