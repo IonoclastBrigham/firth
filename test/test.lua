@@ -2,7 +2,7 @@
 --! @file
 --! @brief Simple testing framework for Firth language components.
 --! @author btoskin - <brigham@ionoclast.com>
---! @copyright © 2015-2021 Brigham Toskin
+--! @copyright © 2015-2025 Brigham Toskin
 --
 -- <p>This file is part of the :Firth language reference implementation. Usage
 -- and redistribution of this software is governed by the terms of a modified
@@ -80,7 +80,7 @@ function assert_eq(actual, expected, msg)
 			.. '\n   Expected: '
 			.. stringio.quote(expected)
 			.. '\n   Actual  : '
-			.. stringio.quote(actual), 2)
+			.. tostring(stringio.quote(actual)), 2)
 	end
 end
 

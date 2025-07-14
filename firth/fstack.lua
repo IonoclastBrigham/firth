@@ -2,7 +2,7 @@
 --! @file
 --! @brief fast stack routines for :Firth language.
 --! @author btoskin - <brigham@ionoclast.com>
---! @copyright © 2015-2021 Brigham Toskin
+--! @copyright © 2015-2025 Brigham Toskin
 --
 -- <p>This file is part of the :Firth language reference implementation. Usage
 -- and redistribution of this software is governed by the terms of a modified
@@ -107,7 +107,7 @@ function shove(i, x, tos, ...)
 	if i == 0 then return x, tos, ... end
 	if i == 1 then return swap(x, tos, ...) end
 	if i == 2 then return revrot(x, tos, ...) end
-	return shovefilter(0, i, x, ...)
+	return shovefilter(0, i, x, tos, ...)
 end
 
 function yank(i, tos, ...)
@@ -116,8 +116,9 @@ function yank(i, tos, ...)
 end
 
 function chop(n, tos, ...)
+	if n < 1 then return tos, ... end
 	if n == 1 then return ... end
-	return select(n, ...)
+	return select(n + 1, tos, ...)
 end
 
 function height(...)
