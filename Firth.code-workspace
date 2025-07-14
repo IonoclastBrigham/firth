@@ -1,0 +1,18 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.exclude": {
+			"**/.git": true,
+			"**/.DS_Store": true,
+			"**/node_modules": true,
+		},
+		"search.exclude": {},
+		"editor.tabSize": 4,
+		"editor.insertSpaces": false,
+		"files.encoding": "utf8",
+	}
+}
