@@ -15,9 +15,9 @@
 --------------------------------------------------------------------------------
 
 
-local stringio = require 'firth/stringio'
-
 local table = require 'table'
+
+local stringio = require 'firth.stringio'
 
 
 return {
@@ -50,7 +50,7 @@ return {
 			assert(i == stringio.tonumber(tok),
 				string.format("Incorrect token value parsed: '%s'", tok))
 		end
-		assert_eq(str:sub(parsepos), "::::", "Should leave remaining unconsumed string suffix")
+		test.assert_eq(str:sub(parsepos), "::::", "Should leave remaining unconsumed string suffix")
 	end,
 
 	function()
@@ -58,14 +58,14 @@ return {
 		local str = "  \t"..nested.."123"
 
 		local tok, parsepos = stringio.matchtoken(str, "%b()")
-		assert_eq(tok, nested, "Should parse out entire nested parentheses.")
+		test.assert_eq(tok, nested, "Should parse out entire nested parentheses.")
 
 		tok = stringio.matchtoken(str, ".+", parsepos)
-		assert_eq(tok, "123", "Remaining string after nested parentheses should be '123'.")
+		test.assert_eq(tok, "123", "Remaining string after nested parentheses should be '123'.")
 
 		tok, parsepos = stringio.matchtoken(str, '2')
-		assert_eq(tok, '2', "Should find substring")
-		assert_eq(str:sub(parsepos), "3", "Expected '3' after last token")
+		test.assert_eq(tok, '2', "Should find substring")
+		test.assert_eq(str:sub(parsepos), "3", "Expected '3' after last token")
 	end,
 
 	function()

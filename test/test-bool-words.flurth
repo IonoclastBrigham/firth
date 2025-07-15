@@ -1,0 +1,266 @@
+--------------------------------------------------------------------------------
+--! @file
+--! @brief Comparison and boolean routines test module.
+--! @author btoskin - <brigham@ionoclast.com>
+--! @copyright © 2025 Brigham Toskin
+-- <p>This file is part of the :Firth language reference implementation. Usage
+-- and redistribution of this software is governed by the terms of a modified
+-- MIT-style license. You should have received a copy of the license with the
+-- source distribution; if not, you may find it online at:
+-- <https://github.com/IonoclastBrigham/firth/blob/master/LICENSE.firth></p>
+-- Formatting:
+--	utf-8 ; unix ; 80 cols ; tabwidth 4
+--------------------------------------------------------------------------------
+
+
+local firth = require 'proto.bootstrap'
+
+
+-- Test file for comparison and boolean operator words in Firth
+-- covers: >, <, =, <=, >=, ~=, and, or, nand, nor, xor
+return {
+	-- comparisons --
+	
+	-- test_greater
+	function() firth[[
+		" Larger should be greater than smaller."
+		5 3 > Lua.test.assert_true
+	]] end,
+	-- test_greater_false
+	function() firth[[
+		" Smaller should not be greater than larger."
+		3 5 > not Lua.test.assert_true
+	]] end,
+	-- test_less
+	function() firth[[
+		" Smaller should be less than larger."
+		3 5 < Lua.test.assert_true
+	]] end,
+	-- test_less_false
+	function() firth[[
+		" Larger should not be less than smaller."
+		5 3 < not Lua.test.assert_true
+	]] end,
+	-- test_equal
+	function() firth[[
+		" Equal values should compare as equal."
+		7 7 == Lua.test.assert_true
+	]] end,
+	-- test_equal_false
+	function() firth[[
+		" Unequal values should not compare as equal."
+		7 8 == not Lua.test.assert_true
+	]] end,
+	-- test_lesseq
+	function() firth[[
+		" Equal values should compare as less or equal."
+		5 5 <=  Lua.test.assert_true
+	]] end,
+	-- test_lesseq_true
+	function() firth[[
+		" Smaller should be less or equal to larger."
+		4 5 <= Lua.test.assert_true
+	]] end,
+	-- test_lesseq_false
+	function() firth[[
+		" Larger should not be less or equal to smaller."
+		6 5 <= not Lua.test.assert_true
+	]] end,
+	-- test_greatereq_eq
+	function() firth[[
+		" Equal values should compare as greater or equal."
+		5 5 >= Lua.test.assert_true
+	]] end,
+	-- test_greatereq_greater
+	function() firth[[
+		" Larger should be greater or equal to smaller."
+		6 5 >= Lua.test.assert_true
+	]] end,
+	-- test_greatereq_less
+	function() firth[[
+		" Smaller should not be greater or equal to larger."
+		4 5 >= not Lua.test.assert_true
+	]] end,
+	-- test_noteq_true
+	function() firth[[
+		" Unequal values should compare as not equal."
+		5 -5 ~= Lua.test.assert_true
+	]] end,
+	-- test_noteq_false
+	function() firth[[
+		" Equal values should not compare as not equal."
+		42 42 ~= not Lua.test.assert_true
+	]] end,
+
+	-- boolean logic --
+
+	-- test_and_TT
+	function() firth[[
+		" TRUE AND TRUE should result in true."
+		true true and Lua.test.assert_true
+	]] end,
+	-- test_and_TF
+	function() firth[[
+		" TRUE AND FALSE should result in false."
+		true false and not Lua.test.assert_true
+	]] end,
+	-- test_and_FT
+	function() firth[[
+		" FALSE AND TRUE should result in false."
+		false true and not Lua.test.assert_true
+	]] end,
+	-- test_and_FF
+	function() firth[[
+		" FALSE AND FALSE and'ed should result in false."
+		false false and not Lua.test.assert_true
+	]] end,
+	-- test_or_TT
+	function() firth[[
+		" TRUE OR TRUE should result in true."
+		true true or Lua.test.assert_true
+	]] end,
+	-- test_or_TF
+	function() firth[[
+		" TRUE OR FALSE should result in true."
+		true false or Lua.test.assert_true
+	]] end,
+	-- test_or_FT
+	function() firth[[
+		" FALSE OR TRUE should result in true."
+		false true or Lua.test.assert_true
+	]] end,
+	-- test_or_false
+	function() firth[[
+		" FALSE OR FALSE should result in false."
+		false false or not Lua.test.assert_true
+	]] end,
+	-- test_nand_FF
+	function() firth[[
+		" FALSE NAND FALSE should result in true."
+		false false nand Lua.test.assert_true
+	]] end,
+	-- test_nand_TF
+	function() firth[[
+		" TRUE NAND FALSE should result in true."
+		true false nand Lua.test.assert_true
+	]] end,
+	-- test_nand_FT
+	function() firth[[
+		" FALSE NAND TRUE should result in true."
+		false true nand Lua.test.assert_true
+	]] end,
+	-- test_nand_TT
+	function() firth[[
+		" TRUE NAND TRUE should result in false."
+		true true nand not Lua.test.assert_true
+	]] end,
+	-- test_nor_FF
+	function() firth[[
+		" FALSE NOR FALSE should result in true."
+		false false nor Lua.test.assert_true
+	]] end,
+	-- test_nor_TF
+	function() firth[[
+		" TRUE NOR FALSE should result in false."
+		true false nor not Lua.test.assert_true
+	]] end,
+	-- test_nor_FT
+	function() firth[[
+		" FALSE NOR TRUE should result in false."
+		false true nor not Lua.test.assert_true
+	]] end,
+	-- test_nor_TT
+	function() firth[[
+		" TRUE NOR TRUE should result in false."
+		true true nor not Lua.test.assert_true
+	]] end,
+	-- test_xor_TF
+	function() firth[[
+		" TRUE XOR FALSE should result in true."
+		true false xor Lua.test.assert_true
+	]] end,
+	-- test_xor_FT
+	function() firth[[
+		" FALSE XOR TRUE should result in true."
+		false true xor Lua.test.assert_true
+	]] end,
+	-- test_xor_TT
+	function() firth[[
+		" TRUE XOR TRUE should result in false." false
+		true true xor Lua.test.assert_eq
+	]] end,
+	-- test_xor_FF
+	function() firth[[
+		" FALSE XOR FALSE should result in false." false
+		false false xor Lua.test.assert_eq
+	]] end,
+
+	-- truthiness assumptions --
+
+	-- test_nil_is_falsey
+	function() firth[[
+		" Nil as bool should be false." false
+		nil >bool Lua.test.assert_eq
+	]] end,
+	 -- test_strings_are_truthy
+	function() firth[[
+		" Non-empty string as bool should be true."
+		" a string" >bool  Lua.test.assert_true
+	]] end,
+	 -- test_empty_string_is_truthy
+	function() firth[[
+		" Empty string as bool should be true."
+		" " >bool Lua.test.assert_true
+	]] end,
+	 -- test_numbers_are_truthy
+	function() firth[[
+		" Non-zero number as bool should be true."
+		42 >bool Lua.test.assert_true
+	]] end,
+	 -- test_zero_is_truthy
+	function() firth[[
+		" Zero as bool should be true."
+		0 >bool Lua.test.assert_true
+	]] end,
+	-- test_tables_are_truthy
+	function() firth[[
+		" Empty table as bool should be true."
+		{} >bool Lua.test.assert_true
+	]] end,
+	-- test_functions_are_truthy
+	function() firth[[
+		" Function as bool should be true."
+		:( ); >bool Lua.test.assert_true
+	]] end,
+
+	-- edge cases --
+
+	-- test_and_TX_fallthrough_second
+	function() firth[[
+		" a value" =: aValue
+		" a second value" =: aSecond
+
+		" TRUTHY AND ANYTHING should be second value." aSecond
+		aValue aSecond and   Lua.test.assert_eq
+
+		" TRUE AND ANYTHING should be second value." aSecond
+		true aSecond and Lua.test.assert_eq
+
+		" TRUTHY AND FALSEY should be second value." nil
+		aValue nil and Lua.test.assert_eq
+	]] end,
+	 -- test_and_FX_short_circuit_first
+	function() firth[[
+		" a value" =: aValue
+
+		" FALSEY AND ANYTHING should be first value." nil
+		nil aValue and Lua.test.assert_eq
+
+		" FALSEY AND ANYTHING should be first value." false
+		false aValue and not Lua.test.assert_eq
+
+		" FALSEY AND ANYTHING should be first value." 123
+		false nil and Lua.test.assert_eq
+	]] end,
+	 -- test_or_TX
+}

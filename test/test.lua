@@ -24,41 +24,60 @@ local fli = require 'firth.fli'
 local stringio = require 'firth.stringio'
 
 
+-- internal state
 local failures = 0
 local mt = { insert = table.insert }
 mt.__index = mt
 local messages = setmetatable({}, mt)
 
-local function try(test, ...)
-	local succ, msg = pcall(test, ...)
-	if not succ then
-		failures = failures + 1
-		if msg then messages:insert(msg) end
-		output:write 'E'
-	else
-		output:write '.'
-	end
-end
-
+-- utilities
 local function failed(msg)
 	output:write('E')
 	messages:insert(msg)
 	failures = failures + 1
 end
 
+local function try(test, ...)
+	local oldfailed = failures
+	local succ, msg = pcall(test, ...)
+	if not succ then
+		failed(msg)
+	elseif oldfailed == failures then
+		output:write '.'
+	end
+end
+
+-- testcase helpers - export globally so it's accessible from test cases
+test = {} -- exported test module
+
+test.assert_eq = function(actual, expected, msg)
+	if actual ~= expected then
+		msg = (msg or 'Assertion failed!')
+			.. '\n   Expected: ' .. tostring(stringio.quote(expected))
+			.. '\n   Actual  : ' .. tostring(stringio.quote(actual))
+		failed(msg)
+	end
+end
+
+test.assert_true = function(actual, msg)
+	return test.assert_eq(actual, true, msg or 'Value should be true')
+end
+
+-- top level test harness
 local function dotests(path)
 	output:write(string.format("\nRunning tests in %s: ", path))
 	local tests, err = loadfile(path)
 	if tests and not err then
+		-- give each suite its own environment
+		local testenv = fli.inject({}, _G)
+		testenv._G = testenv
+		setfenv(tests, testenv)
+
 		local oldfailed = failures
 		success, tests = pcall(tests)
 		if success then
-			-- give each suite its own environment
-			local env = fli.inject({}, _G)
-			env._G = env
 
 			for _, test in ipairs(tests) do
-				setfenv(test, env)
 				try(test)
 			end
 			if failures == oldfailed then
@@ -77,16 +96,6 @@ local function dotests(path)
 			if me:sub(1, 1) == '@' then me = me:sub(2) end
 		end
 		failed(me .. err)
-	end
-end
-
--- export globally so it's accessible from test cases
-function assert_eq(actual, expected, msg)
-	if actual ~= expected then
-		msg = (msg or 'Assertion failed!')
-			.. '\n   Expected: ' .. tostring(stringio.quote(expected))
-			.. '\n   Actual  : ' .. tostring(stringio.quote(actual))
-		error(msg, 2)
 	end
 end
 
