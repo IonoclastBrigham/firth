@@ -1,0 +1,130 @@
+--------------------------------------------------------------------------------
+--! @file
+--! @brief Arithmetic routines test module.
+--! @author btoskin - <brigham@ionoclast.com>
+--! @copyright © 2025 Brigham Toskin
+--
+-- <p>This file is part of the :Firth language reference implementation. Usage
+-- and redistribution of this software is governed by the terms of a modified
+-- MIT-style license. You should have received a copy of the license with the
+-- source distribution; if not, you may find it online at:
+-- <https://github.com/IonoclastBrigham/firth/blob/master/LICENSE.firth></p>
+--
+-- Formatting:
+--	utf-8 ; unix ; 80 cols ; tabwidth 4
+--------------------------------------------------------------------------------
+
+
+local firth = require 'proto.bootstrap'
+
+
+return {
+	-- test_add
+	function()
+		local result = firth[[ 2 3 + ]]
+		assert_eq(result, 5, "Adding should equal expected sum")
+	end,
+	-- test_sub
+	function()
+		local result = firth[[ 7 4 - ]]
+		assert_eq(result, 3, "Subtracting should equal expected difference")
+	end,
+	-- test_mul
+	function()
+		local result = firth[[ 6 7 * ]]
+		assert_eq(result, 42, "Multiplying should equal expected product")
+	end,
+	-- test_div
+	function()
+		local result = firth[[ 20 5 / ]]
+		assert_eq(result, 4, "Dividing should equal expected quotient")
+	end,
+	-- test_mod
+	function()
+		local result = firth[[ 17 5 % ]]
+		assert_eq(result, 2, "Taking modulo should equal expected remainder")
+	end,
+	-- test_pow
+	function()
+		local result = firth[[ 2 8 ** ]]
+		assert_eq(result, 256, "Taking a power should equal expected result")
+	end,
+	-- test_inc
+	function()
+		local result = firth[[ 41 1+ ]]
+		assert_eq(result, 42, "Incrementing should equal one greater than original")
+	end,
+	-- test_dec
+	function()
+		local result = firth[[ 42 1- ]]
+		assert_eq(result, 41, "Decrementing should equal one less than original")
+	end,
+
+	-- edge cases --
+
+	-- test_add_zero
+	function()
+		local result = firth[[ 42 0 + ]]
+		assert_eq(result, 42, "Adding zero should equal the original value")
+	end,
+	-- test_sub_neg
+	function()
+		local result = firth[[ 3 -2 - ]]
+		assert_eq(result, 5, "Subtracting a negative should add")
+	end,
+	-- test_mul_zero
+	function()
+		local result = firth[[ 0 99 * ]]
+		assert_eq(result, 0, "Multiplying by zero should equal zero")
+	end,
+	-- test_div_by_one
+	function()
+		local result = firth[[ 42 1 / ]]
+		assert_eq(result, 42, "Dividing by 1 should return the number itself")
+	end,
+	-- test_div_by_zero
+	function()
+		local result = firth[[ 42 0 / ]]
+		assert_eq(result, math.huge, "Dividing by 0 should return infinity")
+	end,
+	-- test_div_by_negative_zero
+	function()
+		local result = firth[[ 42 -0 / ]]
+		assert_eq(result, -math.huge, "Dividing by 0 should return -infinity")
+	end,
+	-- test_zero_mod_k
+	function()
+		local result = firth[[ 0 5 % ]]
+		assert_eq(result, 0, "Taking zero modulo k should return zero")
+	end,
+	-- test_k_mod_zero
+	function()
+		local result = firth[[ 5 0 % ]]
+		assert_eq(result ~= result, true, "Taking k modulo zero should return NaN")
+	end,
+	-- test_zero_pow_k
+	function()
+		local result = firth[[ 0 5 ** ]]
+		assert_eq(result, 0, "Raising zero to any power should be zero")
+	end,
+	-- test_k_pow_zero
+	function()
+		local result = firth[[ 5 0 ** ]]
+		assert_eq(result, 1, "Anything raised to 0 power should be one")
+	end,
+	-- test_one_pow_k
+	function()
+		local result = firth[[ 1 5 ** ]]
+		assert_eq(result, 1, "One raised to any power should be one")
+	end,
+	-- test_k_pow_one
+	function()
+		local result = firth[[ 5 1 ** ]]
+		assert_eq(result, 5, "Anything raised to 1 power should be itself")
+	end,
+	-- test_inverse_neg
+	function()
+		local result = firth[[ -4 -1 ** ]]
+		assert_eq(result, -0.25, "Anything raised to -1 should be its inverse")
+	end,
+}

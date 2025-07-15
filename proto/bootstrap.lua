@@ -150,7 +150,7 @@ end
 function errhandler(success, ...)
 	if success then return ... end
 
-	if PRINT_ERRS then
+	if dictionary.PRINT_ERRS then
 		local msg = (...)
 		stringio.output(stringio.stderr())
 		stringio.printline(("ERROR: %s"):format(msg))
@@ -202,7 +202,7 @@ local function sortmatches(buckets, tok)
 	return result
 end
 
-local LOOKUP_ERR_MSG = "%s is undefined\n%s"
+local LOOKUP_ERR_MSG = "%s is undefined%s"
 
 -- ( n s -- 0 )
 local function lookup_err(tok, throw, ...)
@@ -226,14 +226,14 @@ local function lookup_err(tok, throw, ...)
 	local suggestions = sortmatches(buckets, tok)
 	local count = math.min(#suggestions, 5)
 	suggestions = table.slice(suggestions, 1, count)
-	local suffix = "Did You Mean..?\n\t"..table.concat(suggestions, "\n\t")
+	local suffix = dictionary.PRINT_ERRS and "\nDid You Mean..?\n\t"..table.concat(suggestions, "\n\t") or ""
 	local msg = LOOKUP_ERR_MSG:format(tok, suffix)
 	if throw then
 		return runtime_err(prefix, msg, 2, ...)
-	else
+	elseif dictionary.PRINT_ERRS then
 		stringio.stderr():write(msg.."\n")
-		return ...
 	end
+	return ...
 end
 dictionary['lookup_err'] = fli.wrapfunc(lookup_err, 2, 0)
 

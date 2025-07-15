@@ -177,7 +177,6 @@ return {
         assert_eq(b, nil, 'chop(1) should remove first arg')
 		local d
         a, b, c, d = fstack.chop(2, 1, 2, 3, 4)
-		print(a, b, c, d)
         assert_eq(a, 3, 'chop(2) should remove first two args')
         assert_eq(b, 4, 'chop(2) should remove first two args')
         assert_eq(c, nil, 'chop(2) should remove first two args')

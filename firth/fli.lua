@@ -287,17 +287,17 @@ function maplua(globalenv, lua)
 	return globalenv
 end
 
-function inject(globalenv, module)
-	for name, val in pairs(module) do
+function inject(target, source)
+	for name, val in pairs(source) do
 		if name == "_G" then
 			-- skip self-referential _G
 		elseif type(val) == "table" and name ~= "package" then -- FIXME
-			globalenv[name] = inject({}, val)
+			target[name] = inject({}, val)
 		else
-			globalenv[name] = val
+			target[name] = val
 		end
 	end
-	return globalenv
+	return target
 end
 
 

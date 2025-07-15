@@ -18,10 +18,11 @@
 local io = require 'io'
 local output = io.output()
 local table = require 'table'
+local setfenv = setfenv or require 'compat.compat_env'.setfenv -- Lua@5.2+
 
-local stringio = require 'firth/stringio'
-local firth = require 'proto.bootstrap'
-firth.dictionary.PRINT_ERRS = false
+local fli = require 'firth.fli'
+local stringio = require 'firth.stringio'
+
 
 local failures = 0
 local mt = { insert = table.insert }
@@ -52,16 +53,22 @@ local function dotests(path)
 		local oldfailed = failures
 		success, tests = pcall(tests)
 		if success then
+			-- give each suite its own environment
+			local env = fli.inject({}, _G)
+			env._G = env
+
 			for _, test in ipairs(tests) do
+				setfenv(test, env)
 				try(test)
 			end
 			if failures == oldfailed then
-				output:write("✅")
+				output:write(" ✅")
 			else
-				output:write("❌")
+				output:write(" ❌")
 			end
 		else
 			failed(tests)
+			output:write(" ❌")
 		end
 	else
 		local me = ""
@@ -76,11 +83,10 @@ end
 -- export globally so it's accessible from test cases
 function assert_eq(actual, expected, msg)
 	if actual ~= expected then
-		error((msg or 'Assertion failed!')
-			.. '\n   Expected: '
-			.. stringio.quote(expected)
-			.. '\n   Actual  : '
-			.. tostring(stringio.quote(actual)), 2)
+		msg = (msg or 'Assertion failed!')
+			.. '\n   Expected: ' .. tostring(stringio.quote(expected))
+			.. '\n   Actual  : ' .. tostring(stringio.quote(actual))
+		error(msg, 2)
 	end
 end
 
