@@ -365,6 +365,12 @@ alias: exit Lua.os.exit
 	;
 false =: PRINT_ERRS
 
+// testing
+` Lua.test defined if
+	0 3 ' Lua.test.assert_eq wrapfunc =: test.assert_eq
+	0 2 ' Lua.test.assert_true wrapfunc =: test.assert_true
+end
+
 // copyright, version, banner
 : Copyright (--)
 	` Copyright create compile

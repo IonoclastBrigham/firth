@@ -2,7 +2,7 @@
 --! @file
 --! @brief Fast Lua Interface - launguage bindings for :Firth.
 --! @author btoskin - <brigham@ionoclast.com>
---! @copyright © 2021 Brigham Toskin
+--! @copyright © 2021-2025 Brigham Toskin
 --
 -- <p>This file is part of the :Firth language reference implementation. Usage
 -- and redistribution of this software is governed by the terms of a modified
@@ -25,6 +25,7 @@ local string = string
 local type = type
 
 require "firth.luex"
+
 
 local module = {}
 setfenv(1, module)
@@ -188,12 +189,18 @@ local dispatch = {
 	{ lua1_1, lua1_2, lua1_3 },
 	{ lua2_1, lua2_2, lua2_3 },
 	{ lua3_1, lua3_2, lua3_3 },
+	{ lua4_1, lua4_2, lua4_3 },
+	{ lua5_1, lua5_2, lua5_3 },
+	{ lua6_1, lua6_2, lua6_3 }
 }
 dispatch[0] = { lua0_1, lua0_2, lua0_3 }
 dispatch[0][0] = lua0_0
 dispatch[1][0] = lua1_0
 dispatch[2][0] = lua2_0
 dispatch[3][0] = lua3_0
+dispatch[4][0] = lua4_0
+dispatch[5][0] = lua5_0
+dispatch[6][0] = lua6_0
 
 --! @endcond
 
@@ -202,11 +209,11 @@ dispatch[3][0] = lua3_0
 --!
 --! @param f    {function} the Lua function to wrap.
 --! @param argc {number}   number of arguments to pull from :Firth stack.
---! @param ret  {number}   number of returns from `f`; defaults to `1`.
---! @return                `ret` values returned from `f()`.
-function wrapfunc(f, argc, ret)
-	ret = ret or 1
-	local luafunc = dispatch[argc][ret]
+--! @param retc {number}   number of returns from `f`; defaults to `1`.
+--! @return                `retc` values returned from `f()`.
+function wrapfunc(f, argc, retc)
+	retc = retc or 1
+	local luafunc = dispatch[argc][retc]
 	return function(...)
 		return luafunc(f, ...)
 	end

@@ -727,7 +727,7 @@ dictionary['for'] = function(...)
 end
 immediates[dictionary['for']] = true
 
--- ( iterable -- )
+-- ( iterable -- ) (EX: x --)
 function each(...)
 	cbeginblock("[[EACH]]", function(eachthread)
 		return true, function(iterable, ...)
@@ -744,7 +744,7 @@ function each(...)
 				local val
 				idx, val = itr(iterable, idx)
 				if idx == nil then return ... end
-				return _each_r(eachthread(val, idx, ...))
+				return _each_r(eachthread(val, ...))
 			end
 			return _each_r(...)
 		end
