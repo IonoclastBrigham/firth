@@ -2,7 +2,7 @@
 --! @file
 --! @brief Stack class test module.
 --! @author btoskin - <brigham@ionoclast.com>
---! @copyright © 2015-2021 Brigham Toskin
+--! @copyright © 2015-2025 Brigham Toskin
 --
 -- <p>This file is part of the :Firth language reference implementation. Usage
 -- and redistribution of this software is governed by the terms of a modified

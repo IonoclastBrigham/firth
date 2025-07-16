@@ -83,5 +83,5 @@ You should see output `127.0.0.1:8080 ok` if it all ran successfully
 
 ## License
 
-Copyright © 2015-2021 Brigham Toskin.
+Copyright © 2015-2025 Brigham Toskin.
 [MIT License](https://github.com/IonoclastBrigham/firth/blob/master/LICENSE.firth).

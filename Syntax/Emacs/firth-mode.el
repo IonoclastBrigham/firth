@@ -1,7 +1,7 @@
 ;; firth-mode.el
 ;; :Firth source editing major mode
 ;;
-;; Copyright © 2015 Brigham Toskin
+;; Copyright © 2015-2025 Brigham Toskin
 ;;
 ;; To automatically load firth-mode for .firth files, install firth-mode.el on
 ;; your library load path and add the following lines to your .emacs file:
@@ -108,7 +108,7 @@
         "\\<\\:\\s-+"										; opening colon
         "\\(\\w+\\)"										; capture name
         "[[:space:][:word:]]+?"								; def body
-		"\\(?:bindfunc\\|;\\(?:immed\\|defer\\)?\\)\\>")	; matches def close
+    "\\(?:bindfunc\\|;\\(?:immed\\|defer\\)?\\)\\>")	; matches def close
       (1 'firth-word-def-name))
 
     ;; aliases, variables, etc.
@@ -119,7 +119,7 @@
 
     ;; postponed calls and ticked words
     '("\\<\\(?:postpone\\|call:\\|'\\|does>\\|`\\)\\s-+\\(\\w+\\)\\>"
-	  (1 firth-ticked-word))
+    (1 firth-ticked-word))
 
     ;; the defining words themselves
     `(,(regexp-opt
@@ -214,12 +214,12 @@
     (modify-syntax-entry ?© "w" stab)
     (modify-syntax-entry ?` "w" stab)
 
-	;; define what comments look like
+  ;; define what comments look like
     ;; (modify-syntax-entry ?( "< n" stab)
     ;; (modify-syntax-entry ?) "> n" stab)
     ;; (modify-syntax-entry ?/ "< 12" stab)
     ;; (modify-syntax-entry ?\n "> " stab)
-	(setq comment-start "//")
+  (setq comment-start "//")
 
     stab)
   "Syntax Table for :Firth Mode")

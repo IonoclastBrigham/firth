@@ -79,8 +79,8 @@ return {
         test.assert_eq(b, 1, 'swap should bring first arg to second')
 
         a, b = fstack.swap(1)
-		test.assert_eq(a, nil, 'swap with one arg treats second value as nil')
-		test.assert_eq(b, 1, 'swap with one arg treats second value as nil')
+        test.assert_eq(a, nil, 'swap with one arg treats second value as nil')
+        test.assert_eq(b, 1, 'swap with one arg treats second value as nil')
     end,
     -- rot
     function()
@@ -175,7 +175,7 @@ return {
         a, b = fstack.chop(1, 1, 2)
         test.assert_eq(a, 2, 'chop(1) should remove first arg')
         test.assert_eq(b, nil, 'chop(1) should remove first arg')
-		local d
+        local d
         a, b, c, d = fstack.chop(2, 1, 2, 3, 4)
         test.assert_eq(a, 3, 'chop(2) should remove first two args')
         test.assert_eq(b, 4, 'chop(2) should remove first two args')
