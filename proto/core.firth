@@ -323,6 +323,9 @@ alias: NOOP NOP
 alias: abs Lua.math.abs
 alias: ciel Lua.math.ciel
 alias: floor Lua.math.floor
+const: inf Lua.math.huge
+-1 inf * ` -inf const
+0 0 / ` nan const
 alias: add +
 alias: sub -
 alias: mul *
@@ -367,6 +370,7 @@ false =: PRINT_ERRS
 
 // testing
 ` Lua.test defined if
+	Lua.test =: test
 	0 3 ' Lua.test.assert_eq wrapfunc =: test.assert_eq
 	0 2 ' Lua.test.assert_true wrapfunc =: test.assert_true
 end

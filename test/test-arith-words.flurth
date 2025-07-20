@@ -20,111 +20,102 @@ local firth = require 'proto.bootstrap'
 
 return {
 	-- test_add
-	function()
-		local result = firth[[ 2 3 + ]]
-		test.assert_eq(result, 5, "Adding should equal expected sum")
-	end,
+	firth[[
+		:( 2 3 + 5 " Adding should equal expected sum." test.assert_eq );
+	]],
 	-- test_sub
-	function()
-		local result = firth[[ 7 4 - ]]
-		test.assert_eq(result, 3, "Subtracting should equal expected difference")
-	end,
+	firth[[
+		:( 7 4 - 3 " Subtracting should equal expected difference" test.assert_eq );
+	]],
 	-- test_mul
-	function()
-		local result = firth[[ 6 7 * ]]
-		test.assert_eq(result, 42, "Multiplying should equal expected product")
-	end,
+	firth[[
+		:( 6 7 * 42 " Multiplying should equal expected product" test.assert_eq );
+	]],
 	-- test_div
-	function()
-		local result = firth[[ 20 5 / ]]
-		test.assert_eq(result, 4, "Dividing should equal expected quotient")
-	end,
+	firth[[
+		:( 20 5 / 4 " Dividing should equal expected quotient" test.assert_eq );
+	]],
 	-- test_mod
-	function()
-		local result = firth[[ 17 5 % ]]
-		test.assert_eq(result, 2, "Taking modulo should equal expected remainder")
-	end,
+	firth[[
+		:( 17 5 % 2 " Taking modulo should equal expected remainder" test.assert_eq );
+	]],
 	-- test_pow
-	function()
-		local result = firth[[ 2 8 ** ]]
-		test.assert_eq(result, 256, "Taking a power should equal expected result")
-	end,
+	firth[[
+		:( 2 8 ** 256 " Taking a power should equal expected result" test.assert_eq );
+	]],
 	-- test_inc
-	function()
-		local result = firth[[ 41 1+ ]]
-		test.assert_eq(result, 42, "Incrementing should equal one greater than original")
-	end,
+	firth[[
+		:( 41 1+  42 " Incrementing should equal one greater than original" test.assert_eq );
+	]],
 	-- test_dec
-	function()
-		local result = firth[[ 42 1- ]]
-		test.assert_eq(result, 41, "Decrementing should equal one less than original")
-	end,
+	firth[[
+		:( 42 1- 41 " Decrementing should equal one less than original" test.assert_eq );
+	]],
 
 	-- edge cases --
 
 	-- test_add_zero
-	function()
-		local result = firth[[ 42 0 + ]]
-		test.assert_eq(result, 42, "Adding zero should equal the original value")
-	end,
+	firth[[
+		:( 42 0 + 42 " Adding zero should equal the original value" test.assert_eq );
+	]],
 	-- test_sub_neg
-	function()
-		local result = firth[[ 3 -2 - ]]
-		test.assert_eq(result, 5, "Subtracting a negative should add")
-	end,
+	firth[[
+		:( 3 -2 - 5 " Subtracting a negative should add" test.assert_eq );
+	]],
 	-- test_mul_zero
-	function()
-		local result = firth[[ 0 99 * ]]
-		test.assert_eq(result, 0, "Multiplying by zero should equal zero")
-	end,
+	firth[[
+		:( 0 99 * 0 " Multiplying by zero should equal zero" test.assert_eq );
+	]],
 	-- test_div_by_one
-	function()
-		local result = firth[[ 42 1 / ]]
-		test.assert_eq(result, 42, "Dividing by 1 should return the number itself")
-	end,
+	firth[[
+		:( 42 1 / 42 " Dividing by 1 should return the number itself" test.assert_eq );
+	]],
 	-- test_div_by_zero
-	function()
-		local result = firth[[ 42 0 / ]]
-		test.assert_eq(result, math.huge, "Dividing by 0 should return infinity")
-	end,
+	firth[[
+		:( 42 0 / inf " Dividing by 0 should return infinity" test.assert_eq );
+	]],
 	-- test_div_by_negative_zero
-	function()
-		local result = firth[[ 42 -0 / ]]
-		test.assert_eq(result, -math.huge, "Dividing by 0 should return -infinity")
-	end,
+	firth[[
+		:( 42 -0 / -inf " Dividing by -0 should return -infinity" test.assert_eq );
+	]],
 	-- test_zero_mod_k
-	function()
-		local result = firth[[ 0 5 % ]]
-		test.assert_eq(result, 0, "Taking zero modulo k should return zero")
-	end,
+	firth[[
+		:( 0 5 %  0 " Taking zero MOD k should return zero" test.assert_eq );
+	]],
 	-- test_k_mod_zero
-	function()
-		local result = firth[[ 5 0 % ]]
-		test.assert_eq(result ~= result, true, "Taking k modulo zero should return NaN")
-	end,
+	firth[[
+		:( 5 0 % isnan? " Taking k modulo zero should return NaN" test.assert_true );
+	]],
 	-- test_zero_pow_k
-	function()
-		local result = firth[[ 0 5 ** ]]
-		test.assert_eq(result, 0, "Raising zero to any power should be zero")
-	end,
+	firth[[
+		:( 0 5 ** 0 " Raising zero to any power should be zero" test.assert_eq );
+	]],
 	-- test_k_pow_zero
-	function()
-		local result = firth[[ 5 0 ** ]]
-		test.assert_eq(result, 1, "Anything raised to 0 power should be one")
-	end,
+	firth[[
+		:( 5 0 ** 1 " Anything raised to 0 power should be one" test.assert_eq );
+	]],
 	-- test_one_pow_k
-	function()
-		local result = firth[[ 1 5 ** ]]
-		test.assert_eq(result, 1, "One raised to any power should be one")
-	end,
+	firth[[
+		:( 1 5 ** 1 " One raised to any power should be one" test.assert_eq );
+	]],
 	-- test_k_pow_one
-	function()
-		local result = firth[[ 5 1 ** ]]
-		test.assert_eq(result, 5, "Anything raised to 1 power should be itself")
-	end,
-	-- test_inverse_neg
-	function()
-		local result = firth[[ -4 -1 ** ]]
-		test.assert_eq(result, -0.25, "Anything raised to -1 should be its inverse")
-	end,
+	firth[[
+		:( 5 1 ** 5 " Anything raised to 1 power should be itself" test.assert_eq );
+	]],
+	-- test_k_pow_neg_inverse
+	firth[[
+		:( -4 -1 ** -0.25 " Anything raised to -1 should be its inverse" test.assert_eq );
+	]],
+	-- test-isnan-inf
+	firth[[
+		:( inf isnan? not " Infinity is not NaN" test.assert_true );
+	]],
+	-- test-isnan-k
+	firth[[
+		:( 42 isnan? not " Finite number should not return NaN" test.assert_true );
+	]],
+	-- test-isnan-nan
+	firth[[
+		:( nan isnan? " NaN should return true for isnan?" test.assert_true );
+	]],
 }
