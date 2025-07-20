@@ -17,42 +17,35 @@ local firth = require 'proto.bootstrap'
 
 
 -- covers: if, else, then, while, do, loop, for, each
-return {
-	-- test_if_true
-	firth[[
-		:( true if 42 else 0 end 42 " TRUE IF should execute the 'then' branch." test.assert_eq );
-	]],
-	-- test_if_false
-	firth[[
-		:( false if 42 else 99 end 99 " FALSE IF should select else branch." test.assert_eq );
-	]],
-	-- test_simple_for
-	firth[[
-		:( 0 0 4 for + end 10 " FOR loop should sum 0..4." test.assert_eq );
-	]],
-	-- test_reverse_for
-	firth[[
-		:( 0 4 0 for + end 10 " FOR loop should sum 4..0." test.assert_eq );
-	]],
-	 -- test_foreach
-	firth[[
-		:( 1 2 3 4 5 [] >[] >[] >[] >[] >[] 0 swap each + end 15 " FOREACH should sum array elements." test.assert_eq );
-	]],
-	-- test_foreach_empty
-	firth[[
-		:( 0 {} each + end 0 " FOREACH should return 0 for empty array." test.assert_eq );
-	]],
-	-- TODO: test_foreach_string (not implemented yet)
-	-- firth[[
-	--	:( -- 	0 " Hello" each ÷ end 195 " FOREACH should sum string character codes." test.assert_eq
-	-- ]],
-	-- test_while_loop
-	firth[[
-		:( 0 true while 1+ dup 5 < end 5 " WHILE loop should increment until 5." test.assert_eq );
-	]],
-	-- test_loops
-	firth[[
-		:( 1 8 loops 2 * end 256 " LOOPS should execute code 8 times" test.assert_eq );
-	]],
-	 -- TODO: test_forever??
-}
+return firth [[
+	// test_if_true
+	:( true if 42 else 0 end 42 " TRUE IF should execute the 'then' branch." test.assert_eq );
+
+	// test_if_false
+	:( false if 42 else 99 end 99 " FALSE IF should select else branch." test.assert_eq );
+
+	// test_simple_for
+	:( 0 0 4 for + end 10 " FOR loop should sum 0..4." test.assert_eq );
+
+	// test_reverse_for
+	:( 0 4 0 for + end 10 " FOR loop should sum 4..0." test.assert_eq );
+
+	// test_foreach
+	:( 1 2 3 4 5 [] >[] >[] >[] >[] >[] 0 swap each + end 15 " FOREACH should sum array elements." test.assert_eq );
+
+	// test_foreach_empty
+	:( 0 {} each + end 0 " FOREACH should return 0 for empty array." test.assert_eq );
+
+	TODO: test_foreach_string (not implemented yet)
+	//	:( -- 	0 " Hello" each ÷ end 195 " FOREACH should sum string character codes." test.assert_eq
+
+	// test_while_loop
+	:( 0 true while 1+ dup 5 < end 5 " WHILE loop should increment until 5." test.assert_eq );
+
+	// test_loops
+	:( 1 8 loops 2 * end 256 " LOOPS should execute code 8 times" test.assert_eq );
+
+	TODO: test_forever??
+
+	freeze // ⚠️ ALWAYS execute LAST
+]]

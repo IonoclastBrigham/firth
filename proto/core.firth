@@ -141,6 +141,7 @@ char : create compile
 // tables, arrays
 : {} ( -- {} ) lua{ return {}, ... } ;
 : # ( s|t -- n ) lua{ return #(...), select(2, ...) } ;
+: freeze ( n*x -- { ...n*x } ) lua{ return {...} } ;
 
 // Minimal stack operations
 : []@    ( stk -- x stk ) lua{ local stk = (...); return stk:top(), ... } ;

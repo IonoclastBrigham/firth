@@ -18,104 +18,80 @@
 local firth = require 'proto.bootstrap'
 
 
-return {
-	-- test_add
-	firth[[
-		:( 2 3 + 5 " Adding should equal expected sum." test.assert_eq );
-	]],
-	-- test_sub
-	firth[[
-		:( 7 4 - 3 " Subtracting should equal expected difference" test.assert_eq );
-	]],
-	-- test_mul
-	firth[[
-		:( 6 7 * 42 " Multiplying should equal expected product" test.assert_eq );
-	]],
-	-- test_div
-	firth[[
-		:( 20 5 / 4 " Dividing should equal expected quotient" test.assert_eq );
-	]],
-	-- test_mod
-	firth[[
-		:( 17 5 % 2 " Taking modulo should equal expected remainder" test.assert_eq );
-	]],
-	-- test_pow
-	firth[[
-		:( 2 8 ** 256 " Taking a power should equal expected result" test.assert_eq );
-	]],
-	-- test_inc
-	firth[[
-		:( 41 1+  42 " Incrementing should equal one greater than original" test.assert_eq );
-	]],
-	-- test_dec
-	firth[[
-		:( 42 1- 41 " Decrementing should equal one less than original" test.assert_eq );
-	]],
+return firth [[
+	// test_add
+	:( 2 3 + 5 " Adding should equal expected sum." test.assert_eq );
 
-	-- edge cases --
+	// test_sub
+	:( 7 4 - 3 " Subtracting should equal expected difference" test.assert_eq );
 
-	-- test_add_zero
-	firth[[
-		:( 42 0 + 42 " Adding zero should equal the original value" test.assert_eq );
-	]],
-	-- test_sub_neg
-	firth[[
-		:( 3 -2 - 5 " Subtracting a negative should add" test.assert_eq );
-	]],
-	-- test_mul_zero
-	firth[[
-		:( 0 99 * 0 " Multiplying by zero should equal zero" test.assert_eq );
-	]],
-	-- test_div_by_one
-	firth[[
-		:( 42 1 / 42 " Dividing by 1 should return the number itself" test.assert_eq );
-	]],
-	-- test_div_by_zero
-	firth[[
-		:( 42 0 / inf " Dividing by 0 should return infinity" test.assert_eq );
-	]],
-	-- test_div_by_negative_zero
-	firth[[
-		:( 42 -0 / -inf " Dividing by -0 should return -infinity" test.assert_eq );
-	]],
-	-- test_zero_mod_k
-	firth[[
-		:( 0 5 %  0 " Taking zero MOD k should return zero" test.assert_eq );
-	]],
-	-- test_k_mod_zero
-	firth[[
-		:( 5 0 % isnan? " Taking k modulo zero should return NaN" test.assert_true );
-	]],
-	-- test_zero_pow_k
-	firth[[
-		:( 0 5 ** 0 " Raising zero to any power should be zero" test.assert_eq );
-	]],
-	-- test_k_pow_zero
-	firth[[
-		:( 5 0 ** 1 " Anything raised to 0 power should be one" test.assert_eq );
-	]],
-	-- test_one_pow_k
-	firth[[
-		:( 1 5 ** 1 " One raised to any power should be one" test.assert_eq );
-	]],
-	-- test_k_pow_one
-	firth[[
-		:( 5 1 ** 5 " Anything raised to 1 power should be itself" test.assert_eq );
-	]],
-	-- test_k_pow_neg_inverse
-	firth[[
-		:( -4 -1 ** -0.25 " Anything raised to -1 should be its inverse" test.assert_eq );
-	]],
-	-- test-isnan-inf
-	firth[[
-		:( inf isnan? not " Infinity is not NaN" test.assert_true );
-	]],
-	-- test-isnan-k
-	firth[[
-		:( 42 isnan? not " Finite number should not return NaN" test.assert_true );
-	]],
-	-- test-isnan-nan
-	firth[[
-		:( nan isnan? " NaN should return true for isnan?" test.assert_true );
-	]],
-}
+	// test_mul
+	:( 6 7 * 42 " Multiplying should equal expected product" test.assert_eq );
+
+	// test_div
+	:( 20 5 / 4 " Dividing should equal expected quotient" test.assert_eq );
+
+	// test_mod
+	:( 17 5 % 2 " Taking modulo should equal expected remainder" test.assert_eq );
+
+	// test_pow
+	:( 2 8 ** 256 " Taking a power should equal expected result" test.assert_eq );
+
+	// test_inc
+	:( 41 1+  42 " Incrementing should equal one greater than original" test.assert_eq );
+
+	// test_dec
+	:( 42 1- 41 " Decrementing should equal one less than original" test.assert_eq );
+
+	// edge cases //
+
+	// test_add_zero
+	:( 42 0 + 42 " Adding zero should equal the original value" test.assert_eq );
+
+	// test_sub_neg
+	:( 3 -2 - 5 " Subtracting a negative should add" test.assert_eq );
+
+	// test_mul_zero
+	:( 0 99 * 0 " Multiplying by zero should equal zero" test.assert_eq );
+
+	// test_div_by_one
+	:( 42 1 / 42 " Dividing by 1 should return the number itself" test.assert_eq );
+
+	// test_div_by_zero
+	:( 42 0 / inf " Dividing by 0 should return infinity" test.assert_eq );
+
+	// test_div_by_negative_zero
+	:( 42 -0 / -inf " Dividing by -0 should return -infinity" test.assert_eq );
+
+	// test_zero_mod_k
+	:( 0 5 %  0 " Taking zero MOD k should return zero" test.assert_eq );
+
+	// test_k_mod_zero
+	:( 5 0 % isnan? " Taking k modulo zero should return NaN" test.assert_true );
+
+	// test_zero_pow_k
+	:( 0 5 ** 0 " Raising zero to any power should be zero" test.assert_eq );
+
+	// test_k_pow_zero
+	:( 5 0 ** 1 " Anything raised to 0 power should be one" test.assert_eq );
+
+	// test_one_pow_k
+	:( 1 5 ** 1 " One raised to any power should be one" test.assert_eq );
+
+	// test_k_pow_one
+	:( 5 1 ** 5 " Anything raised to 1 power should be itself" test.assert_eq );
+
+	// test_k_pow_neg_inverse
+	:( -4 -1 ** -0.25 " Anything raised to -1 should be its inverse" test.assert_eq );
+
+	// test-isnan-inf
+	:( inf isnan? not " Infinity is not NaN" test.assert_true );
+
+	// test-isnan-k
+	:( 42 isnan? not " Finite number should not return NaN" test.assert_true );
+
+	// test-isnan-nan
+	:( nan isnan? " NaN should return true for isnan?" test.assert_true );
+
+	freeze // ⚠️ ALWAYS execute LAST
+]]
