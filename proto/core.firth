@@ -15,6 +15,8 @@ char : create compile
 : `
 	word cpush
 	interpret buildfunc dup bindfunc immediate
+: ' word find cpush
+	interpret buildfunc dup bindfunc immediate
 : postpone
 	word find ccall
 	interpret buildfunc dup bindfunc immediate
@@ -71,7 +73,6 @@ char : create compile
 : (EX: 3 backtrack postpone ( ;immed // execution effects for compiling words
 : (--)(EX: postpone (EX: ;immed
 : TODO: (TS: .*\n) postpone // ;immed  TODO: add to list with file/line/word?
-: ' ( -- xt )  (TS: word ) word find cpush ;immed
 : "" ( -- s ) ` (.-)"" parsematch trim cpush ;immed
 : clips ( s -- s' ) 2 -2 Lua.string.sub ;
 : eachword ( * s xt -- *) ; TODO: parse words from string and hand to xt
@@ -109,9 +110,9 @@ char : create compile
 : 2not ( a b -- ~a ~b) swap not swap not ;
 : && ( a b -- a&&b ) " and" cbinop ;immed
 : || ( a b -- a||b ) " or" cbinop ;immed
-: ^^ ( a b -- aXORb ) postpone 2not postpone ~= ;immed
-: ~&& ( a b -- !a&&b ) postpone && not ;immed
-: ~|| ( a b -- !a||b ) postpone || not ;immed
+: ^^ ( a b -- aXORb ) ' 2not ccall postpone ~= ;immed
+: ~&& ( a b -- !a&&b ) postpone && ' not ccall ;immed
+: ~|| ( a b -- !a||b ) postpone || ' not ccall ;immed
 
 // Lambdas, functions, etc.
 0 dictionary ` __firth_lambdaID !!

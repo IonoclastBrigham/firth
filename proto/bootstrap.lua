@@ -77,6 +77,7 @@ fli.inject(dictionary, fli) -- do we want to do this ???
 
 
 -- global parser / interpreter / compiler state
+compiling = false
 intptr_running = false
 parserules = stack.new()
 cstack = stack.new()
@@ -733,7 +734,7 @@ function each(...)
 		return true, function(iterable, ...)
 			-- TODO: support strings and iterator xts on TOS
 			-- TODO: function spairs(str) return function(str, idx) local c = str:sub(idx+1, idx+1); if  #c == 0 then return nil, nil else return idx+1, c end end, str, 0 end
-			local newitr = getmetatable(iterable) and getmetatable(iterable).__itr
+			local newitr = getmetatable(iterable) and getmetatable(iterable).__ipairs
 			assert(
 				newitr or type(iterable) == "table",
 				"Argument must be iterable"
@@ -867,6 +868,7 @@ parserules:push(function(word, ...)
 	return val ~= nil and "literal", val, ...
 end)
 
+-- dictionary lookup rule
 parserules:push(function(word, ...)
 	if not defined(word) then return false, word, ... end
 
@@ -903,12 +905,12 @@ local function _interpret_r(...)
 	-- loop through parse rules here
 	debug("RESOLVING INPUT WORD '%s'", word)
 	local success, found
-	for _, rule in parserules:__itr() do
+	for _, rule in ipairs(parserules) do
 		success, found = rule(word)
 		if success then break end
 	end
 
-	-- TODO: decompose these into a stack of compile rules? --
+	-- TODO: decompose these into a stack of COMPILE rules? --
 
 	-- interpret/compile?
 	if type(found) == "function" then

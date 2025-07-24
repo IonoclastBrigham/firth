@@ -66,17 +66,16 @@ end
 -- top level test harness
 local function dotests(path)
 	output:write(string.format("\nRunning tests in %s: ", path))
-	local tests, err = loadfile(path)
-	if tests and not err then
+	local loadtests, err = loadfile(path)
+	if loadtests and not err then
 		-- give each suite its own environment
 		local testenv = fli.inject({}, _G)
 		testenv._G = testenv
-		setfenv(tests, testenv)
+		setfenv(loadtests, testenv)
 
 		local oldfailed = failures
-		success, tests = pcall(tests)
+		local success, tests = pcall(loadtests)
 		if success then
-
 			for _, test in ipairs(tests) do
 				try(test)
 			end

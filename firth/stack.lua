@@ -167,7 +167,7 @@ function stack:__tostring()
 end
 
 -- TODO: replace with standard `__ipairs`?
-function stack:__itr()
+function stack:__ipairs()
 	return function(_, current)
 		current = current - 1
 		if current > 0 then
@@ -200,8 +200,8 @@ stack = {}
 --! -- prints: 3	2	1
 --! </pre>
 --! @return a newly initialized stack object.
-function stack.new()
-	return setmetatable({ height = 0 }, mt)
+function stack.new(...)
+	return setmetatable({ height = select("#", ...), ... }, mt)
 end
 
 return stack

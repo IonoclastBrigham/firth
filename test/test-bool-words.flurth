@@ -16,251 +16,151 @@
 local firth = require 'proto.bootstrap'
 
 
--- Test file for comparison and boolean operator words in Firth
 -- covers: >, <, =, <=, >=, ~=, and, or, nand, nor, xor
-return {
-	-- comparisons --
-	
-	-- test_greater
-	function() firth[[
-		" Larger should be greater than smaller."
-		5 3 > Lua.test.assert_true
-	]] end,
-	-- test_greater_false
-	function() firth[[
-		" Smaller should not be greater than larger."
-		3 5 > not Lua.test.assert_true
-	]] end,
-	-- test_less
-	function() firth[[
-		" Smaller should be less than larger."
-		3 5 < Lua.test.assert_true
-	]] end,
-	-- test_less_false
-	function() firth[[
-		" Larger should not be less than smaller."
-		5 3 < not Lua.test.assert_true
-	]] end,
-	-- test_equal
-	function() firth[[
-		" Equal values should compare as equal."
-		7 7 == Lua.test.assert_true
-	]] end,
-	-- test_equal_false
-	function() firth[[
-		" Unequal values should not compare as equal."
-		7 8 == not Lua.test.assert_true
-	]] end,
-	-- test_lesseq
-	function() firth[[
-		" Equal values should compare as less or equal."
-		5 5 <=  Lua.test.assert_true
-	]] end,
-	-- test_lesseq_true
-	function() firth[[
-		" Smaller should be less or equal to larger."
-		4 5 <= Lua.test.assert_true
-	]] end,
-	-- test_lesseq_false
-	function() firth[[
-		" Larger should not be less or equal to smaller."
-		6 5 <= not Lua.test.assert_true
-	]] end,
-	-- test_greatereq_eq
-	function() firth[[
-		" Equal values should compare as greater or equal."
-		5 5 >= Lua.test.assert_true
-	]] end,
-	-- test_greatereq_greater
-	function() firth[[
-		" Larger should be greater or equal to smaller."
-		6 5 >= Lua.test.assert_true
-	]] end,
-	-- test_greatereq_less
-	function() firth[[
-		" Smaller should not be greater or equal to larger."
-		4 5 >= not Lua.test.assert_true
-	]] end,
-	-- test_noteq_true
-	function() firth[[
-		" Unequal values should compare as not equal."
-		5 -5 ~= Lua.test.assert_true
-	]] end,
-	-- test_noteq_false
-	function() firth[[
-		" Equal values should not compare as not equal."
-		42 42 ~= not Lua.test.assert_true
-	]] end,
+return firth[[
+	// comparisons //
 
-	-- boolean logic --
+	// test_greater
+	:( 5 3 > " Larger should be greater than smaller." test.assert_true );
 
-	-- test_and_TT
-	function() firth[[
-		" TRUE AND TRUE should result in true."
-		true true and Lua.test.assert_true
-	]] end,
-	-- test_and_TF
-	function() firth[[
-		" TRUE AND FALSE should result in false."
-		true false and not Lua.test.assert_true
-	]] end,
-	-- test_and_FT
-	function() firth[[
-		" FALSE AND TRUE should result in false."
-		false true and not Lua.test.assert_true
-	]] end,
-	-- test_and_FF
-	function() firth[[
-		" FALSE AND FALSE and'ed should result in false."
-		false false and not Lua.test.assert_true
-	]] end,
-	-- test_or_TT
-	function() firth[[
-		" TRUE OR TRUE should result in true."
-		true true or Lua.test.assert_true
-	]] end,
-	-- test_or_TF
-	function() firth[[
-		" TRUE OR FALSE should result in true."
-		true false or Lua.test.assert_true
-	]] end,
-	-- test_or_FT
-	function() firth[[
-		" FALSE OR TRUE should result in true."
-		false true or Lua.test.assert_true
-	]] end,
-	-- test_or_false
-	function() firth[[
-		" FALSE OR FALSE should result in false."
-		false false or not Lua.test.assert_true
-	]] end,
-	-- test_nand_FF
-	function() firth[[
-		" FALSE NAND FALSE should result in true."
-		false false nand Lua.test.assert_true
-	]] end,
-	-- test_nand_TF
-	function() firth[[
-		" TRUE NAND FALSE should result in true."
-		true false nand Lua.test.assert_true
-	]] end,
-	-- test_nand_FT
-	function() firth[[
-		" FALSE NAND TRUE should result in true."
-		false true nand Lua.test.assert_true
-	]] end,
-	-- test_nand_TT
-	function() firth[[
-		" TRUE NAND TRUE should result in false."
-		true true nand not Lua.test.assert_true
-	]] end,
-	-- test_nor_FF
-	function() firth[[
-		" FALSE NOR FALSE should result in true."
-		false false nor Lua.test.assert_true
-	]] end,
-	-- test_nor_TF
-	function() firth[[
-		" TRUE NOR FALSE should result in false."
-		true false nor not Lua.test.assert_true
-	]] end,
-	-- test_nor_FT
-	function() firth[[
-		" FALSE NOR TRUE should result in false."
-		false true nor not Lua.test.assert_true
-	]] end,
-	-- test_nor_TT
-	function() firth[[
-		" TRUE NOR TRUE should result in false."
-		true true nor not Lua.test.assert_true
-	]] end,
-	-- test_xor_TF
-	function() firth[[
-		" TRUE XOR FALSE should result in true."
-		true false xor Lua.test.assert_true
-	]] end,
-	-- test_xor_FT
-	function() firth[[
-		" FALSE XOR TRUE should result in true."
-		false true xor Lua.test.assert_true
-	]] end,
-	-- test_xor_TT
-	function() firth[[
-		" TRUE XOR TRUE should result in false." false
-		true true xor Lua.test.assert_eq
-	]] end,
-	-- test_xor_FF
-	function() firth[[
-		" FALSE XOR FALSE should result in false." false
-		false false xor Lua.test.assert_eq
-	]] end,
+	// test_greater_false
+	:( 3 5 > not " Smaller should not be greater than larger." test.assert_true );
 
-	-- truthiness assumptions --
+	// test_less
+	:( 3 5 < " Smaller should be less than larger." test.assert_true );
 
-	-- test_nil_is_falsey
-	function() firth[[
-		" Nil as bool should be false." false
-		nil >bool Lua.test.assert_eq
-	]] end,
-	 -- test_strings_are_truthy
-	function() firth[[
-		" Non-empty string as bool should be true."
-		" a string" >bool  Lua.test.assert_true
-	]] end,
-	 -- test_empty_string_is_truthy
-	function() firth[[
-		" Empty string as bool should be true."
-		" " >bool Lua.test.assert_true
-	]] end,
-	 -- test_numbers_are_truthy
-	function() firth[[
-		" Non-zero number as bool should be true."
-		42 >bool Lua.test.assert_true
-	]] end,
-	 -- test_zero_is_truthy
-	function() firth[[
-		" Zero as bool should be true."
-		0 >bool Lua.test.assert_true
-	]] end,
-	-- test_tables_are_truthy
-	function() firth[[
-		" Empty table as bool should be true."
-		{} >bool Lua.test.assert_true
-	]] end,
-	-- test_functions_are_truthy
-	function() firth[[
-		" Function as bool should be true."
-		:( ); >bool Lua.test.assert_true
-	]] end,
+	// test_less_false
+	:( 5 3 < not " Larger should not be less than smaller." test.assert_true );
 
-	-- edge cases --
+	// test_equal
+	:( 7 7 == " Equal values should compare as equal." test.assert_true );
 
-	-- test_and_TX_fallthrough_second
-	function() firth[[
-		" a value" =: aValue
-		" a second value" =: aSecond
+	// test_equal_false
+	:( 7 8 == not " Unequal values should not compare as equal." test.assert_true );
 
-		" TRUTHY AND ANYTHING should be second value." aSecond
-		aValue aSecond and   Lua.test.assert_eq
+	// test_lesseq
+	:( 5 5 <= " Equal values should compare as less or equal." test.assert_true );
 
-		" TRUE AND ANYTHING should be second value." aSecond
-		true aSecond and Lua.test.assert_eq
+	// test_lesseq_true
+	:( 4 5 <= " Smaller should be less or equal to larger." test.assert_true );
 
-		" TRUTHY AND FALSEY should be second value." nil
-		aValue nil and Lua.test.assert_eq
-	]] end,
-	 -- test_and_FX_short_circuit_first
-	function() firth[[
-		" a value" =: aValue
+	// test_lesseq_false
+	:( 6 5 <= not " Larger should not be less or equal to smaller." test.assert_true );
 
-		" FALSEY AND ANYTHING should be first value." nil
-		nil aValue and Lua.test.assert_eq
+	// test_greatereq_eq
+	:( 5 5 >=  " Equal values should compare as greater or equal." test.assert_true );
 
-		" FALSEY AND ANYTHING should be first value." false
-		false aValue and not Lua.test.assert_eq
+	// test_greatereq_greater
+	:( 6 5 >= " Larger should be greater or equal to smaller." test.assert_true );
 
-		" FALSEY AND ANYTHING should be first value." 123
-		false nil and Lua.test.assert_eq
-	]] end,
-	 -- test_or_TX
-}
+	// test_greatereq_less
+	:( 5 6 >= not " Smaller should not be greater or equal to larger." test.assert_true );
+
+	// test_noteq_true
+	:( 5 -5 ~= " Unequal values should compare as not equal." test.assert_true );
+
+	// test_noteq_false
+	:( 42 42 ~= not " Equal values should not compare as not equal." test.assert_true );
+
+	// boolean logic //
+
+	// test_and_TT
+	:( true true and " TRUE AND TRUE should result in true." test.assert_true );
+
+	// test_and_TF
+	:( true false and not " TRUE AND FALSE should result in false." test.assert_true );
+
+	// test_and_FT
+	:( false true and not " FALSE AND TRUE should result in false." test.assert_true );
+
+	// test_and_FF
+	:( false false and not " FALSE AND FALSE should result in false." test.assert_true );
+
+	// test_or_TT
+	:( true true or " TRUE OR TRUE should result in true." test.assert_true );
+
+	// test_or_TF
+	:( true false or " TRUE OR FALSE should result in true." test.assert_true );
+
+	// test_or_FT
+	:( false true or " FALSE OR TRUE should result in true." test.assert_true );
+
+	// test_or_false
+	:( false false or not " FALSE OR FALSE should result in false." test.assert_true );
+
+	// test_nand_FF
+	:( false false nand " FALSE NAND FALSE should result in true." test.assert_true );
+
+	// test_nand_TF
+	:( true false nand " TRUE NAND FALSE should result in true." test.assert_true );
+
+	// test_nand_FT
+	:( false true nand " FALSE NAND TRUE should result in true." test.assert_true );
+
+	// test_nand_TT
+	:( true true nand not " TRUE NAND TRUE should result in false." test.assert_true );
+
+	// test_nor_FF
+	:( false false nor " FALSE NOR FALSE should result in true." test.assert_true );
+
+	// test_nor_TF
+	:( true false nor not " TRUE NOR FALSE should result in false." test.assert_true );
+
+	// test_nor_FT
+	:( false true nor not " FALSE NOR TRUE should result in false." test.assert_true );
+
+	// test_nor_TT
+	:( true true nor not " TRUE NOR TRUE should result in false." test.assert_true );
+
+	// test_xor_TF
+	:( true false xor " TRUE XOR FALSE should result in true." test.assert_true );
+
+	// test_xor_FT
+	:( false true xor " FALSE XOR TRUE should result in true." test.assert_true );
+
+	// test_xor_TT
+	:( true true xor not " TRUE XOR TRUE should result in false" test.assert_true );
+
+	// test_xor_FF
+	:( false false xor not " FALSE XOR FALSE should result in false." test.assert_true );
+
+	// truthiness conversions //
+
+	// test_nil_is_falsey
+	:( nil >bool not " Nil as bool should be false." test.assert_true );
+
+	//  test_strings_are_truthy
+	:( " a string" >bool " Non-empty string as bool should be true."  test.assert_true );
+
+	//  test_empty_string_is_truthy
+	:( " " >bool " Empty string as bool should be true." test.assert_true );
+
+	//  test_numbers_are_truthy
+	:( 42 >bool " Non-zero number as bool should be true." test.assert_true );
+
+	//  test_zero_is_truthy
+	:( 0 >bool " Zero as bool should be true." test.assert_true );
+
+	// test_tables_are_truthy
+	:( {} >bool " Empty table as bool should be true." test.assert_true );
+
+	// test_functions_are_truthy
+	:( :( ); >bool " Function as bool should be true." test.assert_true );
+
+	// edge cases //
+
+	" a value" =: aValue
+	" a second value" =: aSecond
+
+	// test_and_TX_fallthrough_second
+	:( aValue aSecond and aSecond " TRUTHY AND ANYTHING should be second value." test.assert_eq );
+	:( true aSecond and aSecond " TRUTHY AND TRUTHY should be second value." test.assert_eq );
+	:( aValue nil and nil " TRUTHY AND FALSEY should be second value." test.assert_eq );
+
+	//  test_and_FX_short_circuit_first
+	:( nil aValue and nil " FALSEY AND ANYTHING should be first value." test.assert_eq );
+	:( false aValue and false " FALSEY AND ANYTHING should be first value." test.assert_eq );
+	:( false nil and false " FALSEY AND ANYTHING should be first value." test.assert_eq );
+
+	freeze // ⚠️ ALWAYS execute LAST
+]]

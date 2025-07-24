@@ -18,7 +18,7 @@
 local firth = require 'proto.bootstrap'
 
 
-return firth [[
+return firth[[
 	// test_add
 	:( 2 3 + 5 " Adding should equal expected sum." test.assert_eq );
 
