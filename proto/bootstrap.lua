@@ -24,6 +24,7 @@ loadstring = loadstring or load -- Lua@5.3+
 setfenv = setfenv or require 'compat.compat_env'.setfenv  -- Lua@5.2+
 unpack = unpack or table.unpack  -- Lua@5.2+
 tonumber = require "compat.tonumber" -- Lua@5.2+
+ipairs = require "compat.ipairs" -- Lua@5.1/JIT
 
 -- cache common lua globals before nuking the environment
 local assert, error = assert, error

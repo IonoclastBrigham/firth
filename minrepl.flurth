@@ -19,8 +19,8 @@
 local pcall = pcall
 local table = table
 
-local stringio = require "firth.stringio"
 local firth = require "proto.bootstrap"
+local stringio = require "firth.stringio"
 local dictionary = firth.dictionary
 
 

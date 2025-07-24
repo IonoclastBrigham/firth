@@ -370,9 +370,9 @@ alias: exit Lua.os.exit
 	;
 false =: PRINT_ERRS
 
-// testing
+// optional testing module
 ` Lua.test defined if
-	Lua.test =: test
+	' Lua.test =: test
 	0 3 ' Lua.test.assert_eq wrapfunc =: test.assert_eq
 	0 2 ' Lua.test.assert_true wrapfunc =: test.assert_true
 end
