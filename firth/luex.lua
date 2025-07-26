@@ -55,14 +55,23 @@ getmetatable("").__index = string__index
 --! @param iStart start index to begin slicing from.
 --! @param iEnd   end index to finish slicing to; negative values are relative
 --!               to the end of the table.
---! @return       a table, with values copied from the requested range of `t`.
+--! @return       a table, with values copied from the requested range of `t`; or
+--!               an empty table if `iStart` or `iEnd` are out of range.
 function table.slice(t, iStart, iEnd)
 	-- allow negative end indices from end of list
 	iEnd = iEnd or -1
 	if iEnd < 0 then iEnd = (#t + 1) - iEnd end
+
 	-- validate inputs
-	if iStart < 1      or iStart > #t then error("bad argument #2 to 'slice' (position out of bounds)") end
-	if iEnd   < iStart or iEnd   > #t then error("bad argument #3 to 'slice' (position out of bounds)") end
+	if type(t) ~= "table" then
+		error(("bad argument #1 (%s) to 'slice' (table expected, got %s)"):format(
+			tostring(t), type(t)), 2)
+	end
+	if iStart < 1 or iStart > #t or iEnd < iStart or iEnd > #t then
+		-- TODO: clamp out of range but non-negative indices to original array bounds.
+		-- TODO: support negative indices like string.sub()?
+		return {} -- empty table if out of range
+	end
 
 	local newT = {}
 	for i = iStart, iEnd do table.insert(newT, t[i]) end

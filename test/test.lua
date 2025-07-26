@@ -30,6 +30,8 @@ local mt = { insert = table.insert }
 mt.__index = mt
 local messages = setmetatable({}, mt)
 
+PRINT_ERRS = false -- EXPORTED; disable default :Firth error printing
+
 -- utilities
 local function failed(msg)
 	output:write('E')

@@ -17,11 +17,13 @@
 --------------------------------------------------------------------------------
 
 
+local assert = assert
 local pairs = pairs
 local print = print
 local select = select
 local setfenv = setfenv or require 'compat.compat_env'.setfenv
 local string = string
+local table = table
 local type = type
 
 require "firth.luex"
@@ -220,18 +222,26 @@ function wrapfunc(f, argc, retc)
 end
 
 function wrapmodule(module, defs)
-	for k, v in pairs(defs) do
-		if type(v) == "table" then
-			if #v == 2 then
-				local argc, ret = v[1], v[2]
-				module[k] = wrapfunc(module[k], argc, ret)
+	for luafunc, signature in pairs(defs) do
+		if type(signature) == "table" then
+			if #signature > 0 then -- is "array"
+				assert(#signature >= 2, "Invalid signature for function '"..luafunc.."': "..table.concat(signature))
+				local retc = signature[#signature]
+				for i = 1, #signature - 1 do
+					local targetfunc = (#signature > 2) and luafunc..signature[i] or luafunc
+					module[targetfunc] = wrapfunc(module[luafunc], signature[i], retc)
+				end
+				if #signature > 2 then
+					-- multiple versions so delete the original name
+					module[luafunc] = nil
+				end
 			else
 				-- nested submodule
-				wrapmodule(module[k], v)
+				wrapmodule(module[luafunc], signature)
 			end
-		elseif type(v) == "number" then
+		elseif type(signature) == "number" then
 			-- no return count specified; defaults to 1
-			module[k] = wrapfunc(module[k], v)
+			module[luafunc] = wrapfunc(module[luafunc], signature)
 		else
 			-- TODO: call closure?
 		end
@@ -261,10 +271,15 @@ function wrapglobals(globalenv)
 		math = {
 			abs = 1,
 			ceil = 1,
-			floor = 1
+			floor = 1,
+			max = 2,
+			min = 2,
+			random = {0, 1, 2, 1},
+			randomseed = {1, 0},
 		},
 		os = {
-			exit = { 1, 0 } -- technically, never returns
+			exit = { 1, 0 }, -- technically, never returns
+			time = 0,
 		},
 		string = {
 			-- format = nil, -- TODO: returns 1, but could take any number
@@ -273,7 +288,7 @@ function wrapglobals(globalenv)
 		},
 		table = {
 			concat = 2,
-			insert = { 2, 0},
+			insert = { 2, 0 },
 			push = { 1, 0 }
 		}
 	})
@@ -282,11 +297,11 @@ end
 local PREFIX = "Lua"
 function maplua(globalenv, lua)
 	for name, val in pairs(lua) do
-		local path = PREFIX.."."..name
+		local path = PREFIX .. "." .. name
 		globalenv[path] = val
 		if type(val) == "table" then
 			for fname, fval in pairs(val) do
-				local path = path.."."..fname
+				local path = path .. "." .. fname
 				globalenv[path] = fval
 			end
 		end
@@ -306,6 +321,5 @@ function inject(target, source)
 	end
 	return target
 end
-
 
 return module

@@ -200,6 +200,13 @@ local function sortmatches(buckets, tok)
 		end
 	end
 
+	-- Limit to 5 dictionary fuzzy matches but add Lua global matches
+	local count = math.min(#result, 5)
+	result = table.slice(result, 1, count)
+	if defined("Lua."..tok) then
+		table.insert(result, "Lua."..tok)
+	end
+
 	if #result == 0 then result[1] = "(NO SUGGESTIONS FOUND)" end
 	return result
 end
@@ -226,8 +233,6 @@ local function lookup_err(tok, throw, ...)
 	end
 
 	local suggestions = sortmatches(buckets, tok)
-	local count = math.min(#suggestions, 5)
-	suggestions = table.slice(suggestions, 1, count)
 	local suffix = dictionary.PRINT_ERRS and "\nDid You Mean..?\n\t"..table.concat(suggestions, "\n\t") or ""
 	local msg = LOOKUP_ERR_MSG:format(tok, suffix)
 	if throw then
@@ -947,10 +952,10 @@ function runstring(src, ...)
 	return _interpret_r(...)
 end
 
-local function _afterfile(success, ...)
+local function _afterfile(path, success, ...)
 	debug("FILE COMPLETED: %sSUCCESSFULLY", success and "👍 " or "💀 UN")
 	if not success then
-		runtime_err("runfile", ...)
+		runtime_err(("`%q runfile`"):format(path), ...)
 	elseif compiling then
 		runtime_err("runfile", "UNEXPECTED EOF WILE COMPILING", ...)
 	end
@@ -978,7 +983,7 @@ function runfile(path, ...)
 	-- e.g. for matching a close paren that hasn't been read yet.
 	local src = stringio.read()
 
-	return _afterfile(pcall(runstring, src, ...))
+	return _afterfile(path, pcall(runstring, src, ...))
 end
 
 --[[

@@ -142,7 +142,7 @@ char : create compile
 // tables, arrays
 : {} ( -- {} ) lua{ return {}, ... } ;
 : # ( s|t -- n ) lua{ return #(...), select(2, ...) } ;
-: freeze ( n*x -- { ...n*x } ) lua{ return {...} } ;
+: freeze ( n*x -- { ...n*x } ) lua{ return {...} } ; TODO: stack.new
 
 // Minimal stack operations
 : []@    ( stk -- x stk ) lua{ local stk = (...); return stk:top(), ... } ;
@@ -269,6 +269,14 @@ const: type.nil ` nil
 // : variable ( name -- entry ) create dup does> NOP ;
 // : var: ( x -- ) word variable ! ;immed
 // : val: ( x -- ) word variable ! last does> @ ;immed
+
+// randomness
+0 =: RANDOM_SEED
+: srand     ( n -- )                     dup = RANDOM_SEED Lua.math.randomseed ;
+: rand      ( -- 0.0≤n≤1.0 )             Lua.math.random0 ;
+: rand..max ( maxn -- 0≤n≤maxn )         1+ Lua.math.random1 1- ; // adjust Lua's 1..maxn to 0..maxn
+: rand..in  ( minn maxn -- minn≤n≤maxn ) Lua.math.random2 ;
+Lua.os.time srand
 
 // strings and i/o
 const: \r char \r
