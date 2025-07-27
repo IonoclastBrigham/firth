@@ -378,6 +378,10 @@ alias: exit Lua.os.exit
 	;
 false =: PRINT_ERRS
 
+// string processing
+: strword ( s istart -- word iend ) %s swap strparse ;
+: strip ( s -- s' ) 0 strword swap drop ;
+
 // optional testing module
 ` Lua.test defined if
 	' Lua.test =: test

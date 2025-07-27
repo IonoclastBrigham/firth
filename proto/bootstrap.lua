@@ -264,6 +264,11 @@ output = fli.wrapfunc(stringio.output, 0, 1)
 useinput  = fli.wrapfunc(stringio.input, 1, 0)
 useoutput = fli.wrapfunc(stringio.output, 1, 0)
 
+readline = fli.wrapfunc(stringio.readline, 0, 1)
+dictionary['.readline'] = fli.wrapfunc(stringio.readline, 1, 1)
+
+strparse = fli.wrapfunc(stringio.nexttoken, 3, 2)
+
 -- ( s -- ) ( Out: s )
 dictionary['.raw'] = function(str, ...)
 	assert(type(str) == "string", "NOT A STRING")
