@@ -1,0 +1,38 @@
+// guess.firth
+// :Firth guess-the-number game example
+//
+// Copyright © 2025 Brigham Toskin
+// This file is part of the :Firth language reference implementation. Usage
+// and redistribution of this software is governed by the terms of a modified
+// MIT-style license. You should have received a copy of the license with the
+// source distribution; if not, you may find it online at:
+// <https://github.com/IonoclastBrigham/firth/blob/master/LICENSE>
+//
+// Formatting:
+//	utf-8 ; unix ; 80 cols ; tabwidth 4
+// /////////////////////////////////////////////////////////////////////////////
+
+
+// Guess-the-Number! Based on Syn9's mini game example.
+// <https://github.com/Syn-Nine/c3-mini-games>
+
+// state
+6 =: tries
+20 rand..max =: secret
+0 =: guess
+
+// game loop
+true while
+	tries .fmt" Enter a number between 0 and 20, %d tries remaining: "
+
+	STDIN .readline strip >number = guess
+	guess nil ~= if
+		guess secret < if .fmt" Too Small\n" end
+		guess secret > if .fmt" Too Large\n" end
+		guess secret == if .fmt" You Win!\n" 0 = tries end
+
+		tries 1- = tries
+	end
+tries 0 > end
+
+.fmt" Game Over\n"
