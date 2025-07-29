@@ -1,27 +1,69 @@
 Ideas / TODOs
 -------------
 proto branch tasks
+	vocabs
+		vocab: name
+			creates words vocab:name, and vocab:name.dictionary, and vocab:pop
+			pushes parse rule that looks at currently-building vocab
+		vocab:name
+			pushes parse rule that looks at previously-built vocab
+		vocab:name.dictionary
+			the raw dictionary lua table if you need to modify or inspect
+		vocab:pop
+			pops current top parse rule
+			do we need to do any monkeying with global env?
+		Need a way to punch through to base dictionary to add globals
+		What is the mechanism for "all new definitions go into vocab"?
+			setfenv?
+			many words directly reference `dictionary`, but could turn this into a function?
+			maybe when important _DICTIONARY as variable, dictionary as getter?
+	Enums / Symbols
+		Declarative like C-alikes, or on-the-fly symbols like Scheme or Ruby?
+		If they need to be declared, harder to mess up with a typo, and could include symbols in module's "interface"
+			➤ :DERD = monsterstate
+			:DERD is undefined
+			Did You Mean..?
+				:DEAD
+				:DUDE
+				:DAVID
+		We could allow a module to declare its valid symbols and not worry about collisions since they're stateless and immutable
+			// module A
+			symbol: STAYED
+			symbol: LEFT
+			...
+			// module B
+			symbol: RIGHT
+			symbol: LEFT // THIS IS FINE 👍
+		On the other hand, could push a parse rule for ":ALLCAPS" that just says "this is a symbol now"
+			Convenient, dynamic, easy to hack in unexpected values
+			Easier to use symbols that the consumer didn't explicitly think of ahead of time
+			This is mostly useful if they're are used as opaque keys or can convert to strings
+		Okay, but how to we feel about enumerations that count up e.g. from 0 or 1, and can convert to an int?
+			Definitely useful.
+			Maybe symbols and enums are different things that in 90% of cases work exactly the same.
+			Need string-ish things? Use a symbol. Need numberish things? Use an enum. Don't care? Pick what's easier.
+			Namespaced? Global? Dot prefix?
 	deferred execution
 		defer word
 		defer{ word word word }
 		could be LATER or ONEXIT or FINALLY or whatever
 		needs to be immediate to collect the words that follow
-		must compile so at runtime, xt gets pushed to rstack
+		must compile so at runtime, xt gets pushed to rstack or appended to final thread
 		must compile so skipped branches don't push defered xt
 		needs to call function body through pcall so deferreds are always called
-		do we want to trigger on exiting blocks?
+		do we want to trigger on exiting control blocks?
 			this is the golang model: DEFER in an IF triggers on leaving then block
 			is reasonable if it's understood to be the rule
 			but zig model is powerful: choose func cleanup based on condition
 			will require some additional compile state
 				mark compiling functions as branch-or-block vs proper func?
 				don't exec until outer word returns
-	using the parserules stack
-		locals, loop counters, etc.
-		possibilities for more structured DSLs and extended literals
-		push a "lookup word in this table" func => BOOM, VOCABULARIES!
 	expand/refine loops, conditionals, and matching
-		figure out elseif and some kinda multi-cond
+		may be helpful to tag compile state with "constrol structure" and search up stack for context
+		elseif
+		some kinda multi-cond / when / switch
+		break and continue
+		while( condition ) stuff end
 	guard
 		can we make guard work without early-exit flow?
 		is this really helpful?
@@ -153,7 +195,7 @@ compiletime macros / constexprs?
 		[ 1 12 foo +] // compiles to the same
 better error debug messagges (xpcall and debug lib)
 	if "debug mode", compile in a local var that counts firth source line
-recurse
+recursion
 	start all defs with -> " local function word()"
 	compile as append " word()"
 	end all defs with -> " end \n return word"

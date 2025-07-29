@@ -4,7 +4,7 @@ char : create compile
 	char %s parse create compile
 	interpret buildfunc bindfunc
 : immediate
-	compile_target.XT @@ immediates true pivot !!
+	compile_target.XT @@ immediates true pivot !! drop
 	interpret buildfunc bindfunc
 : %s
 	char %s cpush
@@ -93,7 +93,7 @@ char : create compile
 : cpushvar ( name -- )(CB: push(dict[name])) cpush ' find ccall ;
 : cstorevar ( name -- )(CB: dict[name]=x)
 	cpush dictionary cpush ' swap ccall (EX: x -- x dict name)
-	' !! ccall
+	' !! ccall ' drop ccall
 	;
 : ++ (EX: -- n+1 )(TS: nvar )
 	word dup cpushvar ' 1+ ccall ( -- name )(EX: -- n+1 )
@@ -115,8 +115,8 @@ char : create compile
 : ~|| ( a b -- !a||b ) postpone || ' not ccall ;immed
 
 // Lambdas, functions, etc.
-0 dictionary ` __firth_lambdaID !!
-` __λ_0x%08X__ dictionary ` __firth_lambdaID_fmt !!
+0 dictionary ` __firth_lambdaID !! drop
+` __λ_0x%08X__ dictionary ` __firth_lambdaID_fmt !! drop
 : nextλID ( -- s ) ++ __firth_lambdaID __firth_lambdaID_fmt fmt ;
 : :( (--) nextλID create compile ;immed
 : ); ( -- xt ) buildfunc ` xt @@ cpush ;immed
@@ -213,13 +213,13 @@ char : create compile
 : immediate ( xt|entry -- )
 	// redefining to allow making raw XTs immediate i.e. lambdas
 	dup xt? not if compile_target.XT @@ end
-	immediates true pivot !!
+	immediates true pivot !! drop
 	;
 : 2word ( -- s1 s2 )(TS: word word ) word word ;
 : #! ( * -- * )(TS: word) word find execute ;immed
 
 // values and variables
-: store ( x name -- ) dictionary swap !! ;
+: store ( x name -- ) dictionary swap !! drop ;
 : =: ( x -- )(TS: name)
 	word dup find nil == assert" Variable redefinition: %s" ?throw
 	cpush ' store ccall
@@ -378,7 +378,19 @@ alias: exit Lua.os.exit
 	;
 false =: PRINT_ERRS
 
-// string processing
+// metatables
+: )meta.tostring; ( mt -- mt)(EX: mt.__string = thr)
+	postpone ); ' swap ccall ` __tostring cpush ' !! ccall
+	;immed
+
+// symbols and enums
+: symbol.create ( s -- )
+	dup {} ` value !!
+	{} :( ` value @@  )meta.tostring; Lua.setmetatable swap store ;
+: symbol: (--)(TS: word) char : word .. dup defined not if symbol.create else drop end ;immed
+
+
+// additional string processing
 : strword ( s istart -- word iend ) %s swap strparse ;
 : strip ( s -- s' ) 0 strword swap drop ;
 

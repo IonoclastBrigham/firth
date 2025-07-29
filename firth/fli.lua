@@ -18,6 +18,7 @@
 
 
 local assert = assert
+local getmetatable, setmetatable = getmetatable, setmetatable
 local pairs = pairs
 local print = print
 local select = select
@@ -258,6 +259,8 @@ function wrapglobals(globalenv)
 		require = 1,
 		tostring = 1,
 		type = 1,
+		getmetatable = 1,
+		setmetatable = 2,
 		-- pcall = nil,	-- NOWRAP: returns all args
 		-- xpcall = nil,-- NOWRAP: returns all args
 		bit = {
