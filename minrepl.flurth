@@ -1,4 +1,4 @@
-#!/usr/bin/env luajit
+#!/usr/bin/env rlwrap -pgreen luajit
 --------------------------------------------------------------------------------
 --! @file
 --! @brief Tiny minimal REPL for :Firth language.
@@ -16,15 +16,18 @@
 --------------------------------------------------------------------------------
 
 
-local pcall = pcall
 local table = table
 
-local firth = require "proto.bootstrap"
 local stringio = require "firth.stringio"
+local firth = require "proto.bootstrap"
+
+
+if not firth.loaded then
+    error(":Firth bootstrap failed to load; cannot start REPL", 2)
+end
+
 local dictionary = firth.dictionary
-
-
-dictionary.PRINT_ERRS = true
+dictionary.PRINT_ERRS = true -- enable for REPL output
 
 local function REPL(clean, ...)
     -- print stack from previous line
@@ -32,21 +35,22 @@ local function REPL(clean, ...)
 
     -- error output / prompt
     firth([[
-        if ." ok" else fmt" %s\n" .err end
+        if ." ok" else PRINT_ERRS not if fmt" %s\n" .err end end
         ` ➤ .
     ]], clean, ...)
-    if dictionary.compiling then stringio.print('      ') end
+    if dictionary.compiling then stringio.printstr('    ') end
 
     -- read input
     local line = stringio.readline()
     if line == nil then
         -- nil => EOF => CTRL+D
-        stringio.print("bye")
+        stringio.printstr("bye")
         dictionary.bye(select(clean and 1 or 2, ...))
     end
-    return REPL(pcall(firth.runstring, line, select(clean and 1 or 2, ...)))
+    return REPL(firth(line, select(clean and 1 or 2, ...)))
 end
 
+-- dictionary.DEBUG_LOGS = true
 firth[[
     false =: showstack
     : ?printstack showstack if printstack end ;
@@ -54,7 +58,7 @@ firth[[
 if select("#", ...) > 0 then
     firth.runfile("firth/cli.firth")
     local src = table.concat({...}, " ")
-    return REPL(firth.runstring(src.." DOREPL not if printstack 0 exit else banner end DOREPL"))
+    return REPL(firth(src.." DOREPL not if printstack 0 exit else banner end DOREPL"))
 else
     dictionary.banner()
     return REPL(true, ...)

@@ -281,6 +281,7 @@ function stringio.read(file)
 end
 
 --! Reads a single line from file.
+--!
 --! Reads text from file up to the first end-of-line char it finds.
 --! The newline, if encountered, is discarded.
 --! @param file descriptor object to read from. If omitted or \c nil,
@@ -297,7 +298,8 @@ function stringio.lines(file)
 	return file:lines()
 end
 
---! Prints its arguments to its output.
+--! Prints its string arguments to its output.
+--!
 --! The behavior of this function can be modified depending on the first
 --! argument that is passed in.
 --! @param ... a list of arguments to print. If the first argument is:<ul>
@@ -308,7 +310,7 @@ end
 --! 			all the other arguments to the current output.
 --! 	</ul>
 --! @see #printline()
-function stringio.print(...)
+function stringio.printstr(...)
 	if select('#', ...) == 0 then return end
 
 	local arg1 = (...)
@@ -320,18 +322,19 @@ function stringio.print(...)
 	end
 end
 
---! Prints its arguments to its output, with a newline appended.
---! The behavior of this function is identical to #print(), except that a
+--! Prints its string arguments to its output, with a newline appended.
+--!
+--! The behavior of this function is identical to #printstr(), except that a
 --! newline char/sequence appropriate for the host platform is appended to
 --! the output stream.
---! @param ... a list of arguments to print. Please see the documentation
---! 		for the paramaters of #print(), for details.
---! @see #print()
+--! @param ... a list of arguments to printstr. Please see the documentation
+--! 		for the paramaters of #printstr(), for details.
+--! @see #printstr()
 function stringio.printline(...)
 	if select("#", ...) > 0 then
-		stringio.print(...)
+		stringio.printstr(...)
 	end
-	stringio.print('\n')
+	stringio.printstr('\n')
 end
 
 function stringio.flush()

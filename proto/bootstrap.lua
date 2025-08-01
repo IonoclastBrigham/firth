@@ -17,7 +17,7 @@
 
 --! @cond
 
--- compat defs for different versions of PUC-Rio Lua
+-- compat defs for different versions of PUC-Rio Lua / LuaJIT
 package.path = "./?/init.lua;"..package.path
 bit = require "compat.bit" -- Lua@5.2 bit32; Lua@5.4 operators
 loadstring = loadstring or load -- Lua@5.3+
@@ -46,14 +46,14 @@ local pcall, xpcall = pcall, xpcall
 local bit = bit
 local bitand, bitor, bitxor, bitnot = bit.band, bit.bor, bit.bxor, bit.bnot
 
--- firth imports
+-- :Firth utility/support imports
 local fli = require "firth.fli"
 local stringio = require "firth.stringio"
 local stack	= require "firth.stack"
 local fstack   = require "firth.fstack"
 require "firth.luex"
 
--- set up Lua global namespace as firth dictionary / global environment
+-- set up Lua global namespace as :Firth dictionary / global environment
 local _lua = fli.inject({}, _G)
 _lua._G, _lua.arg = nil, nil
 local _G  = { Lua =  _lua }
@@ -61,7 +61,7 @@ _G.dictionary = _G
 setfenv(1, _G)
 setmetatable(dictionary, {
 	__newindex = function(d, k, v)
-		if type(k) ~= "string" then error("Invalid Name: "..tostring(k)) end
+		if type(k) ~= "string" then error("Invalid Name: "..tostring(k), 2) end
 		rawset(d, k, v)
 	end,
 	__tostring = function()
@@ -78,8 +78,15 @@ fli.inject(dictionary, fli) -- do we want to do this ???
 
 
 -- global parser / interpreter / compiler state
+DEBUG_LOGS = false
+PRINT_ERRS = true
+
 compiling = false
-intptr_running = false
+interp_running = false
+tok_stream = ""
+parse_pos = 1
+line_num = 1
+
 parserules = stack.new()
 cstack = stack.new()
 rstack = stack.new()
@@ -132,7 +139,7 @@ local function prepstack(...)
 
 	return mapstack(
 		function(x)
-			-- pass through quote before tostring; quote will quote strings
+			-- pass through quote before tostring; quote will quote strings,
 			-- but leave e.g. numbers untouched.
 			-- then we convert everything for printing.
 			return tostring(quote(x)):gsub('\\\n', '\\n'):gsub('\\9', '\\t').." "
@@ -149,25 +156,26 @@ function recover(...)
 	return unpack(stk)
 end
 
-function errhandler(success, ...)
+function err_middleware(success, ...)
 	if success then return ... end
 
-	if dictionary.PRINT_ERRS then
-		local msg = (...)
-		stringio.output(stringio.stderr())
-		stringio.printline(("ERROR: %s"):format(msg))
-		stringio.printline(("while running %s:%d"):format(current_infile, line_num))
-		-- local stackstring = '[ '..prepstack(unpack(frozen_stack))..']'
-		local stackstring = '[ '..prepstack(select(2, ...))..']'
-		stringio.printline('stack : '..stackstring)
-		stringio.printline('cstack: '..tostring(cstack))
-		stringio.printline('rstack: '..tostring(rstack))
-		stringio.printline(stacktrace(3))
-		stringio.output(stringio.stdout())
-	end
-
-	-- return cclearstate(false, recover())
-	return cclearstate(false, ...)
+	local errmsg = (...)
+	return (function(...)
+		if dictionary.PRINT_ERRS then
+			stringio.output(stringio.stderr())
+			stringio.printline(("ERROR: %s"):format(errmsg))
+			stringio.printline(("while running %s:%d"):format(current_infile, line_num))
+			local stackstring = '[ '..prepstack(...)..']'
+			stringio.printline('stack : '..stackstring)
+			stringio.printline('cstack: '..tostring(cstack))
+			stringio.printline('rstack: '..tostring(rstack))
+			stringio.printline(stacktrace(3))
+			stringio.output(stringio.stdout())
+			return clear_cstate(true, errmsg, ...)
+		end
+	end)(recover())
+	-- local die = current_infile ~= "{STDIN}"
+	-- return clear_cstate(die, select(2, ...))
 end
 
 -- ( n -- s )
@@ -238,15 +246,14 @@ local function lookup_err(tok, throw, ...)
 	if throw then
 		return runtime_err(prefix, msg, 2, ...)
 	elseif dictionary.PRINT_ERRS then
-		stringio.stderr():write(msg.."\n")
+		STDERR:write(msg.."\n")
 	end
 	return ...
 end
-dictionary['lookup_err'] = fli.wrapfunc(lookup_err, 2, 0)
+dictionary.lookup_err = fli.wrapfunc(lookup_err, 2)
 
-debuglogs = false
-local function debug(str, ...)
-	if not debuglogs then return end
+local function trace(str, ...)
+	if not DEBUG_LOGS then return end
 
 	if select("#", ...) > 0 then str = str:format(...) end
 	stringio.printline("🐛 "..str)
@@ -271,14 +278,15 @@ strparse = fli.wrapfunc(stringio.nexttoken, 3, 2)
 
 -- ( s -- ) ( Out: s )
 dictionary['.raw'] = function(str, ...)
-	assert(type(str) == "string", "NOT A STRING")
-	stringio.print(str)
+	assert(type(str) == "string", (".raw: %s IS NOT A STRING"):format(str))
+	stringio.printstr(str)
 	return ...
 end
 
 -- ( -- )
-dictionary[".S"] = function(...)
-	stringio.print(prepstack(...))
+dictionary['.S'] = function(...)
+	trace("PRINT STACK (height: %d):", height(...))
+	stringio.printstr(prepstack(...))
 	return ...
 end
 
@@ -289,7 +297,9 @@ quote = fli.wrapfunc(stringio.quote, 1)
 trim = fli.wrapfunc(stringio.trim, 1)
 
 -- ( x -- n|nil )
-dictionary["string>number"] = fli.wrapfunc(stringio.tonumber, 1)
+dictionary['string>number'] = fli.wrapfunc(stringio.tonumber, 1)
+
+
 
 -- ( s -- b )
 function defined(name, ...)
@@ -360,10 +370,6 @@ function parsematch(pattern, ...)
 	return word, ...
 end
 
-local function _split_r(...)
-	-- body
-end
-
 -- ( str -- array )
 function split(str, ...)
 	return stringio.split(str), ...
@@ -372,7 +378,7 @@ end
 -- ( n -- ) ( TS: -n )
 function backtrack(n, ...)
 	parse_pos = math.max(parse_pos - n, 0)
-	debug("BACKTRACKING TO ...%q...", tok_stream:sub(parse_pos, parse_pos + 10))
+	-- trace("BACKTRACKING TO ...%q...\n                       ^", tok_stream:sub(parse_pos, parse_pos + math.min(tok_stream:find('\n', parse_pos) - 1 or #tok_stream - parse_pos, 10)))
 	return ...
 end
 
@@ -390,14 +396,14 @@ function countlines(str, ...)
 end
 
 -- ( b -- )
-function cclearstate(die, ...)
-	debug("CLEARING COMPILE STATE!!!!!!!")
+function clear_cstate(die, ...)
+	trace("CLEARING COMPILE STATE 📄")
 
 	current_infile = "{STDIN}"
-	stringio.input(stringio.stdin())
+	stringio.input(STDIN())
 
 	tok_stream = ""
-	intptr_running = not die
+	interp_running = not die
 	parse_pos = 1
 	line_num = 1
 
@@ -406,6 +412,7 @@ function cclearstate(die, ...)
 
 	cstack:clear()
 
+	if die then error((...), 3) end
 	return ...
 end
 
@@ -427,7 +434,7 @@ end
 
 function pushparsestate(...)
 	cstack:push(tok_stream)
-	cstack:push(intptr_running)
+	cstack:push(interp_running)
 	cstack:push(parse_pos)
 	cstack:push(line_num)
 
@@ -437,7 +444,7 @@ end
 function popparsestate(...)
 	line_num = cstack:pop()
 	parse_pos = cstack:pop()
-	intptr_running = cstack:pop()
+	interp_running = cstack:pop()
 	tok_stream = cstack:pop()
 
 	return ...
@@ -459,17 +466,25 @@ end
 
 -- ( s -- entry )
 function create(name, ...)
-	debug("CREATE %q", name)
+	trace("CREATE %q", name)
 	local entry = { name = name }
 	setmetatable(entry, entrymt)
 	-- dictionary[name] = entry
 	return entry, ...
 end
 
-dictionary["compile_target.NAME"] = "name"
-dictionary["compile_target.XT"] = "xt"
-dictionary["compile_target.COMPILEBUF"] = "compilebuf"
-dictionary["compile_target.SRCBUF"] = "srcbuf"
+dictionary['compile_target.NAME'] = "name"
+
+
+dictionary['compile_target.XT'] = "xt"
+
+
+dictionary['compile_target.COMPILEBUF'] = "compilebuf"
+
+
+dictionary['compile_target.SRCBUF'] = "srcbuf"
+
+
 
 -- ( entry -- )
 function compile(newtarget, ...)
@@ -526,7 +541,7 @@ end
 
 local function _thread(entry)
 	local name, compilebuf = entry.name, entry.compilebuf
-	debug("BUILDING %s", name)
+	trace("BUILDING %s", name)
 	if #compilebuf == 0 then
 		-- catch NOOP definitions
 		entry.xt = function(...) return ... end
@@ -566,7 +581,7 @@ end
 
 -- ( entry -- )
 function bindfunc(entry, ...)
-	debug("ADDING %s '%s' TO DICTIONARY", entry.xt, entry.name)
+	trace("ADDING %s '%s' TO DICTIONARY", entry.xt, entry.name)
 	dictionary[entry.name] = entry.xt
 	meta[entry.name] = entry
 	meta[entry.xt] = entry
@@ -630,7 +645,7 @@ function cbinop(op, ...)
 end
 
 -- TODO: replace with unop impl.
-dictionary["not"] = function(b, ...)
+dictionary['not'] = function(b, ...)
 	return not b, ...
 end
 
@@ -646,8 +661,10 @@ function ccall(func, ...)
 	end
 
 	if compiling then
+		trace("CCALL: COMPILING CALL TO %s", quote(func))
 		return cappend(xt, ...)
 	else
+		trace("CCALL: executing %s", func)
 		return xt(...)
 	end
 end
@@ -666,11 +683,11 @@ function cpush(val, ...)
 end
 
 -- NOTE: not a word; we use `fli` to wrap it for :Firth use.
-local function cbeginblock(name, completion)
+local function cbeginblock(name, breakable, completion)
 	compile(create(name)) -- compile pushes prev compile state
 	cstack:push(completion)
 end
-dictionary['cbeginblock'] = fli.wrapfunc(cbeginblock, 2, 0)
+dictionary['cbeginblock'] = fli.wrapfunc(cbeginblock, 3, 0)
 
 function cendblock(...)
 	local completion = cstack:pop()
@@ -684,7 +701,7 @@ end
 
 -- ( cond -- )
 dictionary['if'] = function(...)
-	cbeginblock("[[IF]]", function(thenthread)
+	cbeginblock("[[IF]]", false, function(thenthread)
 		return true, function(cond, ...)
 			if cond then return thenthread(...) else return ... end
 		end
@@ -700,7 +717,7 @@ dictionary['else'] = function(...)
 	local thenthread = buildfunc().xt
 
 	-- replacement completion for end
-	cbeginblock("[[ELSE]]", function(elsethread)
+	cbeginblock("[[ELSE]]", false, function(elsethread)
 		return true, function(cond, ...)
 			if cond then
 				return thenthread(...)
@@ -719,9 +736,33 @@ dictionary['end'] = function(...)
 end
 immediates[dictionary['end']] = true
 
+function execif(thenthread, cond, ...)
+	if cond then
+		return thenthread(...)
+	else
+		return ...
+	end
+end
+dictionary['?exec'] = execif -- NOT immediate
+
+dictionary['?continue'] = function(...)
+	local loopcompletion = cstack:pop()
+	local prefix = buildfunc().xt
+
+	-- replacement completion for endloop
+	cbeginblock("[[CONTINUE]]", true, function(suffix)
+		return loopcompletion(function(...)
+			-- negate because we want to execute the suffix if the prefix is not true
+			return execif(suffix, dictionary['not'](prefix(...)))
+		end)
+	end)
+	return ...
+end
+immediates[dictionary['?continue']] = true
+
 -- ( nstart nlimit -- )
 dictionary['for'] = function(...)
-	cbeginblock("[[FOR]]", function(forthread)
+	cbeginblock("[[FOR]]", true, function(forthread)
 		return true, function(limit, start, ...)
 			assert(limit % 1 == 0 and start % 1 == 0, "Arguments must be integers")
 			local step = sign(limit - start)
@@ -741,7 +782,7 @@ immediates[dictionary['for']] = true
 
 -- ( iterable -- ) (EX: x --)
 function each(...)
-	cbeginblock("[[EACH]]", function(eachthread)
+	cbeginblock("[[EACH]]", true, function(eachthread)
 		return true, function(iterable, ...)
 			-- TODO: support strings and iterator xts on TOS
 			-- TODO: function spairs(str) return function(str, idx) local c = str:sub(idx+1, idx+1); if  #c == 0 then return nil, nil else return idx+1, c end end, str, 0 end
@@ -768,7 +809,7 @@ immediates[each] = true
 -- ( cond -- )
 dictionary['while'] = function(...)
 	-- TODO: a coopt the block thread to allow a `WHILE cond DO xxx END` form..?
-	cbeginblock("[[WHILE]]", function(whilethread)
+	cbeginblock("[[WHILE]]", true, function(whilethread)
 		local function _while_r(cond, ...)
 			if cond then return _while_r(whilethread(...)) end
 			return ...
@@ -780,7 +821,7 @@ end
 immediates[dictionary['while']] = true
 
 function loops(...)
-	cbeginblock("[[LOOPS]]", function(loopsthread)
+	cbeginblock("[[LOOPS]]", true, function(loopsthread)
 		local function _loops_r(count, ...)
 			if count < 1 then return ... end
 			return _loops_r(count - 1, loopsthread(...))
@@ -792,7 +833,7 @@ end
 immediates[loops] = true
 
 function forever(...)
-	cbeginblock("[[FOREVER]]", function(foreverthread)
+	cbeginblock("[[FOREVER]]", true, function(foreverthread)
 		local function _forever_r(...)
 			return _forever_r(foreverthread(...))
 		end
@@ -852,7 +893,7 @@ end
 -- This is used very early in the bootstrapping process to
 -- implement `immediate`.
 dictionary['!!'] = function(k, t, x, ...)
-	debug("%s[%s] = %s", t, quote(k), quote(x))
+	trace("%s[%s] = %s", t, quote(k), quote(x))
 	t[k] = x
 	return t, ...
 end
@@ -871,28 +912,28 @@ parserules:push(function(word, ...)
 end)
 parserules:push(function(word, ...)
 	local val = stringio.toboolean(word)
-	if val ~= nil then debug("PARSED BOOLEAN %s", val) end
+	if val ~= nil then trace("PARSED BOOLEAN %s", val) end
 	return val ~= nil and "literal", val, ...
 end)
 parserules:push(function(word, ...)
 	local val = stringio.tonumber(word)
+	if val ~= nil then trace("PARSED NUMBER %s", val) end
 	return val ~= nil and "literal", val, ...
 end)
 
 -- dictionary lookup rule
 parserules:push(function(word, ...)
-	if not defined(word) then return false, word, ... end
-
 	local found = find(word)
-	return found ~= nil, found
+	if found ~= nil then trace("FOUND %q", word) end
+	return found ~= nil, found, ...
 end)
 
 -- ( * -- * ) ( TS: tok... )
--- TODO: make this as minimal as possible, and replace with firth impl?
+-- TODO: make this as minimal as possible, and replace with :Firth impl?
 --! @private
 local function _interpret_r(...)
 	-- bail if we're done
-	if not intptr_running or parse_pos > #tok_stream then
+	if not interp_running or parse_pos > #tok_stream then
 		if cstack.height > 0 then popparsestate() end -- may have been cleared in error handler
 		return ...
 	end
@@ -902,19 +943,20 @@ local function _interpret_r(...)
 		local space = parsematch('^%s+')
 		local oldline = line_num
 		countlines(space)
-		if line_num > oldline then debug("---Line %d---", line_num) end
+		if line_num > oldline then trace("--- %s:%d ---", current_infile, line_num) end
 	end
 
 	-- parse out the next word
 	local word = parse('%s')
 	if not nonempty(word) then
+		-- EOF; bail
 		popparsestate()
 		return ...
 	end
 	if compiling then srcappend(word) end
 
 	-- loop through parse rules here
-	debug("RESOLVING INPUT WORD '%s'", word)
+	trace("RESOLVING INPUT WORD '%s'", word)
 	local success, found
 	for _, rule in ipairs(parserules) do
 		success, found = rule(word)
@@ -926,81 +968,93 @@ local function _interpret_r(...)
 	-- interpret/compile?
 	if type(found) == "function" then
 		if not compiling or immediates[found] then
-			debug("EXECUTING %s", word)
-			return _interpret_r(errhandler(pcall(execute, found, ...)))
+			trace("EXECUTING %s", word)
+			return _interpret_r(err_middleware(pcall(found, ...)))
+		else
+			trace("COMPILING CALL TO %s", word)
+			return _interpret_r(ccall(found, ...)) -- pass `word` instead to dynamic-link
 		end
-		debug("COMPILING CALL TO %s", word)
-		return _interpret_r(ccall(found, ...)) -- pass `word` instead to dynamic-link
 	end
 
 	-- push
-	debug("PUSHING (%s): %s", success, found)
 	if success == "literal" then
+		trace("%sPUSH: LITERAL %s", compiling and "COMPILING " or "", found)
 		return _interpret_r(cpush(found, ...))
 	elseif compiling then
-		debug("COMPILING PUSH %s (%s)", word, found)
+		-- we're referencing a global var, so we want updates to its value reflected at runtime.
+		trace("COMPILING PUSH: {dictionary...}[%q]", word)
 		return _interpret_r(ccall(find, cpush(word, ...)))
 	end
-	debug("PUSHING %s", word)
+	trace("PUSH: %s (%s)", word, quote(found))
 	return _interpret_r(found, ...)
 end
 
 -- ( s -- * )
 function runstring(src, ...)
+	trace("RUNSTRING WITH INCOMING STACK HEIGHT: %d", height(...))
 	pushparsestate()
 	tok_stream = src
-	intptr_running = nonempty(src)
+	interp_running = nonempty(src)
 	line_num = 1
 	parse_pos  = 1
 
-	debug("---Line 1---")
+	trace("--- %s:1 ---", current_infile)
 	return _interpret_r(...)
 end
 
 local function _afterfile(path, success, ...)
-	debug("FILE COMPLETED: %sSUCCESSFULLY", success and "👍 " or "💀 UN")
-	if not success then
-		runtime_err(("`%q runfile`"):format(path), ...)
-	elseif compiling then
-		runtime_err("runfile", "UNEXPECTED EOF WILE COMPILING", ...)
-	end
+	trace("FILE COMPLETED: %sSUCCESSFULLY", success and "👍 " or "💀 UN")
+	-- if not success then
+	-- 	runtime_err(("`%q runfile`"):format(path), "ERROR WHILE RUNNING FILE", 0)
+	-- elseif compiling then
+	-- 	runtime_err(("`%q runfile`"):format(path), "UNEXPECTED EOF WILE COMPILING", 0)
+	-- end
 
 	if cstack.height >= 2 then -- could have been cleared if error
 		popinputstate()
-		debug("RETURNING TO COMPILING %s, %d CHARS LEFT", current_infile, #tok_stream - parse_pos)
+		trace("RETURNING TO COMPILING %s, %d CHARS LEFT", current_infile, #tok_stream - parse_pos)
 	end
 
-	return ...
+	return success, ...
 end
 
 -- ( path -- * )
 --! Runs the specified file.
 --! @param path path to file to load.
---! @param ...  firth stack.
+--! @param ...  :Firth stack.
 --! @return     contents of stack after execution.
 function runfile(path, ...)
+	trace("RUNFILE %q", path)
+	local success, src
+	
 	-- TODO: default/search paths?
 	pushinputstate()
-	stringio.input(path)
 	current_infile = path
-	-- TODO stream a line at a time?
+	success = pcall(stringio.input, path)
+	if not success then return _afterfile(path, false, "Could not open file", ...) end
+
+	-- TODO: stream a line at a time?
 	-- ...will require holding onto incomplete parse state,
 	-- e.g. for matching a close paren that hasn't been read yet.
-	local src = stringio.read()
+	-- On the other hand, file would have to be multiple megabytes to matter. 🤷‍♀️
+	success, src = pcall(stringio.read)
+	if not success then return _afterfile(path, false, "Could not read file", ...) end
 
 	return _afterfile(path, pcall(runstring, src, ...))
 end
 
 --[[
 local depth = 0
-local prints = dictionary[".S"]
+local prints = dictionary['.S']
+
+
 local function _postcall(...)
 	depth = depth - 1
 	local indentation = ("	"):rep(depth)
 	-- debug("%s<==[ %s ]", indentation, prepstack(...))
 	stringio.print(("🐛%s<==[ "):format(indentation))
 	prints(...)
-	stringio.printline("]")
+	stringio.printline(']")
 	-- debug("%sCOMPILING? (%s)", indentation, compiling)
 	return ...
 end
@@ -1022,19 +1076,22 @@ for k, v in pairs(dictionary) do
 	end
 end
 
-cclearstate(false)
-runfile "proto/core.firth"
-
--- Export
+-- Prepare the Export
 local firth = {
 	runstring = runstring,
 	runfile = runfile,
-	dictionary = dictionary
+	dictionary = dictionary,
+	loaded = false,
 }
 
+clear_cstate(false)
+firth.loaded = runfile "proto/core.firth"
+PRINT_ERRS = false -- default error printing to disabled after core is loaded
+
 return setmetatable(firth, {
-	__call = function(dict, str, ...)
-		return runstring(str, ...)
+	__call = function(f, str, ...)
+		if not f.loaded then error("UNINITIALIZED", 2) end
+		return pcall(runstring, str, ...)
 	end,
 	__index = firth
 })

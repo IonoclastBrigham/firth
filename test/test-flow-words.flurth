@@ -17,7 +17,7 @@ local firth = require 'proto.bootstrap'
 
 
 -- covers: if, else, then, while, do, loop, for, each
-return firth[[
+return firth.dictionary.rethrow(firth[[
 	// test_if_true
 	:( true if 42 else 0 end 42 " TRUE IF should execute the 'then' branch." test.assert_eq );
 
@@ -48,4 +48,4 @@ return firth[[
 	TODO: test_forever??
 
 	freeze // ⚠️ ALWAYS execute LAST
-]]
+	]])

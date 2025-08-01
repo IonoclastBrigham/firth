@@ -18,7 +18,7 @@
 local firth = require 'proto.bootstrap'
 
 
-return firth[[
+return firth.dictionary.rethrow(firth[[
 	// test_add
 	:( 2 3 + 5 " Adding should equal expected sum." test.assert_eq );
 
@@ -94,4 +94,4 @@ return firth[[
 	:( nan isnan? " NaN should return true for isnan?" test.assert_true );
 
 	freeze // ⚠️ ALWAYS execute LAST
-]]
+]])

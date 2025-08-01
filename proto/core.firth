@@ -9,6 +9,9 @@ char : create compile
 : %s
 	char %s cpush
 	interpret buildfunc dup bindfunc immediate
+: \n
+	char \n cpush
+	interpret buildfunc dup bindfunc immediate
 : word
 	%s parse
 	interpret buildfunc bindfunc
@@ -92,12 +95,15 @@ char : create compile
 
 : cpushvar ( name -- )(CB: push(dict[name])) cpush ' find ccall ;
 : cstorevar ( name -- )(CB: dict[name]=x)
-	cpush dictionary cpush ' swap ccall (EX: x -- x dict name)
-	' !! ccall ' drop ccall
-	;
+	dictionary cpush cpush (EX: x -- x dict name)
+	' !! ccall ' drop ccall ;
 : ++ (EX: -- n+1 )(TS: nvar )
-	word dup cpushvar ' 1+ ccall ( -- name )(EX: -- n+1 )
-	' dup ccall cstorevar
+	word dup
+	compiling if
+		cpushvar ' 1+ ccall ' dup ccall cstorevar
+	else
+		find 1+ dup dictionary 3 roll !! drop  // have: name, n+1 => want: n+1, n+1, dict, name
+	end
 	;immed
 
 // some basic boolean operators
@@ -145,11 +151,12 @@ char : create compile
 : freeze ( n*x -- { ...n*x } ) lua{ return {...} } ; TODO: stack.new
 
 // Minimal stack operations
-: []@    ( stk -- x stk ) lua{ local stk = (...); return stk:top(), ... } ;
-: []>    ( stk -- x )     lua{ local stk = (...); return stk:pop(), select(2, ...) } ;
-: >[]    ( x stk -- stk ) lua{ local stk, x = ...; stk:push(x); return stk, select(3, ...) } ;
-: []swap ( stk -- )       lua{ local stk = (...); stk:swap(); return select(2, ...) } ;
-: []clear ( stk -- )      lua{ local stk = (...); stk:clear(); return select(2, ...) } ;
+: []@     ( stk -- stk x )	lua{ local stk = (...); return stk:top(), ... } ;
+: []>     ( stk -- x )		lua{ local stk = (...); return stk:pop(), select(2, ...) } ;
+: >[]     ( x stk -- stk )	lua{ local stk, x = ...; stk:push(x); return stk, select(3, ...) } ;
+: []swap  ( stk -- )		lua{ local stk = (...); stk:swap(); return select(2, ...) } ;
+: []clear ( stk -- )		lua{ local stk = (...); stk:clear(); return select(2, ...) } ;
+: []#     ( stk -- n )		lua{ local stk = (...); return  stk.height, select(2, ...) } ;
 
 // auxiliary stacks
 : C@ ( -- x )(C: x -- x ) cstack []@ ;
@@ -167,13 +174,13 @@ char : create compile
 // error handling
 : throw ( x -- ) 2 Lua.error ;
 : try ( compiles: * -- * )
-	` [[TRY]] :( ( xt -- xt )
+	` [[TRY]] false :( ( xt -- xt )
 		:( ( [xt] -- *) Lua.pcall )[1]; true
 	); cbeginblock
 	;immed
 : catch ( compiles: * err? b -- * )
 	cendblock ( -- xt )
-	` [[CATCH]] :( ( xt -- xt )
+	` [[CATCH]] false :( ( xt -- xt )
 		:( ( * e? b [xt] -- * ) swap not if execute else drop end )[1];
 		true
 	); cbeginblock
@@ -182,7 +189,7 @@ char : create compile
 	// grab the assert string and squirrel it away
 	skipch ` [^"]* parsematch >C skipch // " compiles a push to the wrong stack
 	// then start compiling the assert cleanup body
-	` [[ASSERT]] :( ( xt -- )
+	` [[ASSERT]] false :( ( xt -- )
 		// pass compiled body thread along
 		false
 	); cbeginblock
@@ -195,6 +202,7 @@ char : create compile
 		cpush ' fmt ccall ' throw ccall // compile push message and call to throw
 	postpone end
 	;immed
+: rethrow ( err? b -- * ) not if throw end ;
 
 // some higher level stack manipulations
 : nip ( a b -- b ) swap drop ;
@@ -216,7 +224,10 @@ char : create compile
 	immediates true pivot !! drop
 	;
 : 2word ( -- s1 s2 )(TS: word word ) word word ;
-: #! ( * -- * )(TS: word) word find execute ;immed
+: #! ( -- )(TS: line)
+	line_num 1 > input STDIN ~= && assert" Shebang only valid on first line; found on: " output line_num STDERR useoutput Lua.tostring .raw useoutput ?throw
+	postpone //
+	;immed
 
 // values and variables
 : store ( x name -- ) dictionary swap !! drop ;
@@ -376,10 +387,9 @@ alias: exit Lua.os.exit
 	.fmt" Goodbye 🖤\n"
 	0 exit
 	;
-false =: PRINT_ERRS
 
 // metatables
-: )meta.tostring; ( mt -- mt)(EX: mt.__string = thr)
+: )meta.tostring; ( mt -- mt)(EX: mt.__tostring = thr)
 	postpone ); ' swap ccall ` __tostring cpush ' !! ccall
 	;immed
 

@@ -17,7 +17,7 @@ local firth = require 'proto.bootstrap'
 
 
 -- covers: >, <, =, <=, >=, ~=, and, or, nand, nor, xor
-return firth[[
+return firth.dictionary.rethrow(firth[[
 	// comparisons //
 
 	// test_greater
@@ -163,4 +163,4 @@ return firth[[
 	:( false nil and false " FALSEY AND ANYTHING should be first value." test.assert_eq );
 
 	freeze // ⚠️ ALWAYS execute LAST
-]]
+]])

@@ -25,6 +25,7 @@ setfenv(1, module)
 
 -- util functions --
 
+-- NOT A WORD
 local function count(...)
 	return select("#", ...)
 end
@@ -100,6 +101,7 @@ end
 function roll(idx, ...)
 	if idx == 0 then return ... end
 	if idx == 1 then return swap(...) end
+	if idx == 2 then return rot(...) end
 	return yank(idx + 1, pick(idx, ...))
 end
 

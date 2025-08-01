@@ -54,10 +54,10 @@ firth = {
 		while c.running do
 			if c.compiling then
 				linenum = linenum + 1
-				stringio.print('>>\t')
+				stringio.printstr('>>\t')
 			else
 				linenum = 1
-				stringio.print('ok ')
+				stringio.printstr('ok ')
 			end
 			firth.doline(c, stringio.readline(), linenum)
 		end

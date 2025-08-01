@@ -554,9 +554,9 @@ function compiler.new()
 
 		xperrhandler = function(msg)
 			stringio.printline(string.format("ERROR: %s", msg))
-			stringio.print 'stack : '
+			stringio.printstr 'stack : '
 			stringio.printline(tostring(self.stack))
-			stringio.print 'cstack: '
+			stringio.printstr 'cstack: '
 			stringio.printline(tostring(self.cstack))
 			stringio.printline(self:stacktrace())
 		end

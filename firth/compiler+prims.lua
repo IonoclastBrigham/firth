@@ -342,7 +342,7 @@ function exports.initialize(compiler)
 	local function rawprint()
 		local tos = stack:pop()
 		compiler:assert(type(tos) == "string", ".raw", "NOT A STRING")
-		stringio.print(tos)
+		stringio.printstr(tos)
 	end
 
 	local function dotprint()
