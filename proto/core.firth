@@ -12,6 +12,9 @@ char : create compile
 : \n
 	char \n cpush
 	interpret buildfunc dup bindfunc immediate
+: \t
+	char \t cpush
+	interpret buildfunc dup bindfunc immediate
 : word
 	%s parse
 	interpret buildfunc bindfunc
@@ -75,12 +78,22 @@ char : create compile
 : (--)(CB: postpone (CB: ;immed
 : (EX: 3 backtrack postpone ( ;immed // execution effects for compiling words
 : (--)(EX: postpone (EX: ;immed
+: (OUT: 4 backtrack postpone ( ;immed // output stream effects
+: (--)(OUT: postpone (OUT: ;immed
 : TODO: (TS: .*\n) postpone // ;immed  TODO: add to list with file/line/word?
+: >string ( x -- s ) Lua.tostring ;
+: .CR (--) \n .raw ;
+: .2CR (--) \n \n .raw .raw ;
+: .line ( x -- ) >string .raw .CR ;
+: .TAB (--) \t .raw ;
 : "" ( -- s ) ` (.-)"" parsematch trim cpush ;immed
 : clips ( s -- s' ) 2 -2 Lua.string.sub ;
 : eachword ( * s xt -- *) ; TODO: parse words from string and hand to xt
 : .. (EX: s1 s2 -- s1..s2) " .." cbinop ;immed // string concat
-: peekch tok_stream parse_pos dup Lua.string.sub ;
+: peekch input_buffer parse_pos dup Lua.string.sub ;
+: str>word ( s istart -- word iend ) %s swap strparse ;
+: strip ( s -- s' ) 0 str>word swap drop ;
+: echo ( s -- )(OUT: s + \n) .raw .CR ;
 
 // some basic arithmetic operators
 : + (EX: a b -- a+b ) char + cbinop ;immed
@@ -102,7 +115,15 @@ char : create compile
 	compiling if
 		cpushvar ' 1+ ccall ' dup ccall cstorevar
 	else
-		find 1+ dup dictionary 3 roll !! drop  // have: name, n+1 => want: n+1, n+1, dict, name
+		find 1+ dup dictionary 3 roll !! drop
+	end
+	;immed
+: -- (EX: -- n-1 )(TS: nvar )
+	word dup
+	compiling if
+		cpushvar ' 1- ccall ' dup ccall cstorevar
+	else
+		find 1- dup dictionary 3 roll !! drop
 	end
 	;immed
 
@@ -145,17 +166,13 @@ char : create compile
 	Lua.loadstring execute cpush
 	;immed
 
-// tables, arrays
-: {} ( -- {} ) lua{ return {}, ... } ;
-: # ( s|t -- n ) lua{ return #(...), select(2, ...) } ;
-: freeze ( n*x -- { ...n*x } ) lua{ return {...} } ; TODO: stack.new
-
 // Minimal stack operations
 : []@     ( stk -- stk x )	lua{ local stk = (...); return stk:top(), ... } ;
 : []>     ( stk -- x )		lua{ local stk = (...); return stk:pop(), select(2, ...) } ;
 : >[]     ( x stk -- stk )	lua{ local stk, x = ...; stk:push(x); return stk, select(3, ...) } ;
 : []swap  ( stk -- )		lua{ local stk = (...); stk:swap(); return select(2, ...) } ;
 : []clear ( stk -- )		lua{ local stk = (...); stk:clear(); return select(2, ...) } ;
+: []drop  ( stk -- )		lua{ local stk = (...); stk:drop(); return select(2, ...) } ;
 : []#     ( stk -- n )		lua{ local stk = (...); return  stk.height, select(2, ...) } ;
 
 // auxiliary stacks
@@ -166,10 +183,20 @@ char : create compile
 : Cclear (--)(C: * -- ) cstack []clear ;
 
 : R@ ( -- x )(C: x -- x ) rstack []@ ;
+// ⚠️ >R is a compiler prim; do not implement in :Firth (see bootstrap)
+// ⚠️ R> is a compiler prim; do not implement in :Firth (see bootstrap)
+: R?> rstack []# 0 > if R> else nil end ;
+: Rdrop rstack []drop ;
 : Rclear (--)(C: * -- ) rstack []clear ;
-: R?> rstack # 0 > if R> else nil end ;
-: R# rstack # ;
+: R# rstack []# ;
 : R#? R# 0 > ;
+
+// tables, arrays
+: {} ( -- {} ) lua{ return {}, ... } ;
+: # ( s|t -- n ) lua{ return #(...), select(2, ...) } ;
+: freeze ( n*x -- { ...n*x } ) lua{ return {...} } ; TODO: stack.new
+: insert ( x t -- t ) dup rot Lua.table.insert ;
+: search ( x t -- n|nil ) nil >R eachi 2 pick ~= if drop else Rdrop >R end end drop R> ;
 
 // error handling
 : throw ( x -- ) 2 Lua.error ;
@@ -254,7 +281,7 @@ const: type.string ` string
 const: type.table ` table
 const: type.boolean ` boolean
 const: type.nil ` nil
-: >string ( x -- s ) Lua.tostring ;
+
 : >bool ( x -- b ) not not ;
 : >number ( x -- n )
 	dup type type.boolean == if
@@ -308,14 +335,10 @@ const: iostack []
 : .fmt ( * s -- s' ) fmt .raw ;
 : .fmt" ( * -- )(TS: "s") postpone " ' .fmt ccall ;immed
 : fmt" ( * -- )(TS: "s") postpone " ' fmt ccall ;immed
-: .err ( s -- ) STDERR pushoutput . popoutput ;
-: .err" (--)(TS: "s") postpone " ' .err ccall ;immed
-: .CR (--) \n .raw ;
-: .2CR (--) \n \n .raw .raw ;
-: .line ( x -- ) >string .raw .CR ;
 : .x ( n -- ) " 0x%x " .fmt ;
 : .X ( n -- ) " 0X%X " .fmt ;
-: .TAB (--) \t .raw ;
+: .err ( s -- ) STDERR pushoutput . popoutput ;
+: .err" (--)(TS: "s") postpone " ' .err ccall ;immed
 : .C (C: * -- * ) cstack . ;
 : .c (C: * -- ) .C Cclear ;
 : .R (R: * -- * ) rstack . ;
@@ -398,11 +421,6 @@ alias: exit Lua.os.exit
 	dup {} ` value !!
 	{} :( ` value @@  )meta.tostring; Lua.setmetatable swap store ;
 : symbol: (--)(TS: word) char : word .. dup defined not if symbol.create else drop end ;immed
-
-
-// additional string processing
-: strword ( s istart -- word iend ) %s swap strparse ;
-: strip ( s -- s' ) 0 strword swap drop ;
 
 // optional testing module
 ` Lua.test defined if

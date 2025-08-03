@@ -1,4 +1,4 @@
-#!/usr/bin/env rlwrap -pgreen luajit
+#!/usr/bin/env rlwrap --always-readline luajit
 --------------------------------------------------------------------------------
 --! @file
 --! @brief Tiny minimal REPL for :Firth language.

@@ -1,6 +1,14 @@
 Ideas / TODOs
 -------------
 proto branch tasks
+	randomized choice
+		whatever ends up on the stack between words ends up a choice
+		optional weight/percentage?
+		rand:select
+			:ROCK  1 3 / ofthetime
+			:PAPER 50 percent ofthetime
+			:SCISSORS
+		end
 	vocabs
 		vocab: name
 			creates words vocab:name, and vocab:name.dictionary, and vocab:pop

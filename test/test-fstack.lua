@@ -189,5 +189,5 @@ return {
         test.assert_eq(a, 10, 'height should push the number of args on top of the stack')
         test.assert_eq(b, 20, 'height should push the number of args on top of the stack')
         test.assert_eq(c, 30, 'height should push the number of args on top of the stack')
-    end
+    end,
 }

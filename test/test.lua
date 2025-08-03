@@ -16,7 +16,7 @@
 
 
 local io = require 'io'
-local output = io.output()
+local stdout, stderr = io.stdout, io.stderr
 local table = require 'table'
 local setfenv = setfenv or require 'compat.compat_env'.setfenv -- Lua@5.2+
 
@@ -25,7 +25,7 @@ local stringio = require 'firth.stringio'
 
 
 -- internal state
-local failures = 0
+local failcount = 0
 local mt = { insert = table.insert }
 mt.__index = mt
 local messages = setmetatable({}, mt)
@@ -34,18 +34,18 @@ PRINT_ERRS = false -- EXPORTED; disable default :Firth error printing
 
 -- utilities
 local function failed(msg)
-	output:write('E')
+	stdout:write('E')
 	messages:insert(msg)
-	failures = failures + 1
+	failcount = failcount + 1
 end
 
 local function try(test, ...)
-	local oldfailed = failures
+	local oldfailed = failcount
 	local succ, msg = pcall(test, ...)
 	if not succ then
 		failed(msg)
-	elseif oldfailed == failures then
-		output:write '.'
+	elseif oldfailed == failcount then
+		stdout:write '.'
 	end
 end
 
@@ -67,7 +67,7 @@ end
 
 -- top level test harness
 local function dotests(path)
-	output:write(string.format("\nRunning tests in %s: ", path))
+	stdout:write(string.format("\nRunning tests in %s: ", path))
 	local loadtests, err = loadfile(path)
 	if loadtests and not err then
 		-- give each suite its own environment
@@ -75,20 +75,20 @@ local function dotests(path)
 		testenv._G = testenv
 		setfenv(loadtests, testenv)
 
-		local oldfailed = failures
+		local oldfailed = failcount
 		local success, tests = pcall(loadtests)
 		if success then
 			for _, test in ipairs(tests) do
 				try(test)
 			end
-			if failures == oldfailed then
-				output:write(" ✅")
+			if failcount == oldfailed then
+				stdout:write(" ✅")
 			else
-				output:write(" ❌")
+				stdout:write(" ❌")
 			end
 		else
 			failed(tests)
-			output:write(" ❌")
+			stdout:write(" ❌")
 		end
 	else
 		local me = ""
@@ -103,18 +103,19 @@ end
 -- export globally so it's accessible from tests.conf
 function testlist(list)
 	for _, path in ipairs(list) do dotests(path) end
-	output:write('\nDONE!\n')
+	stdout:write('\nDONE!\n')
+	stdout:flush()
 end
 
 local succ, msg = pcall(dofile, "test/tests.conf")
 if not succ then failed(msg) end
 
-if failures > 0 then
-	output:write(string.format("\n%d failed tests.\n", failures))
+if failcount > 0 then
+	stderr:write(string.format("\n%d failed test(s).\n", failcount))
 	for _, msg in ipairs(messages) do
-		output:write(string.format("❌ %s\n", msg))
+		stderr:write(string.format("❌ %s\n", msg))
 	end
-	os.exit(failures)
+	os.exit(failcount)
 else
-	output:write("\n✅ All tests passed!\n")
+	stdout:write("\n✅ All tests passed!\n")
 end

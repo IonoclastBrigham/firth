@@ -83,7 +83,7 @@ PRINT_ERRS = true
 
 compiling = false
 interp_running = false
-tok_stream = ""
+input_buffer = ""
 parse_pos = 1
 line_num = 1
 
@@ -164,7 +164,7 @@ function err_middleware(success, ...)
 		if dictionary.PRINT_ERRS then
 			stringio.output(stringio.stderr())
 			stringio.printline(("ERROR: %s"):format(errmsg))
-			stringio.printline(("while running %s:%d"):format(current_infile, line_num))
+			stringio.printline(("while running %s:%d"):format(input_path, line_num))
 			local stackstring = '[ '..prepstack(...)..']'
 			stringio.printline('stack : '..stackstring)
 			stringio.printline('cstack: '..tostring(cstack))
@@ -225,7 +225,7 @@ local LOOKUP_ERR_MSG = "%s is undefined%s"
 local function lookup_err(tok, throw, ...)
 	local __FIRTH_DUMPTRACE__ = true -- TODO ???
 
-	local path = current_infile--:gsub("^(.-)(/?)([^/]*)$", "%1%2")
+	local path = input_path--:gsub("^(.-)(/?)([^/]*)$", "%1%2")
 	if not path or #path == 0 then path = "./" end
 	local prefix = path..':'..line_num
 	local buckets = {}
@@ -354,9 +354,9 @@ end
 
 -- ( s1 -- s2 )
 function parse(delim, ...)
-	if parse_pos > #tok_stream then return '', ... end
+	if parse_pos > #input_buffer then return '', ... end
 
-	local word, endpos = stringio.nexttoken(tok_stream, delim, parse_pos)
+	local word, endpos = stringio.nexttoken(input_buffer, delim, parse_pos)
 	parse_pos  = endpos
 	return word, ...
 end
@@ -364,7 +364,7 @@ end
 --! ( pattern -- tok )
 function parsematch(pattern, ...)
 	-- TODO: seems redundant to pcall and then assert??
-	local success, word, endpos = pcall(stringio.matchtoken, tok_stream, pattern, parse_pos)
+	local success, word, endpos = pcall(stringio.matchtoken, input_buffer, pattern, parse_pos)
 	assert(success, word)
 	parse_pos = endpos
 	return word, ...
@@ -399,10 +399,10 @@ end
 function clear_cstate(die, ...)
 	trace("CLEARING COMPILE STATE 📄")
 
-	current_infile = "{STDIN}"
+	input_path = "{STDIN}"
 	stringio.input(STDIN())
 
-	tok_stream = ""
+	input_buffer = ""
 	interp_running = not die
 	parse_pos = 1
 	line_num = 1
@@ -417,49 +417,70 @@ function clear_cstate(die, ...)
 end
 
 function pushinputstate(...)
-	cstack:push(current_infile)
 	stringio.flush()
-	cstack:push(stringio.input())
+
+	cstack:push(setmetatable({
+		input_path = input_path,
+		input_file = stringio.input(),
+	}, {
+		__tostring = function(io) return ("I/O{ %q, %s }"):format(io.input_path, io.input_file) end
+	}))
 
 	return ...
 end
 
 function popinputstate(...)
 	stringio.flush()
-	stringio.input(cstack:pop())
-	current_infile = cstack:pop()
+
+	local io = cstack:pop()
+	stringio.input(io.input_file)
+	input_path = io.input_path
 
 	return ...
 end
 
 function pushparsestate(...)
-	cstack:push(tok_stream)
-	cstack:push(interp_running)
-	cstack:push(parse_pos)
-	cstack:push(line_num)
+	cstack:push(setmetatable({
+		input_buffer = input_buffer,
+		interp_running = interp_running,
+		parse_pos = parse_pos,
+		line_num = line_num,
+	}, {
+		__tostring = function(prs)
+			return ("PRS{ %q, %s, %s, %d }"):format(prs.input_buffer:sub(10), prs.interp_running, prs.parse_pos, prs.line_num)
+		end
+	}))
 
 	return ...
 end
 
 function popparsestate(...)
-	line_num = cstack:pop()
-	parse_pos = cstack:pop()
-	interp_running = cstack:pop()
-	tok_stream = cstack:pop()
+	local prs = cstack:pop()
+	line_num = prs.line_num
+	parse_pos = prs.parse_pos
+	interp_running = prs.interp_running
+	input_buffer = prs.input_buffer
 
 	return ...
 end
 
 function pushcompilestate(...)
-	cstack:push(compiling)
-	cstack:push(compile_target)
+	cstack:push(setmetatable({
+		compiling = compiling,
+		compile_target = compile_target,
+	}, {
+		__tostring = function(cmp)
+			return ("CMP{ %s, %s }"):format(cmp.compiling, cmp.compile_target)
+		end
+	}))
 
 	return ...
 end
 
 function popcompilestate(...)
-	compile_target = cstack:pop()
-	compiling = cstack:pop()
+	local cmp = cstack:pop()
+	compile_target = cmp.compile_target
+	compiling = cmp.compiling
 
 	return ...
 end
@@ -691,7 +712,8 @@ dictionary['cbeginblock'] = fli.wrapfunc(cbeginblock, 3, 0)
 
 function cendblock(...)
 	local completion = cstack:pop()
-	local do_call, thread = completion(buildfunc().xt) -- pops prev compile state
+	local built = buildfunc()
+	local do_call, thread = completion(built.xt) -- pops prev compile state
 	if do_call then
 		return ccall(thread, ...)
 	else
@@ -713,7 +735,8 @@ immediates[dictionary['if']] = true
 -- ( -- )
 dictionary['else'] = function(...)
 	-- restore compile state for cbeginblock
-	cstack:drop() -- drop basic if-then completion
+	local then_completion = cstack:pop() -- drop basic if-then completion
+	assert(type(then_completion) == "function", "Compiler error: "..type(then_completion).." on cstack instead of function")
 	local thenthread = buildfunc().xt
 
 	-- replacement completion for end
@@ -805,6 +828,32 @@ function each(...)
 	return ...
 end
 immediates[each] = true
+
+-- ( iterable -- ) (EX: x --)
+function eachi(...)
+	cbeginblock("[[EACHI]]", true, function(eachthread)
+		return true, function(iterable, ...)
+			-- TODO: support strings and iterator xts on TOS
+			-- TODO: function spairs(str) return function(str, idx) local c = str:sub(idx+1, idx+1); if  #c == 0 then return nil, nil else return idx+1, c end end, str, 0 end
+			local newitr = getmetatable(iterable) and getmetatable(iterable).__ipairs
+			assert(
+				newitr or type(iterable) == "table",
+				"Argument must be iterable"
+			)
+			newitr = newitr or (#iterable > 0 and ipairs) or pairs
+			local itr, _, idx = newitr(iterable)
+			local function _each_r(...)
+				local val
+				idx, val = itr(iterable, idx)
+				if idx == nil then return ... end
+				return _each_r(eachthread(val, idx, ...))
+			end
+			return _each_r(...)
+		end
+	end)
+	return ...
+end
+immediates[eachi] = true
 
 -- ( cond -- )
 dictionary['while'] = function(...)
@@ -933,17 +982,17 @@ end)
 --! @private
 local function _interpret_r(...)
 	-- bail if we're done
-	if not interp_running or parse_pos > #tok_stream then
+	if not interp_running or parse_pos > #input_buffer then
 		if cstack.height > 0 then popparsestate() end -- may have been cleared in error handler
 		return ...
 	end
 
 	-- count any leading newlines
-	if tok_stream[parse_pos]:match("%s") then
+	if input_buffer[parse_pos]:match("%s") then
 		local space = parsematch('^%s+')
 		local oldline = line_num
 		countlines(space)
-		if line_num > oldline then trace("--- %s:%d ---", current_infile, line_num) end
+		if line_num > oldline then trace("--- %s:%d ---", input_path, line_num) end
 	end
 
 	-- parse out the next word
@@ -993,12 +1042,12 @@ end
 function runstring(src, ...)
 	trace("RUNSTRING WITH INCOMING STACK HEIGHT: %d", height(...))
 	pushparsestate()
-	tok_stream = src
+	input_buffer = src
 	interp_running = nonempty(src)
 	line_num = 1
 	parse_pos  = 1
 
-	trace("--- %s:1 ---", current_infile)
+	trace("--- %s:1 ---", input_path)
 	return _interpret_r(...)
 end
 
@@ -1010,9 +1059,9 @@ local function _afterfile(path, success, ...)
 	-- 	runtime_err(("`%q runfile`"):format(path), "UNEXPECTED EOF WILE COMPILING", 0)
 	-- end
 
-	if cstack.height >= 2 then -- could have been cleared if error
+	if cstack.height > 0 then -- could have been cleared if error
 		popinputstate()
-		trace("RETURNING TO COMPILING %s, %d CHARS LEFT", current_infile, #tok_stream - parse_pos)
+		trace("RETURNING TO COMPILING %s, %d CHARS LEFT", input_path, #input_buffer - parse_pos)
 	end
 
 	return success, ...
@@ -1029,7 +1078,7 @@ function runfile(path, ...)
 	
 	-- TODO: default/search paths?
 	pushinputstate()
-	current_infile = path
+	input_path = path
 	success = pcall(stringio.input, path)
 	if not success then return _afterfile(path, false, "Could not open file", ...) end
 
