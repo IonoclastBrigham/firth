@@ -16,7 +16,7 @@ char : create compile
 	char \t cpush
 	interpret buildfunc dup bindfunc immediate
 : word
-	%s parse
+	%s parse compiling if dup srcappend end
 	interpret buildfunc bindfunc
 : `
 	word cpush
@@ -36,14 +36,9 @@ char : create compile
 : skipch  -1 backtrack ;
 : 2skipch -2 backtrack ;
 : " skipch ` [^"]* parsematch cpush skipch ;immed
-: parseline " ^[^\n]*" fmt parsematch ;
-: // parseline
-	compiling if
-		2 -1 Lua.string.sub srcappend char \n srcappend
-	else
-		drop
-	end
-	;immed // There, now we can comment our code!
+: parseline " ^[^\n]*" fmt parsematch compiling if dup srcappend end ;
+: parsematch parsematch compiling if dup srcappend end ;
+: // parseline drop ;immed // There, now we can comment our code!
 
 // /////////////////////////////////////////////////////////////////////////////
 // core.firth
@@ -195,7 +190,25 @@ char : create compile
 : {} ( -- {} ) lua{ return {}, ... } ;
 : # ( s|t -- n ) lua{ return #(...), select(2, ...) } ;
 : freeze ( n*x -- { ...n*x } ) lua{ return {...} } ; TODO: stack.new
-: insert ( x t -- t ) dup rot Lua.table.insert ;
+: insert ( x t -- t ) dup rot Lua.table.insert ; // Lua.table.insert "feels" backward, table first
+: { (--)(TS: * '}' )(EX: * -- t )
+	TODO: distinguish between a variable and a literal
+	{} compiling if
+		cpush true while
+			word dup ` } ~= if
+				dup resolve dup Lua.type ` function == if ccall else cpush end
+				' swap ccall ' insert ccall
+			end
+		` } ~= end
+	else
+		true while
+			word dup ` } ~= if
+				dup resolve dup Lua.type ` function == if execute end
+				rot insert swap
+			end
+		` } ~= end
+	end
+	;immed
 : search ( x t -- n|nil ) nil >R eachi 2 pick ~= if drop else Rdrop >R end end drop R> ;
 
 // error handling
