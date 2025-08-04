@@ -327,6 +327,8 @@ const: type.nil ` nil
 : rand..max ( maxn -- 0≤n≤maxn )         1+ Lua.math.random1 1- ; // adjust Lua's 1..maxn to 0..maxn
 : rand..in  ( minn maxn -- minn≤n≤maxn ) Lua.math.random2 ;
 Lua.os.time srand
+: rand-element ( t -- x ) 1 over # rand..in @@ ;
+: rand-select{ ( -- x)(TS: *) postpone { ' rand-element ccall ;immed
 
 // strings and i/o
 const: \r char \r
