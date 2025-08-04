@@ -160,6 +160,7 @@ function err_middleware(success, ...)
 	if success then return ... end
 
 	local errmsg = (...)
+	-- print("💥 MIDDLEWARE CAUGHT ERROR WITH MESSAGE", errmsg)
 	return (function(...)
 		if dictionary.PRINT_ERRS then
 			stringio.output():flush()
@@ -221,12 +222,12 @@ local function sortmatches(buckets, tok)
 	return result
 end
 
-local LOOKUP_ERR_MSG = "%s is undefined%s"
+local LOOKUP_ERR_MSG = "%q is undefined%s"
 
 -- ( n s -- 0 )
 local function lookup_err(tok, throw, ...)
-	local __FIRTH_DUMPTRACE__ = true -- TODO ???
-
+	local __FIRTH_DUMPTRACE__ = true -- TODO
+	
 	local path = input_path--:gsub("^(.-)(/?)([^/]*)$", "%1%2")
 	if not path or #path == 0 then path = "./" end
 	local prefix = path..':'..line_num
@@ -241,18 +242,20 @@ local function lookup_err(tok, throw, ...)
 			end
 		end
 	end
-
+	
 	local suggestions = sortmatches(buckets, tok)
 	local suffix = dictionary.PRINT_ERRS and "\nDid You Mean..?\n\t"..table.concat(suggestions, "\n\t") or ""
 	local msg = LOOKUP_ERR_MSG:format(tok, suffix)
 	if throw then
 		return runtime_err(prefix, msg, 2, ...)
 	elseif dictionary.PRINT_ERRS then
-		STDERR:write(msg.."\n")
+		STDOUT():flush()
+		STDERR():write("💀 "..msg.."\n")
+		STDERR():flush()
 	end
 	return ...
 end
-dictionary.lookup_err = fli.wrapfunc(lookup_err, 2)
+dictionary.lookup_err = fli.wrapfunc(lookup_err, 2, 0)
 
 local function trace(str, ...)
 	if not DEBUG_LOGS then return end
@@ -1016,7 +1019,7 @@ local function _interpret_r(...)
 
 	-- TODO: decompose these into a stack of COMPILE rules? --
 
-	-- interpret/compile?
+	-- execute/compile?
 	if type(found) == "function" then
 		if not compiling or immediates[found] then
 			trace("EXECUTING %s", word)

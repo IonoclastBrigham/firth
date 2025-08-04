@@ -326,9 +326,9 @@ const: type.nil ` nil
 : rand      ( -- 0.0≤n≤1.0 )             Lua.math.random0 ;
 : rand..max ( maxn -- 0≤n≤maxn )         1+ Lua.math.random1 1- ; // adjust Lua's 1..maxn to 0..maxn
 : rand..in  ( minn maxn -- minn≤n≤maxn ) Lua.math.random2 ;
-Lua.os.time srand
 : rand-element ( t -- x ) 1 over # rand..in @@ ;
 : rand-select{ ( -- x)(TS: *) postpone { ' rand-element ccall ;immed
+Lua.os.time srand
 
 // strings and i/o
 const: \r char \r
@@ -360,17 +360,22 @@ const: iostack []
 : .s ( * -- ) .S clear ;
 : printstack ( * -- ) .fmt" \n<==[ " .S .char ] .CR ;
 : see ( word -- )
-	dup meta over @@ ( -- word entry? )
-	dup if nip else drop meta swap find @@ end ( -- entry? )
+	// find meta-entry by name..?
+	meta over @@ ( -- word entry? )
+	// find meta-entry by value..?
+	dup if nip else drop meta over find @@ end ( -- entry|(word nil) )
 	dup not if
+		PRINT_ERRS >R
+		true = PRINT_ERRS
 		drop false lookup_err
+		R> = PRINT_ERRS
 	else
 		.char : dup ` name @@ .
 		` srcbuf @@ each nip . end
 		drop
 	end
 	;
-: see: (--)(TS: word ) word see ;immed
+: see: (--)(TS: word ) word cpush ' see ccall ;immed
 
 // miscellaneous util words and stuff
 : NOP ;
