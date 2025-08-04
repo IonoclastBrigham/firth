@@ -1,0 +1,76 @@
+// RPS.firth
+// :Firth Rock-Paper-Scissors game example
+//
+// Copyright © 2025 Brigham Toskin
+// This file is part of the :Firth language reference implementation. Usage
+// and redistribution of this software is governed by the terms of a modified
+// MIT-style license. You should have received a copy of the license with the
+// source distribution; if not, you may find it online at:
+// <https://github.com/IonoclastBrigham/firth/blob/master/LICENSE>
+//
+// Formatting:
+//	utf-8 ; unix ; 80 cols ; tabwidth 4
+// /////////////////////////////////////////////////////////////////////////////
+
+
+// Rock-Paper-Scissors! Based on Syn9's mini game example.
+// <https://github.com/Syn-Nine/c3-mini-games>
+
+symbol: PAPER
+symbol: ROCK
+symbol: SCISSORS
+symbol: INVALID
+
+symbol: TIE
+symbol: PLAYER_WIN
+symbol: COMPUTER_WIN
+
+const: MAX_TRIES 3
+
+// game state
+0 =: p_score
+0 =: c_score
+MAX_TRIES =: tries
+:INVALID =: player_choice
+:INVALID =: computer_choice
+:TIE =: result
+
+.fmt" Let's play Rock-Paper-Scissors! 🪨  📄 ✂️\n"
+true while
+	tries MAX_TRIES .fmt" \nBest out of %d, %d tries remaining.\n"
+	." What is your choice? [r]ock, [p]aper, or [s]cissors:"
+
+	// get player's guess
+	:INVALID = player_choice
+	STDIN .readline strip dup .line
+	dup ` r  == if :ROCK = player_choice end
+	dup ` p  == if :PAPER = player_choice end
+	` s  == if :SCISSORS = player_choice end
+	player_choice .fmt" Player choice is %s\n"
+	:INVALID player_choice == true swap ?continue drop
+
+	// get computer's guess
+	rand-select{ :PAPER :SCISSORS :ROCK } = computer_choice
+	computer_choice .fmt" Computer choice is %s\n"
+
+	// apply precedence rules to find winner
+	:TIE = result
+	player_choice computer_choice ~= if
+		player_choice :ROCK == computer_choice :SCISSORS == and
+		player_choice :PAPER == computer_choice :ROCK == and
+		player_choice :SCISSORS == computer_choice :PAPER == and
+		or or if :PLAYER_WIN = result else :COMPUTER_WIN = result end
+	end
+
+	// handle scoring
+	result :PLAYER_WIN == if ++ p_score drop else
+	result :COMPUTER_WIN == if ++ c_score drop else
+	++ tries drop end end
+	result p_score c_score pivot .fmt" %s!\nScore: Player: %d, Computer: %d\n"
+
+-- tries 0 > end // while
+
+// final outcome
+" Tie Game!"
+p_score c_score > if drop " A Winner is You! 💪" else p_score c_score < if drop " Computer is Champion! 🏆" end end
+.fmt" \n\n***%s***\nGame Over!\n"
