@@ -88,7 +88,6 @@ char : create compile
 : peekch input_buffer parse_pos dup Lua.string.sub ;
 : str>word ( s istart -- word iend ) %s swap strparse ;
 : strip ( s -- s' ) 0 str>word swap drop ;
-: echo ( s -- )(OUT: s + \n) .raw .CR ;
 
 // some basic arithmetic operators
 : + (EX: a b -- a+b ) char + cbinop ;immed
