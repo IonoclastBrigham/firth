@@ -86,8 +86,8 @@ char : create compile
 : eachword ( * s xt -- *) ; TODO: parse words from string and hand to xt
 : .. (EX: s1 s2 -- s1..s2) " .." cbinop ;immed // string concat
 : peekch input_buffer parse_pos dup Lua.string.sub ;
-: str>word ( s istart -- word iend ) %s swap strparse ;
-: strip ( s -- s' ) 0 str>word swap drop ;
+: str>word ( s istart -- s iend word ) over -rot %s swap strparse ;
+: strip ( s -- s' ) 0 str>word 2 shove 2 chop ;
 
 // some basic arithmetic operators
 : + (EX: a b -- a+b ) char + cbinop ;immed

@@ -35,7 +35,7 @@ local function REPL(clean, ...)
 
     -- error output / prompt
     firth([[
-        if ." ok" else PRINT_ERRS not if fmt" %s\n" .err end end
+        if ." ok" else PRINT_ERRS if fmt" %s\n" .err end end
         ` ➤ .
     ]], clean, ...)
     if dictionary.compiling then stringio.printstr('    ') end

@@ -161,22 +161,22 @@ function err_middleware(success, ...)
 
 	local errmsg = (...)
 	-- print("💥 MIDDLEWARE CAUGHT ERROR WITH MESSAGE", errmsg)
-	return (function(...)
-		if dictionary.PRINT_ERRS then
-			stringio.output():flush()
-			stringio.output(stringio.stderr())
-			stringio.printline(("ERROR: %s"):format(errmsg))
-			stringio.printline(("while running %s:%d"):format(input_path, line_num))
-			local stackstring = '[ '..prepstack(...)..']'
-			stringio.printline('stack : '..stackstring)
-			stringio.printline('cstack: '..tostring(cstack))
-			stringio.printline('rstack: '..tostring(rstack))
-			stringio.printline(stacktrace(3))
-			stringio.output():flush()
-			stringio.output(stringio.stdout())
-			return clear_cstate(true, errmsg, ...)
-		end
-	end)(recover())
+	if dictionary.PRINT_ERRS then
+		stringio.output():flush()
+		local savedout = stringio.output()
+		stringio.output(stringio.stderr())
+		stringio.printline(("ERROR: %s"):format(errmsg))
+		stringio.printline(("while running %s:%d"):format(input_path, line_num))
+		local stackstring = '[ '..prepstack(recover())..']'
+		stringio.printline('stack : '..stackstring)
+		stringio.printline('cstack: '..tostring(cstack))
+		stringio.printline('rstack: '..tostring(rstack))
+		stringio.printline(stacktrace(3))
+		stringio.output():flush()
+		stringio.output(stringio.stdout())
+		stringio.output(savedout)
+		return clear_cstate(true, errmsg, ...)
+	end
 	-- local die = current_infile ~= "{STDIN}"
 	-- return clear_cstate(die, select(2, ...))
 end
@@ -224,7 +224,7 @@ end
 
 local LOOKUP_ERR_MSG = "%q is undefined%s"
 
--- ( n s -- 0 )
+-- ( b s -- *? )
 local function lookup_err(tok, throw, ...)
 	local __FIRTH_DUMPTRACE__ = true -- TODO
 	
@@ -318,7 +318,7 @@ end
 
 -- ( word -- x )
 function resolve(word, ...)
-	-- TODO: move the rule stack loop here and call from _interpret_r
+	-- TODO: move the rule stack loop here and call from _interpret_r?
 	if defined(word) then return find(word, ...) end
 
 	local val = stringio.tonumber(word) or stringio.toboolean(word)
@@ -1004,6 +1004,7 @@ local function _interpret_r(...)
 	local word = parse('%s')
 	if not nonempty(word) then
 		-- EOF; bail
+		if compiling then popcompilestate() end -- TODO: error if compiling?
 		popparsestate()
 		return ...
 	end
