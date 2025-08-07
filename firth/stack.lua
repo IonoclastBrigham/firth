@@ -65,6 +65,14 @@ function stack:top()
 	return rawget(self, self.height)
 end
 
+--! Peeks at an item at a given index, non-destructively.
+--! @param idx zero-based offset from the top of the stack of item to return.
+--! @return a copy of the indexed stack item, without removing it.
+function stack:peek(idx)
+	assertsize(self, idx + 1, "INSUFFICIENT HEIGHT")
+	return rawget(self, self.height - idx)
+end
+
 --! Pushes a copy of the top stack entry.
 function stack:dup()
 	assertsize(self, 1, "STACK EMPTY")

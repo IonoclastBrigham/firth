@@ -82,7 +82,7 @@ char : create compile
 : .line ( x -- ) >string .raw .CR ;
 : .TAB (--) \t .raw ;
 : "" ( -- s ) ` (.-)"" parsematch trim cpush ;immed
-: clips ( s -- s' ) 2 -2 Lua.string.sub ;
+: clips ( s -- s' ) 2 -2 Lua.string.sub ; // NOT the same as strip!
 : eachword ( * s xt -- *) ; TODO: parse words from string and hand to xt
 : .. (EX: s1 s2 -- s1..s2) " .." cbinop ;immed // string concat
 : peekch input_buffer parse_pos dup Lua.string.sub ;
@@ -359,6 +359,8 @@ const: iostack []
 : .r (R: * -- ) .R Rclear ;
 : .s ( * -- ) .S clear ;
 : printstack ( * -- ) .fmt" \n<==[ " .S .char ] .CR ;
+: joinstack ( s -- s' ) height 1 > while swap >string swap .. height 1 > end ;
+
 : see ( word -- )
 	// find meta-entry by name..?
 	meta over @@ ( -- word entry? )
@@ -431,9 +433,11 @@ alias: exit Lua.os.exit
 	;
 
 // metatables
+: getmeta ( x -- mt? ) Lua.getmetatable ;
 : )meta.tostring; ( mt -- mt)(EX: mt.__tostring = thr)
 	postpone ); ' swap ccall ` __tostring cpush ' !! ccall
 	;immed
+: entry? ( x -- b ) getmeta entrymt  == ;
 
 // symbols and enums
 : symbol.create ( s -- )

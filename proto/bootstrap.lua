@@ -117,13 +117,14 @@ end
 meta = setmetatable({}, { __mode = "k" })
 immediates = setmetatable({}, { __mode = "k" })
 
---! @private
-local entrymt = {
+entrymt = {
 	__tostring = function(t)
-		return ("{%s}"):format(t.name)
+		return ("{%s%s}"):format(t.name, t.block and " (block)" or "")
 	end
 }
 entrymt.__index = entrymt
+
+--! @private
 
 -- Error Handling --------------------------------------------------------------
 
@@ -173,7 +174,6 @@ function err_middleware(success, ...)
 		stringio.printline('rstack: '..tostring(rstack))
 		stringio.printline(stacktrace(3))
 		stringio.output():flush()
-		stringio.output(stringio.stdout())
 		stringio.output(savedout)
 		return clear_cstate(true, errmsg, ...)
 	end
@@ -469,15 +469,16 @@ function popparsestate(...)
 	return ...
 end
 
+local cstatemt = {
+		__tostring = function(cmp)
+			return ("CMP{ %s, %s }"):format(cmp.compiling, cmp.compile_target)
+		end
+	}
 function pushcompilestate(...)
 	cstack:push(setmetatable({
 		compiling = compiling,
 		compile_target = compile_target,
-	}, {
-		__tostring = function(cmp)
-			return ("CMP{ %s, %s }"):format(cmp.compiling, cmp.compile_target)
-		end
-	}))
+	}, cstatemt))
 
 	return ...
 end
@@ -493,9 +494,8 @@ end
 -- ( s -- entry )
 function create(name, ...)
 	trace("CREATE %q", name)
-	local entry = { name = name }
+	local entry = { name = name, block = false }
 	setmetatable(entry, entrymt)
-	-- dictionary[name] = entry
 	return entry, ...
 end
 
@@ -578,7 +578,9 @@ local function _thread(entry)
 	local __thr
 	for i = #compilebuf, 1, -1 do
 		local __xt = compilebuf[i]
-		if getmetatable(__xt) then __xt = __xt:compile(entry) end
+		if getmetatable(__xt) and getmetatable(__xt).compile then
+			 __xt = __xt:compile(entry)
+		end
 
 		if not __thr then
 			__thr = __xt
@@ -592,6 +594,7 @@ local function _thread(entry)
 
 	-- wrap thread for stack effects (and locals??)
 	entry.xt = function(...)
+		__FIRTH_WORD_NAME__ = entry.name
 		local __initialheight = rstack.height
 		return jmpcont(__initialheight, __thr(...))
 	end
@@ -632,7 +635,7 @@ function cappend(xt, ...)
 end
 
 local binopmt = {
-	compile = function(self)
+	compile = function(self, _)
 		if self.xt then return self.xt end
 
 		local src = ([[
@@ -669,6 +672,49 @@ function cbinop(op, ...)
 		return op:exec(...)
 	end
 end
+
+-- ( * -- * ) ( CB: {recurse} )
+-- e.g. : foo ( n -- n' ) 2 * dup 100 < if recurse end ;
+function recurse(...)
+	if not compiling then
+		return runtime_err("recurse", "Cannot recurse outside of word compilation", 2, ...)
+	end
+
+	-- find a valid, recursable compilation context
+	local parent = compile_target
+	local i = 0
+	while i < #cstack and (not dictionary['entry?'](parent) or parent.block) do
+		-- FIXME: this is super ugly and may not work in all cases
+		parent = type(cstack:peek(i)) == "table" and cstack:peek(i).compile_target or cstack:peek(i)
+		i = i + 1
+	end
+	if not parent or not parent.name or parent.block then
+		return runtime_err("recurse", "Cannot recurse outside of word compilation", 2, ...)
+	end
+
+	local recursivecallmt = {
+		compile = function(self, entry)
+			-- We needed to compile for each word it's compiled into,
+			-- so we can't cache any of these.
+			return function(...)
+				__FIRTH_WORD_NAME__ = self.name
+
+				-- This will be less optimal than a true by-name recursive lua function
+				-- but it will work for all cases, including lambdas.
+				local xt = parent.xt
+				return xt(...)
+			end
+		end
+	}
+	recursivecallmt.__index = recursivecallmt
+	local recursivecall = setmetatable({
+		-- collect some metadata for future use?
+		name = "recurse "..parent.name,
+		line_num = line_num
+	}, recursivecallmt)
+	return cappend(recursivecall, ...)
+end
+immediates[recurse] = true
 
 -- TODO: replace with unop impl.
 dictionary['not'] = function(b, ...)
@@ -710,7 +756,9 @@ end
 
 -- NOTE: not a word; we use `fli` to wrap it for :Firth use.
 local function cbeginblock(name, breakable, completion)
-	compile(create(name)) -- compile pushes prev compile state
+	local entry = create(name)
+	entry.block = true
+	compile(entry) -- compile pushes prev compile state
 	cstack:push(completion)
 end
 dictionary['cbeginblock'] = fli.wrapfunc(cbeginblock, 3, 0)
