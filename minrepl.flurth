@@ -16,50 +16,53 @@
 --------------------------------------------------------------------------------
 
 
-local table = table
-
-local stringio = require "firth.stringio"
 local firth = require "proto.bootstrap"
+local loaded, dictionary = firth.loaded, firth.dictionary
 
 
-if not firth.loaded then
-    error(":Firth bootstrap failed to load; cannot start REPL", 2)
+if not loaded then
+	-- TODO: handle this a little more elloquently.
+	error(":Firth bootstrap failed to load; cannot start REPL - " .. firth.load_err, 1)
+end
+dictionary.PRINT_ERRS = true
+
+-- just reverses its arguments; always call as _reverse_r(0, ...)
+local function _reverse_r(i, ...)
+	local height = select("#", ...)
+	if height - i < 1 then
+		return
+	end
+	return select(height - i, ...), _reverse_r(i+1, ...)
 end
 
-local dictionary = firth.dictionary
-dictionary.PRINT_ERRS = true -- enable for REPL output
+firth([[
+	// true = DEBUG_LOGS
+	true = PRINT_ERRS
+	false =: _repl_showstack
+	: ?printstack _repl_showstack if printstack end ;
+	: _repl_do_prompt
+		?printstack
+		if ." ok" else PRINT_ERRS if fmt" %s\n" .err else end end
+		` ➤ .
+		compiling if .fmt" \t"  end ;
 
-local function REPL(clean, ...)
-    -- print stack from previous line
-    dictionary['?printstack'](...)
+	: REPL ( * b -- *' b' )
+		_repl_do_prompt
 
-    -- error output / prompt
-    firth([[
-        if ." ok" else PRINT_ERRS if fmt" %s\n" .err end end
-        ` ➤ .
-    ]], clean, ...)
-    if dictionary.compiling then stringio.printstr('    ') end
+		// read input... nil => EOF => CTRL+D
+		readline dup not if ." bye" bye end
 
-    -- read input
-    local line = stringio.readline()
-    if line == nil then
-        -- nil => EOF => CTRL+D
-        stringio.printstr("bye")
-        dictionary.bye(select(clean and 1 or 2, ...))
-    end
-    return REPL(firth(line, select(clean and 1 or 2, ...)))
-end
+		// evaluate input
+		// try runstring catch " error..?" false end recurse ;
+		' runstring Lua.pcall recurse ;
 
--- dictionary.DEBUG_LOGS = true
-firth[[
-    false =: showstack
-    : ?printstack showstack if printstack end ;
-]]
-if select("#", ...) > 0 then
-    firth.runfile("firth/cli.firth")
-    local src = table.concat({...}, " ")
-    return REPL(firth(src.." DOREPL not if printstack 0 exit else banner end DOREPL"))
-else
-    dictionary.banner()
-    return REPL(true, ...)
-end
+	height 0 > if
+		` firth/cli.firth runfile not if " Could not load cli extensions." throw end
+		SPACE joinstack " DOREPL not if printstack 0 exit else banner end DOREPL" ..
+		// try runstring catch false end REPL
+		// .dup .CR
+		' runstring Lua.pcall  REPL
+	else
+		banner true REPL
+	end
+]], _reverse_r(0, ...))

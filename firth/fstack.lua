@@ -112,6 +112,10 @@ function shove(i, x, tos, ...)
 	return shovefilter(0, i, x, tos, ...)
 end
 
+function stuff(tos, _2nd, ...)
+	return tos, _2nd, tos, ...
+end
+
 function yank(i, tos, ...)
 	if i == 0 then return ... end
 	return yankfilter(0, i, tos, ...)

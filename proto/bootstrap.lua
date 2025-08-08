@@ -76,6 +76,8 @@ fli.inject(dictionary, fli) -- do we want to do this ???
 
 --! @endcond
 
+-- the export
+local firth = {}
 
 -- global parser / interpreter / compiler state
 DEBUG_LOGS = false
@@ -452,7 +454,7 @@ function pushparsestate(...)
 		line_num = line_num,
 	}, {
 		__tostring = function(prs)
-			return ("PRS{ %q, %s, %s, %d }"):format(prs.input_buffer:sub(10), prs.interp_running, prs.parse_pos, prs.line_num)
+			return ("PRS{ %q, %s, %s, %d }"):format(prs.input_buffer:sub(1, 10), prs.interp_running, prs.parse_pos, prs.line_num)
 		end
 	}))
 
@@ -1107,18 +1109,25 @@ end
 
 local function _afterfile(path, success, ...)
 	trace("FILE COMPLETED: %sSUCCESSFULLY", success and "👍 " or "💀 UN")
+
+	if cstack.height > 0 then -- could have been cleared if error
+		popinputstate()
+		trace("RETURNING TO READING %s, %d CHARS LEFT", input_path, #input_buffer - parse_pos)
+	end
+
+	if success then return true, ... end
+
+	if path == "proto/core.firth" then
+		firth.load_err = (...)
+	end
+
 	-- if not success then
 	-- 	runtime_err(("`%q runfile`"):format(path), "ERROR WHILE RUNNING FILE", 0)
 	-- elseif compiling then
 	-- 	runtime_err(("`%q runfile`"):format(path), "UNEXPECTED EOF WILE COMPILING", 0)
 	-- end
 
-	if cstack.height > 0 then -- could have been cleared if error
-		popinputstate()
-		trace("RETURNING TO COMPILING %s, %d CHARS LEFT", input_path, #input_buffer - parse_pos)
-	end
-
-	return success, ...
+	return false, ...
 end
 
 -- ( path -- * )
@@ -1180,12 +1189,13 @@ for k, v in pairs(dictionary) do
 end
 
 -- Prepare the Export
-local firth = {
+firth = table.assign(firth, {
 	runstring = runstring,
 	runfile = runfile,
 	dictionary = dictionary,
 	loaded = false,
-}
+	-- don't overrwrite load_err, which may be assigned elsewhere
+})
 
 clear_cstate(false)
 firth.loaded = runfile "proto/core.firth"

@@ -165,21 +165,24 @@ char : create compile
 : []>     ( stk -- x )		lua{ local stk = (...); return stk:pop(), select(2, ...) } ;
 : >[]     ( x stk -- stk )	lua{ local stk, x = ...; stk:push(x); return stk, select(3, ...) } ;
 : []swap  ( stk -- )		lua{ local stk = (...); stk:swap(); return select(2, ...) } ;
+: []dup   ( stk -- )        lua{ local stk = (...); stk:dup(); return select(2, ...) } ;
 : []clear ( stk -- )		lua{ local stk = (...); stk:clear(); return select(2, ...) } ;
 : []drop  ( stk -- )		lua{ local stk = (...); stk:drop(); return select(2, ...) } ;
 : []#     ( stk -- n )		lua{ local stk = (...); return  stk.height, select(2, ...) } ;
 
 // auxiliary stacks
-: C@ ( -- x )(C: x -- x ) cstack []@ ;
+: C@ ( -- x )(C: x -- x ) cstack []@ 1 yank ;
 : C> ( -- x )(C: x -- ) cstack []> ;
 : >C ( x -- )(C: -- x ) cstack >[] drop ;
 : Cswap (--)(C: x y - y x ) cstack []swap ;
 : Cclear (--)(C: * -- ) cstack []clear ;
 
-: R@ ( -- x )(C: x -- x ) rstack []@ ;
+: R@ ( -- x )(C: x -- x ) rstack []@ 1 yank ;
 // ⚠️ >R is a compiler prim; do not implement in :Firth (see bootstrap)
 // ⚠️ R> is a compiler prim; do not implement in :Firth (see bootstrap)
 : R?> rstack []# 0 > if R> else nil end ;
+: Rswap rstack []swap ;
+: Rdup rstack []dup ;
 : Rdrop rstack []drop ;
 : Rclear (--)(C: * -- ) rstack []clear ;
 : R# rstack []# ;
@@ -336,6 +339,7 @@ const: \n char \n
 const: \t char \t
 const: \v char \v
 const: SPACE "  "
+const: EMPTY " "
 
 const: iostack []
 : pushinput  ( fd -- )(IO: fd ) input iostack >[] drop useinput ;
@@ -353,13 +357,15 @@ const: iostack []
 : .X ( n -- ) " 0X%X " .fmt ;
 : .err ( s -- ) STDERR pushoutput . popoutput ;
 : .err" (--)(TS: "s") postpone " ' .err ccall ;immed
+: .dup ( x - x )(OUT: "x") dup . ;
+: .pick ( x(i) ... x(1) x i -- x(i) ... x(1) x )(OUT: "x(-i)") pick . ;
 : .C (C: * -- * ) cstack . ;
 : .c (C: * -- ) .C Cclear ;
 : .R (R: * -- * ) rstack . ;
 : .r (R: * -- ) .R Rclear ;
 : .s ( * -- ) .S clear ;
 : printstack ( * -- ) .fmt" \n<==[ " .S .char ] .CR ;
-: joinstack ( s -- s' ) height 1 > while swap >string swap .. height 1 > end ;
+: joinstack ( * s -- s' ) >R EMPTY height 1 > while swap >string R@ rot .. .. height 1 > end Rdrop ;
 
 : see ( word -- )
 	// find meta-entry by name..?
