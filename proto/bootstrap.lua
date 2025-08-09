@@ -675,6 +675,11 @@ function cbinop(op, ...)
 	end
 end
 
+-- entry? may not be compiled yet the first time we need this...
+local function isentry(t)
+	return getmetatable(t) == entrymt
+end
+
 -- ( * -- * ) ( CB: {recurse} )
 -- e.g. : foo ( n -- n' ) 2 * dup 100 < if recurse end ;
 function recurse(...)
@@ -685,7 +690,7 @@ function recurse(...)
 	-- find a valid, recursable compilation context
 	local parent = compile_target
 	local i = 0
-	while i < #cstack and (not dictionary['entry?'](parent) or parent.block) do
+	while i < #cstack and (not isentry(parent) or parent.block) do
 		-- FIXME: this is super ugly and may not work in all cases
 		parent = type(cstack:peek(i)) == "table" and cstack:peek(i).compile_target or cstack:peek(i)
 		i = i + 1
@@ -1032,7 +1037,7 @@ parserules:push(function(word, ...)
 	return found ~= nil, found, ...
 end)
 
--- ( * -- * ) ( TS: tok... )
+-- ( * -- * ) ( TS: word * )
 -- TODO: make this as minimal as possible, and replace with :Firth impl?
 --! @private
 local function _interpret_r(...)
@@ -1117,10 +1122,6 @@ local function _afterfile(path, success, ...)
 
 	if success then return true, ... end
 
-	if path == "proto/core.firth" then
-		firth.load_err = (...)
-	end
-
 	-- if not success then
 	-- 	runtime_err(("`%q runfile`"):format(path), "ERROR WHILE RUNNING FILE", 0)
 	-- elseif compiling then
@@ -1198,7 +1199,7 @@ firth = table.assign(firth, {
 })
 
 clear_cstate(false)
-firth.loaded = runfile "proto/core.firth"
+firth.loaded, firth.load_err = runfile "proto/core.firth"
 PRINT_ERRS = false -- default error printing to disabled after core is loaded
 
 return setmetatable(firth, {

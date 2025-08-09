@@ -60,6 +60,7 @@ char : create compile
 	dup countlines
 	compiling if 3 -1 Lua.string.sub srcappend else drop end
 	;immed ( ( nestable) parentheses)
+: (NOTHING) ;immed
 : (--) ;immed // shortcut, no stack effects
 : (C:  2 backtrack postpone ( ;immed // cstack effects
 : (--)(C: postpone (C: ;immed
@@ -85,6 +86,7 @@ char : create compile
 : clips ( s -- s' ) 2 -2 Lua.string.sub ; // NOT the same as strip!
 : eachword ( * s xt -- *) ; TODO: parse words from string and hand to xt
 : .. (EX: s1 s2 -- s1..s2) " .." cbinop ;immed // string concat
+: .." ( s1 -- s1..s2)(TS: s2)(EX: s1 -- s1..s2) postpone " postpone .. ;immed
 : peekch input_buffer parse_pos dup Lua.string.sub ;
 : str>word ( s istart -- s iend word ) over -rot %s swap strparse ;
 : strip ( s -- s' ) 0 str>word 2 shove 2 chop ;
@@ -255,6 +257,25 @@ char : create compile
 : 3drop ( a b c -- ) drop drop drop ;
 : ndrop ( n*x n -- ) loops drop end ;
 : ?drop ( x b -- x? ) if drop end ;
+: reverse ( x(k)..x i -- x..x(k) )
+	 // capture stack height; decrement because we don't want to count `i`
+	height 1-
+
+	// base cases and a few optimazations first, then more expensive SHOVE algo
+	dup 2 <  >R 2dup == R> || if
+		2drop
+	else dup 2 == if
+		2drop swap
+	else dup 3 == if
+		2drop pivot
+	else
+		TODO: local i instead of rstack
+		swap dup >R - shove
+		R> 1+ recurse
+	end end end
+	;
+// immediately redefine; hide the index from interface
+: reverse ( x(k)..x -- x..x(k) ) 1 reverse ;
 
 // a few parser/interpreter/compiler control words
 : xt ( {word} -- xt ) ` xt @@ ;

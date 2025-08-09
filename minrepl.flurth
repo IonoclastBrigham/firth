@@ -17,52 +17,42 @@
 
 
 local firth = require "proto.bootstrap"
-local loaded, dictionary = firth.loaded, firth.dictionary
+local stringio = require "firth.stringio"
 
 
-if not loaded then
-	-- TODO: handle this a little more elloquently.
-	error(":Firth bootstrap failed to load; cannot start REPL - " .. firth.load_err, 1)
+if not firth.loaded then
+	error(":Firth bootstrap failed to load; cannot start REPL...\n" .. firth.load_err, 1)
 end
-dictionary.PRINT_ERRS = true
+firth.dictionary.PRINT_ERRS = true
 
--- just reverses its arguments; always call as _reverse_r(0, ...)
-local function _reverse_r(i, ...)
-	local height = select("#", ...)
-	if height - i < 1 then
-		return
-	end
-	return select(height - i, ...), _reverse_r(i+1, ...)
-end
-
-firth([[
+local success, err = firth([[
 	// true = DEBUG_LOGS
 	true = PRINT_ERRS
-	false =: _repl_showstack
-	: ?printstack _repl_showstack if printstack end ;
-	: _repl_do_prompt
-		?printstack
-		if ." ok" else PRINT_ERRS if fmt" %s\n" .err else end end
-		` ➤ .
-		compiling if .fmt" \t"  end ;
+	false =: _repl_showstack?
+	: ?printstack _repl_showstack? if printstack end ;
+	: _repl_status_prompt
+		compiling if
+			drop .fmt" \t" // if compiling is true we know there wasn't an error
+		else
+			if ." ok" else PRINT_ERRS if fmt" %s\n" .err else (NOTHING) end end
+			` ➤ .
+		end ;
 
 	: REPL ( * b -- *' b' )
-		_repl_do_prompt
-
-		// read input... nil => EOF => CTRL+D
-		readline dup not if ." bye" bye end
-
-		// evaluate input
-		// try runstring catch " error..?" false end recurse ;
+		?printstack _repl_status_prompt
+		readline dup not if drop ." bye" bye end // nil => EOF => CTRL+D
 		' runstring Lua.pcall recurse ;
 
+	` firth/cli.firth runfile not if " Could not load cli extensions: " throw end
 	height 0 > if
-		` firth/cli.firth runfile not if " Could not load cli extensions." throw end
-		SPACE joinstack " DOREPL not if printstack 0 exit else banner end DOREPL" ..
-		// try runstring catch false end REPL
-		// .dup .CR
-		' runstring Lua.pcall  REPL
+		reverse SPACE joinstack
+		 ' runstring Lua.pcall
+		 dup if DOREPL not if drop printstack 0 exit else banner end end
+		 DOREPL and REPL // DOREPL and [runstring success]
 	else
 		banner true REPL
 	end
-]], _reverse_r(0, ...))
+]], ...)
+if not success then
+	stringio.printline(stringio.stderr(), err); os.exit(1)
+end

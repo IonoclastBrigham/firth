@@ -68,6 +68,10 @@ function over(tos, _2nd, ... )
 	return _2nd, tos, _2nd, ...
 end
 
+function stuff(tos, _2nd, ...)
+	return tos, _2nd, tos, ...
+end
+
 function drop(tos, ...)
 	return ...
 end
@@ -110,10 +114,6 @@ function shove(i, x, tos, ...)
 	if i == 1 then return swap(x, tos, ...) end
 	if i == 2 then return revrot(x, tos, ...) end
 	return shovefilter(0, i, x, tos, ...)
-end
-
-function stuff(tos, _2nd, ...)
-	return tos, _2nd, tos, ...
 end
 
 function yank(i, tos, ...)
