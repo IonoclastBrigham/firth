@@ -1,0 +1,353 @@
+--------------------------------------------------------------------------------
+--! @file
+--! @brief Main stack manipulation routines test module.
+--! @author btoskin - <brigham@ionoclast.com>
+--! @copyright © 2025 Brigham Toskin
+--
+-- <p>This file is part of the :Firth language reference implementation. Usage
+-- and redistribution of this software is governed by the terms of a modified
+-- MIT-style license. You should have received a copy of the license with the
+-- source distribution; if not, you may find it online at:
+-- <https://github.com/IonoclastBrigham/firth/blob/master/LICENSE.firth></p>
+--
+-- Formatting:
+--	utf-8 ; unix ; 80 cols ; tabwidth 4
+--------------------------------------------------------------------------------
+
+
+
+local firth = require 'proto.bootstrap'
+local rethrow = firth.dictionary.rethrow
+
+
+-- Automated tests for all stack routines.
+return rethrow(firth[[
+	// region stack primitives //
+
+	// push (a NOOP in :Firth, but used for threading Lua code)
+	:( 7 8 9 push
+		height 3 " push should leave first arg on top and pass through rest" test.assert_eq
+		9 " push should leave first arg on top and pass through rest" test.assert_eq
+		8 " push should leave first arg on top and pass through rest" test.assert_eq
+		7 " push should leave first arg on top and pass through rest" test.assert_eq
+		clear );
+
+	// top (mostly intended for Lua, but useful if you want to drop everything but TOS)
+	:( 99 128 1024 42 top
+		height 1 " top should return first arg" test.assert_eq
+		42 " top should return TOS" test.assert_eq
+		clear );
+
+	// peek (mostly intended for Lua, but useful if you want to drop everything but x(i))
+	:( 99 128 1024 42 0 peek
+		height 1 " peek(0) should return TOS" test.assert_eq
+		42 " peek(0) should return TOS" test.assert_eq
+		clear );
+	:( 99 128 1024 42 1 peek
+		height 1 " peek(1) should return second arg" test.assert_eq
+		1024 " peek(1) should return second arg" test.assert_eq
+		clear );
+
+	// dup
+	:( 4 5 6 dup
+		height 4 " dup should duplicate first arg and pass through rest" test.assert_eq
+		6 " dup should duplicate first arg and pass through rest" test.assert_eq
+		6 " dup should duplicate first arg and pass through rest" test.assert_eq
+		5 " dup should duplicate first arg and pass through rest" test.assert_eq
+		4 " dup should duplicate first arg and pass through rest" test.assert_eq
+		clear );
+
+	// over
+	:( 1 2 3 over
+		height 4 " over should bring second arg to top and pass through rest" test.assert_eq
+		2 " over should bring second arg to top and pass through rest" test.assert_eq
+		3 " over should bring second arg to top and pass through rest" test.assert_eq
+		2 " over should bring second arg to top and pass through rest" test.assert_eq
+		1 " over should bring second arg to top and pass through rest" test.assert_eq
+		clear );
+		
+	// stuff
+	:( 1 2 3 stuff
+		height 4 " over should bring second arg to top and pass through rest" test.assert_eq
+		3 " stuff should keep first arg and should pass through rest" test.assert_eq
+		2 " stuff should keep first arg and should pass through rest" test.assert_eq
+		3 " stuff should keep first arg and should pass through rest" test.assert_eq
+		1 " stuff should keep first arg and should pass through rest" test.assert_eq
+		clear );
+
+	// drop
+	:( 7 8 9 drop
+		height 2 " drop should remove TOS" test.assert_eq
+		8 " drop should remove TOS" test.assert_eq
+		7 " drop should remove TOS" test.assert_eq
+		clear );
+
+	// clear
+	:( 1 2 3 clear height 0 " clear should remove all args" test.assert_eq );
+
+	// swap
+	:( 7 8 9 swap 
+		 height 3 " swap should bring 2nd arg to top and pass through rest" test.assert_eq
+		 8 " swap should bring 2nd arg to top and pass through rest" test.assert_eq
+		 9 " swap should bring 2nd arg to top and pass through rest" test.assert_eq
+		 7 " swap should bring 2nd arg to top and pass through rest" test.assert_eq
+		clear );
+	:( 1 swap
+		height 2 " swap with one arg treats second value as nil" test.assert_eq
+		nil " swap with one arg treats second value as nil" test.assert_eq
+		clear );
+	:( 7 8 9 swap swap
+		height 3 " swap swap is equivalent to NOOP" test.assert_eq
+		height 3 " swap swap is equivalent to NOOP" test.assert_eq
+		9 " swap swap is equivalent to NOOP" test.assert_eq
+		8 " swap swap is equivalent to NOOP" test.assert_eq
+		7 " swap swap is equivalent to NOOP" test.assert_eq
+		clear );
+
+	// rot
+	:( 100 200 300 400 rot
+		height 4 " rot should bring third arg to top and pass through rest" test.assert_eq
+		200 " rot should bring third arg to top and pass through rest" test.assert_eq
+		400 " rot should bring third arg to top and pass through rest" test.assert_eq
+		300 " rot should bring third arg to top and pass through rest" test.assert_eq
+		100 " rot should bring third arg to top and pass through rest" test.assert_eq
+		clear );
+	:( 100 200 300 400 rot rot rot
+		height 4 " 3 rots should restore original state" test.assert_eq
+		400 " 3 rots should restore original state" test.assert_eq
+		300 " 3 rots should restore original state" test.assert_eq
+		200 " 3 rots should restore original state" test.assert_eq
+		100 " 3 rots should restore original state" test.assert_eq
+		clear );
+
+	// -rot
+	:( 100 200 300 400 -rot
+		height 4 " -rot should bring second arg to top and TOS to 3rd position" test.assert_eq
+		300 " -rot should bring second arg to top and TOS to 3rd position" test.assert_eq
+		200 " -rot should bring second arg to top and TOS to 3rd position" test.assert_eq
+		400 " -rot should bring second arg to top and TOS to 3rd position" test.assert_eq
+		100 " -rot should bring second arg to top and TOS to 3rd position" test.assert_eq
+		clear );
+	:( 100 200 300 400 -rot -rot -rot
+		height 4 " 3 -rots should restore original state" test.assert_eq
+		400 " 3 -rots should restore original state" test.assert_eq
+		300 " 3 -rots should restore original state" test.assert_eq
+		200 " 3 -rots should restore original state" test.assert_eq
+		100 " 3 -rots should restore original state" test.assert_eq
+		clear );
+
+	// pivot
+	:( 1 42 666 1024 pivot
+		height 4 " pivot should swap TOS and the third element" test.assert_eq
+		42 " pivot should swap TOS and the third element" test.assert_eq
+		666 " pivot should swap TOS and the third element" test.assert_eq
+		1024 " pivot should swap TOS and the third element" test.assert_eq
+		1 " pivot should swap TOS and the third element" test.assert_eq
+		clear );
+	:( 1 42 666 1024 pivot pivot
+		height 4 " 2 pivots should restore the original state" test.assert_eq
+		1024 " 2 pivots should restore the original state" test.assert_eq
+		666 " 2 pivots should restore the original state" test.assert_eq
+		42 " 2 pivots should restore the original state" test.assert_eq
+		1 " 2 pivots should restore the original state" test.assert_eq
+		clear );
+
+	// pick
+	:( 10 11 12 13 0 pick
+		height 5 " pick(0) should duplicate first arg" test.assert_eq
+		13 " pick(0) should duplicate TOS" test.assert_eq
+		13 " pick(0) should duplicate TOS" test.assert_eq
+		12 " pick(0) should duplicate TOS" test.assert_eq
+		11 " pick(0) should duplicate TOS" test.assert_eq
+		10 " pick(0) should duplicate TOS" test.assert_eq
+		clear );
+	:( 10 11 12 13 3 pick
+		height 5 " pick(3) should duplicate third element to TOS" test.assert_eq
+		10 " pick(3) should duplicate third element to TOS" test.assert_eq
+		13 " pick(3) should duplicate third element to TOS" test.assert_eq
+		12 " pick(3) should duplicate third element to TOS" test.assert_eq
+		11 " pick(3) should duplicate third element to TOS" test.assert_eq
+		10 " pick(3) should duplicate third element to TOS" test.assert_eq
+		clear );
+
+	// roll
+	:( 10 20 30 40 0 roll
+		height 4 " roll(0) should pass through unchanged" test.assert_eq
+		40 " roll(0) should pass through unchanged" test.assert_eq
+		30 " roll(0) should pass through unchanged" test.assert_eq
+		20 " roll(0) should pass through unchanged" test.assert_eq
+		10 " roll(0) should pass through unchanged" test.assert_eq
+		clear );
+	:( 10 20 30 40 1 roll
+		height 4 " roll(1) should swap first two args" test.assert_eq
+		30 " roll(1) should swap first two args" test.assert_eq
+		40 " roll(1) should swap first two args" test.assert_eq
+		20 " roll(1) should swap first two args" test.assert_eq
+		10 " roll(1) should swap first two args" test.assert_eq
+		clear );
+	:( 10 20 30 40 2 roll
+		height 4 " roll(2) should rot the top 3 elements" test.assert_eq
+		20 " roll(2) should rot the top 3 elements" test.assert_eq
+		40 " roll(2) should rot the top 3 elements" test.assert_eq
+		30 " roll(2) should rot the top 3 elements" test.assert_eq
+		10 " roll(2) should rot the top 3 elements" test.assert_eq
+		clear );
+	:( 10 20 30 40 3 roll
+		height 4 " roll(n > 2) should remove the element at idx and leave it on top" test.assert_eq
+		10 " roll(n > 2) should remove the element at idx and leave it on top" test.assert_eq
+		40 " roll(n > 2) should remove the element at idx and leave it on top" test.assert_eq
+		30 " roll(n > 2) should remove the element at idx and leave it on top" test.assert_eq
+		20 " roll(n > 2) should remove the element at idx and leave it on top" test.assert_eq
+		clear );
+
+	// shove
+	const: INSRT " inserted"
+	:( 10 20 30 INSRT 0 shove
+		height 4 " shove(0) should put x on top" test.assert_eq
+		INSRT " shove(0) should put x on top" test.assert_eq
+		30 " shove(0) should put x on top" test.assert_eq
+		20 " shove(0) should put x on top" test.assert_eq
+		10 " shove(0) should put x on top" test.assert_eq
+		clear );
+	:( 10 20 30 INSRT 1 shove
+		height 4 " shove(1) should swap the top 2 elements" test.assert_eq
+		30 " shove(1) should swap the top 2 elements" test.assert_eq
+		INSRT " shove(1) should swap the top 2 elements" test.assert_eq
+		20 " shove(1) should swap the top 2 elements" test.assert_eq
+		10 " shove(1) should swap the top 2 elements" test.assert_eq
+		clear );
+	:( 10 20 30 INSRT 2 shove
+		height 4 " shove(2) should -rot the top 3 elements" test.assert_eq
+		30 " shove(2) should -rot the top 3 elements" test.assert_eq
+		20 " shove(2) should -rot the top 3 elements" test.assert_eq
+		INSRT " shove(2) should -rot the top 3 elements" test.assert_eq
+		10 " shove(2) should -rot the top 3 elements" test.assert_eq
+		clear );
+	:( 10 20 30 INSRT 3 shove
+		height 4 " shove(n>2) should insert TOS at index" test.assert_eq
+		30 " shove(3) should insert TOS at index" test.assert_eq
+		20 " shove(3) should insert TOS at index" test.assert_eq
+		10 " shove(3) should insert TOS at index" test.assert_eq
+		INSRT " shove(3) should put x on top" test.assert_eq
+		clear );
+
+	// yank
+	:( 10 11 12 0 yank
+		height 2 " yank(0) should remove first arg" test.assert_eq
+		11 " yank(0) should remove first arg" test.assert_eq
+		10 " yank(0) should remove first arg" test.assert_eq
+		clear );
+	:( 10 11 12 2 yank
+		height 2 " yank(0) should remove first arg" test.assert_eq
+		12 " yank(0) should remove first arg" test.assert_eq
+		11 " yank(0) should remove first arg" test.assert_eq
+		clear );
+
+	// chop
+	:( 10 20 30 0 chop
+		height 3 " chop(0) should do nothing" test.assert_eq
+		30 " chop(0) should do nothing" test.assert_eq
+		20 " chop(0) should do nothing" test.assert_eq
+		10 " chop(0) should do nothing" test.assert_eq
+		clear );
+	:( 10 20 30 1 chop
+		height 2 " chop(1) should drop TOS" test.assert_eq
+		20 " chop(1) should drop TOS" test.assert_eq
+		10 " chop(1) should drop TOS" test.assert_eq
+		clear );
+	:( 10 20 30 2 chop
+		height 1 " chop(n>1) should remove first n elements" test.assert_eq
+		10 " chop(n>1) should remove first n elements" test.assert_eq
+		clear );
+
+	// height
+	:( 10 height
+		1 " height should push the number of elements on top of the stack" test.assert_eq
+		clear );
+	:( 10 20 height
+		2 " height should push the number of elements on top of the stack" test.assert_eq
+		clear );
+	:( 10 20 30 height
+		3 " height should push the number of elements on top of the stack" test.assert_eq
+		clear );
+
+
+	// endregion stack primitives //
+
+	// region core stack HL ops //
+
+	// nip
+	:( 1 2 3 nip
+		height 2 " nip should remove the second element from the top" test.assert_eq
+		3 " nip should remove the second element from the top" test.assert_eq
+		1 " nip should remove the second element from the top" test.assert_eq
+		clear );
+
+	// 2dup
+	:( 10 20 30 2dup
+		height 5 " 2dup should dup the top 2 elements in the same relative order" test.assert_eq
+		30 " 2dup should dup the top 2 elements in the same relative order" test.assert_eq
+		20 " 2dup should dup the top 2 elements in the same relative order" test.assert_eq
+		30 " 2dup should dup the top 2 elements in the same relative order" test.assert_eq
+		20 " 2dup should dup the top 2 elements in the same relative order" test.assert_eq
+		10 " 2dup should dup the top 2 elements in the same relative order" test.assert_eq
+		clear );
+
+	// 3dup
+	:( 10 20 30 40 3dup
+		height 7 " 3dup should dup the top 3 elements in the same relative order" test.assert_eq
+		40 " 3dup should dup the top 3 elements in the same relative order" test.assert_eq
+		30 " 3dup should dup the top 3 elements in the same relative order" test.assert_eq
+		20 " 3dup should dup the top 3 elements in the same relative order" test.assert_eq
+		40 " 3dup should dup the top 3 elements in the same relative order" test.assert_eq
+		30 " 3dup should dup the top 3 elements in the same relative order" test.assert_eq
+		20 " 3dup should dup the top 3 elements in the same relative order" test.assert_eq
+		10 " 3dup should dup the top 3 elements in the same relative order" test.assert_eq
+		clear );
+
+	// ndup
+	:( 1 2 3 4 4 ndup
+		height 8 dup " ndup should dup top n elemnts in the same relative order" test.assert_eq
+		0 swap 1- for
+			4 % + 4 " ndup should dup top n elemnts in the same relative order" test.assert_eq
+		end
+		clear );
+
+	// 2drop
+	:( 1 2 3 4 2drop
+		height 2 " 2drop should drop the top 2 elements" test.assert_eq
+		2 " 2drop should drop the top 2 elements" test.assert_eq
+		1 " 2drop should drop the top 2 elements" test.assert_eq
+		clear );
+
+	// 3drop
+	:( 1 2 3 4 5 3drop
+		height 2 " 3drop should drop the top 3 elements" test.assert_eq
+		2 " 3drop should drop the top 3 elements" test.assert_eq
+		1 " 3drop should drop the top 3 elements" test.assert_eq
+		clear );
+
+	// ?drop
+	:( 1 2 3 4 dup even? ?drop
+		height 3 " ?drop should drop 2nd element if TOS is true" test.assert_eq
+		3 " ?drop should drop 2nd element if TOS is true" test.assert_eq
+		2 " ?drop should drop 2nd element if TOS is true" test.assert_eq
+		1 " ?drop should drop 2nd element if TOS is true" test.assert_eq
+		clear );
+	:( 1 2 3 4 dup odd? ?drop
+		height 4 " ?drop should not drop if TOS is false" test.assert_eq
+		4 " ?drop should not drop if TOS is false" test.assert_eq
+		3 " ?drop should not drop if TOS is false" test.assert_eq
+		2 " ?drop should not drop if TOS is false" test.assert_eq
+		1 " ?drop should not drop if TOS is false" test.assert_eq
+		clear );
+
+	// reverse
+	// freeze
+	// joinstack
+
+	// endregion core stack HL ops //
+
+
+	reverse freeze // ⚠️ ALWAYS execute LAST
+]])

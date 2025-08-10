@@ -60,5 +60,5 @@ return firth.dictionary.rethrow(firth[[
 	//  test.assert_eq(height, 0, " []clear on empty stack should still be empty" );
 
 
-	freeze // ⚠️ ALWAYS execute LAST
+	reverse freeze // ⚠️ ALWAYS execute LAST
 ]])

@@ -92,6 +92,8 @@ line_num = 1
 parserules = stack.new()
 cstack = stack.new()
 rstack = stack.new()
+iostack = stack.new()
+
 do
 	local rmt = table.assign({}, getmetatable(rstack))
 	function rmt:__tostring()
@@ -423,10 +425,10 @@ function clear_cstate(die, ...)
 	return ...
 end
 
-function pushinputstate(...)
+local function pushinputstate(...)
 	stringio.flush()
 
-	cstack:push(setmetatable({
+	iostack:push(setmetatable({
 		input_path = input_path,
 		input_file = stringio.input(),
 	}, {
@@ -436,10 +438,10 @@ function pushinputstate(...)
 	return ...
 end
 
-function popinputstate(...)
+local function popinputstate(...)
 	stringio.flush()
 
-	local io = cstack:pop()
+	local io = iostack:pop()
 	stringio.input(io.input_file)
 	input_path = io.input_path
 
@@ -960,6 +962,17 @@ end
 immediates[dictionary['break']] = true
 
 -- ( *x -- *x' )
+function filterstack(predicate, ...)
+	if height(...) == 0 then return end
+
+	if predicate((...)) then
+		return (...), filterstack(predicate, select(2, ...))
+	else
+		return filterstack(predicate, select(2, ...))
+	end
+end
+
+-- ( *x -- *x' )
 function mapstack(f, ...)
 	if height(...) == 0 then return end
 
@@ -967,7 +980,7 @@ function mapstack(f, ...)
 end
 
 -- ( * -- )
-function eachstack(f, ...)
+function eachstack(f, ...) -- 9c6b90
 	if height(...) == 0 then return end
 
 	f((...))
@@ -1115,7 +1128,7 @@ end
 local function _afterfile(path, success, ...)
 	trace("FILE COMPLETED: %sSUCCESSFULLY", success and "👍 " or "💀 UN")
 
-	if cstack.height > 0 then -- could have been cleared if error
+	if iostack.height > 0 then
 		popinputstate()
 		trace("RETURNING TO READING %s, %d CHARS LEFT", input_path, #input_buffer - parse_pos)
 	end

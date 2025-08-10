@@ -177,7 +177,7 @@ function stringio.tonumber(val)
 	if type(val) == "number" then return val end
 	if type(val) == "string" then
 		val = stringio.trim(val)
-		local radix
+		local radix -- ⚠️ UNITIALIZED TO ALLOW RADIX TO DEFAULT
 		if val:match("^0[0-7]+$") then
 			radix = 8
 		else
@@ -187,7 +187,7 @@ function stringio.tonumber(val)
 				val = bin
 			end
 		end
-		-- hex strings prefixed with '0x' will be recognized
+		-- hex strings prefixed with '0x' will be recognized, all other cases are decimal
 		return tonumber(val, radix)
 	end
 	return tonumber(tostring(val))

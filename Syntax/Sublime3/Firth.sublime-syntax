@@ -93,7 +93,7 @@ contexts:
         2: entity.name.function.firth
 
   stack-manip:
-    - match: (?<={{stdelim}})([23]?dup|[23]?drop|nip|over|clear|swap|-?rot|pivot|pick|roll|shove|yank|chop|height|C>|>C|Cswap)(?={{endelim}})
+    - match: (?<={{stdelim}})([23n]?dup|[23?]?drop|nip|over|stuff|clear|swap|-?rot|pivot|pick|roll|shove|yank|chop|height|C>|>C|Cswap)(?={{endelim}})
       scope: keyword.control.firth
 
   stack-values:
@@ -194,7 +194,7 @@ contexts:
       push:
         - meta_scope: meta.block.control.firth
         - include: main
-    - match: (?<={{stdelim}})for|forever|while|each|eachstack|mapstack(?={{endelim}})
+    - match: (?<={{stdelim}})for|loops|forever|while|each|eachstack|mapstack(?={{endelim}})
       scope: keyword.control.loop.firth
       push:
         - meta_scope: meta.block.control.firth

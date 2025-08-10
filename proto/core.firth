@@ -255,12 +255,11 @@ char : create compile
 : ndup ( n*x n -- 2n*x ) dup loops dup pick swap end drop ;
 : 2drop ( a b -- ) drop drop ;
 : 3drop ( a b c -- ) drop drop drop ;
-: ndrop ( n*x n -- ) loops drop end ;
+// ndrop is spelled "n chop"
 : ?drop ( x b -- x? ) if drop end ;
 : reverse ( x(k)..x i -- x..x(k) )
 	 // capture stack height; decrement because we don't want to count `i`
 	height 1-
-
 	// base cases and a few optimazations first, then more expensive SHOVE algo
 	dup 2 <  >R 2dup == R> || if
 		2drop
@@ -362,7 +361,6 @@ const: \v char \v
 const: SPACE "  "
 const: EMPTY " "
 
-const: iostack []
 : pushinput  ( fd -- )(IO: fd ) input iostack >[] drop useinput ;
 : pushoutput ( fd -- )(IO: fd ) output iostack >[] drop useoutput ;
 : popinput  (--)(IO: fd -- ) iostack []> useinput ;
@@ -386,7 +384,10 @@ const: iostack []
 : .r (R: * -- ) .R Rclear ;
 : .s ( * -- ) .S clear ;
 : printstack ( * -- ) .fmt" \n<==[ " .S .char ] .CR ;
-: joinstack ( * s -- s' ) >R EMPTY height 1 > while swap >string R@ rot .. .. height 1 > end Rdrop ;
+: joinstack ( * s -- s' )
+	>R EMPTY
+	height 1 > while swap >string R@ rot .. .. height 1 > end
+	Rdrop ;
 
 : see ( word -- )
 	// find meta-entry by name..?
@@ -412,9 +413,11 @@ alias: NOOP NOP
 // : calls: (--) postpone ` " calledby" @@ nip foreach drop " \tcalledby". . .CR end ;
 // : calledby: (--) postpone ` " calls" @@ nip foreach drop " \tcalls"   . . .CR end ;
 
+// math
 alias: abs Lua.math.abs
-alias: ciel Lua.math.ciel
+alias: ceil Lua.math.ceil
 alias: floor Lua.math.floor
+alias: remainder Lua.math.modf
 const: inf Lua.math.huge
 -1 inf * ` -inf const
 0 0 / ` nan const
@@ -450,6 +453,11 @@ alias: & Lua.bit.band
 alias: | Lua.bit.bor
 alias: ^ Lua.bit.bxor
 alias: ~ Lua.bit.bnot
+
+: round>0 ( f -- i ) dup 0 < if ceil else floor end ;
+: round ( f -- i ) dup remainder drop abs 0.5 >= if ceil else floor end ;
+: even? ( n -- b ) remainder nip 1 & 0 == ; // ignores fractional part
+: odd? ( n -- b ) remainder nip 1 & 1 == ;  // ignores fractional part
 
 // control and os words
 alias: exit Lua.os.exit

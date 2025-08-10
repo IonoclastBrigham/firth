@@ -277,6 +277,7 @@ function wrapglobals(globalenv)
 			floor = 1,
 			max = 2,
 			min = 2,
+			modf = {1, 2},
 			random = {0, 1, 2, 1},
 			randomseed = {1, 0},
 		},
@@ -285,6 +286,7 @@ function wrapglobals(globalenv)
 			time = 0,
 		},
 		string = {
+			char = 1,
 			-- format = nil, -- TODO: returns 1, but could take any number
 			gsub = { 2, 2 },
 			sub = 3

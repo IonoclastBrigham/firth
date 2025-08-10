@@ -93,5 +93,5 @@ return firth.dictionary.rethrow(firth[[
 	// test-isnan-nan
 	:( nan isnan? " NaN should return true for isnan?" test.assert_true );
 
-	freeze // ⚠️ ALWAYS execute LAST
+	reverse freeze // ⚠️ ALWAYS execute LAST
 ]])

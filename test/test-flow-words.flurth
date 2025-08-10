@@ -47,5 +47,5 @@ return firth.dictionary.rethrow(firth[[
 
 	TODO: test_forever??
 
-	freeze // ⚠️ ALWAYS execute LAST
-	]])
+	reverse freeze // ⚠️ ALWAYS execute LAST
+]])

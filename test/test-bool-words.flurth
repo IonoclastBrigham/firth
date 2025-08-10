@@ -162,5 +162,5 @@ return firth.dictionary.rethrow(firth[[
 	:( false aValue and false " FALSEY AND ANYTHING should be first value." test.assert_eq );
 	:( false nil and false " FALSEY AND ANYTHING should be first value." test.assert_eq );
 
-	freeze // ⚠️ ALWAYS execute LAST
+	reverse freeze // ⚠️ ALWAYS execute LAST
 ]])
