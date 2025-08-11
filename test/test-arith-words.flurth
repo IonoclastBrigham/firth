@@ -16,9 +16,10 @@
 
 
 local firth = require 'proto.bootstrap'
+local rethrow = firth.dictionary.rethrow
 
 
-return firth.dictionary.rethrow(firth[[
+return rethrow(firth[[
 	// test_add
 	:( 2 3 + 5 " Adding should equal expected sum." test.assert_eq );
 

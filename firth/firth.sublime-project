@@ -1,0 +1,24 @@
+{
+	"folders":
+	[
+		{
+			"path": "/Users/prime/Code/Firth"
+		}
+	],
+	"settings":
+	{
+		"LSP":
+		{
+			"LSP-lua":
+			{
+				"settings":
+				{
+					"Lua.diagnostics.globals":
+					[
+						"luaN"
+					]
+				}
+			}
+		}
+	}
+}

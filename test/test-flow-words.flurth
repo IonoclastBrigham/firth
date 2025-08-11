@@ -14,10 +14,11 @@
 
 
 local firth = require 'proto.bootstrap'
+local rethrow = firth.dictionary.rethrow
 
 
 -- covers: if, else, then, while, do, loop, for, each
-return firth.dictionary.rethrow(firth[[
+return rethrow(firth[[
 	// test_if_true
 	:( true if 42 else 0 end 42 " TRUE IF should execute the 'then' branch." test.assert_eq );
 

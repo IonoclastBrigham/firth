@@ -193,7 +193,7 @@ char : create compile
 // tables, arrays
 : {} ( -- {} ) lua{ return {}, ... } ;
 : # ( s|t -- n ) lua{ return #(...), select(2, ...) } ;
-: freeze ( n*x -- { ...n*x } ) lua{ return {...} } ; TODO: stack.new
+: freeze ( n*x -- [ ...n*x ] ) stack.new ;
 : insert ( x t -- t ) dup rot Lua.table.insert ; // Lua.table.insert "feels" backward, table first
 : { (--)(TS: * '}' )(EX: * -- t )
 	TODO: distinguish between a variable and a literal
@@ -309,13 +309,23 @@ char : create compile
 	;
 : const: (--)(TS: word x ) 2word resolve xt?exec swap cpush const ;immed
 : alias: (--)(TS: new old ) 2word find swap store ;immed
-alias: type Lua.type
+
+: ?. dup nil ~= if word resolve xt?exec else word drop end ;immed
+: ?? dup nil == if drop word resolve xt?exec else word drop end ;immed
+
+: type ( x -- s )
+	dup Lua.getmetatable dup if
+		` __type @@ dup if nip else drop Lua.type end
+	else
+		drop Lua.type
+	end ;
 const: type.xt ` function
 const: type.number ` number
 const: type.string ` string
 const: type.table ` table
 const: type.boolean ` boolean
 const: type.nil ` nil
+const: type.stack ` stack
 
 : >bool ( x -- b ) not not ;
 : >number ( x -- n )
@@ -325,8 +335,6 @@ const: type.nil ` nil
 		dup nil == if drop 0 else string>number end
 	end
 	;
-: ?. dup nil ~= if word resolve xt?exec else word drop end ;immed
-: ?? dup nil == if drop word resolve xt?exec else word drop end ;immed
 : __call@@ ( mt -- xt ) ` __call @@ ;
 : executable? ( x -- b )
 	dup xt? if
@@ -387,7 +395,7 @@ const: EMPTY " "
 : joinstack ( * s -- s' )
 	>R EMPTY
 	height 1 > while swap >string R@ rot .. .. height 1 > end
-	Rdrop ;
+	Rdrop 1 -2 Lua.string.sub ;
 
 : see ( word -- )
 	// find meta-entry by name..?

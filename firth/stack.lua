@@ -193,6 +193,7 @@ end
 --! @cond
 local mt = stack
 mt.__index = mt
+mt.__type = "stack"
 stack = {}
 --! @endcond
 
@@ -209,7 +210,16 @@ stack = {}
 --! </pre>
 --! @return a newly initialized stack object.
 function stack.new(...)
-	return setmetatable({ height = select("#", ...), ... }, mt)
+	local height = select("#", ...)
+	local stk = setmetatable({ height = 0 }, mt)
+	for i = 1, height do -- start at 1 so we don't run if height is 9
+		stk:push((select(height - i + 1, ...)))
+	end
+	return stk
+end
+
+function stack.isstack(x)
+	return getmetatable(x) == mt
 end
 
 return stack

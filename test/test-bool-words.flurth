@@ -14,10 +14,11 @@
 
 
 local firth = require 'proto.bootstrap'
+local rethrow = firth.dictionary.rethrow
 
 
 -- covers: >, <, =, <=, >=, ~=, and, or, nand, nor, xor
-return firth.dictionary.rethrow(firth[[
+return rethrow(firth[[
 	// comparisons //
 
 	// test_greater

@@ -343,8 +343,47 @@ return rethrow(firth[[
 		clear );
 
 	// reverse
+	:( reverse
+		height 0 " Reverse should do nothing is stack is empty" test.assert_eq
+		clear );
+	:( 10 reverse
+		height 1 " Reverse should leave a stack with 1 element untouched" test.assert_eq
+		10 " Reverse should leave a stack with 1 element untouched" test.assert_eq
+		clear );
+	:( 10 20 reverse
+		height 2 " Reverse should put 2 elements in reverse order" test.assert_eq
+		10 " Reverse should put 2 elements in reverse order" test.assert_eq
+		20 " Reverse should put 2 elements in reverse order" test.assert_eq
+		clear );
+	:( 10 20 30 reverse
+		height 3 " Reverse should put 3 elements in reverse order" test.assert_eq
+		10 " Reverse should put 3 elements in reverse order" test.assert_eq
+		20 " Reverse should put 3 elements in reverse order" test.assert_eq
+		30 " Reverse should put 3 elements in reverse order" test.assert_eq
+		clear );
+	:( 10 20 30 40 reverse
+		height 4 " Reverse should put 4 elements in reverse order" test.assert_eq
+		10 " Reverse should put 4 elements in reverse order" test.assert_eq
+		20 " Reverse should put 4 elements in reverse order" test.assert_eq
+		30 " Reverse should put 4 elements in reverse order" test.assert_eq
+		40 " Reverse should put 4 elements in reverse order" test.assert_eq
+		clear );
+
 	// freeze
+	:( 1 2 3 freeze
+		height 1 " freeze should move entire stack to a stack object" test.assert_eq
+		dup type type.stack " freeze should move entire stack to a stack object" test.assert_eq
+		dup []> 3 " freeze should move entire stack to a stack object" test.assert_eq
+		dup []> 2 " freeze should move entire stack to a stack object" test.assert_eq
+		dup []> 1 " freeze should move entire stack to a stack object" test.assert_eq
+		dup []# 0 " freeze should move entire stack to a stack object" test.assert_eq
+		clear );
+
 	// joinstack
+	:( 1 2 3 " ," joinstack
+		height 1 " joinstack reduces stack to a single string" test.assert_eq
+		" 1,2,3" " joinstack reduces stack to a single string" test.assert_eq
+		clear );
 
 	// endregion core stack HL ops //
 

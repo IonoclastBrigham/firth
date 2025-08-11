@@ -989,6 +989,10 @@ end
 
 dictionary['[]'] = fli.wrapfunc(stack.new, 0)
 
+dictionary['stack.new'] = stack.new -- consumes whole stack
+
+dictionary['[]?'] = fli.wrapfunc(stack.isstack, 1)
+
 -- ( -- x)(R: x -- )
 -- R-from is a prim to avoid mucking with stack ops as they happen.
 -- ⚠️ DO NOT DELETE THIS FUNCTION

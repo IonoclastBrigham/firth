@@ -16,12 +16,13 @@
 
 
 local firth = require 'proto.bootstrap'
+local rethrow = firth.dictionary.rethrow
 
 
 -- Automated tests for Firth stack object words ([]@, []>, >[], []swap, []clear, etc.)
-return firth.dictionary.rethrow(firth[[
+return rethrow(firth[[
 	// Create stack and push values
-	:( [] type type.table " [] should create a stack object" test.assert_eq );
+	:( [] type type.stack " [] should create a stack object" test.assert_eq );
 	:( [] []# 0 " [] should create an empty stack object" test.assert_eq );
 
 	// Test []@ (top element)

@@ -99,7 +99,7 @@ contexts:
   stack-values:
     - match: (?<={{stdelim}})\[\](?={{endelim}})
       scope: variable.other.stack.firth
-    - match: (?<={{stdelim}})\[\](@|>|swap|clear)(?={{endelim}})
+    - match: (?<={{stdelim}})\[\](@|>|#|swap|dup|clear|drop)(?={{endelim}})
       scope: keyword.operator.stack.firth
     - match: (?<={{stdelim}})>\[\](?={{endelim}})
       scope: keyword.operator.stack.firth
@@ -194,7 +194,7 @@ contexts:
       push:
         - meta_scope: meta.block.control.firth
         - include: main
-    - match: (?<={{stdelim}})for|loops|forever|while|each|eachstack|mapstack(?={{endelim}})
+    - match: (?<={{stdelim}})for|loops|forever|while|eachi?|eachstack|mapstack(?={{endelim}})
       scope: keyword.control.loop.firth
       push:
         - meta_scope: meta.block.control.firth
