@@ -25,7 +25,9 @@
 : term.clear (--) \0 33 .raw " [2J" .raw ;
 : term.reset (--) \0 33 .raw " [0m" .raw ;
 
-enum: AnsiColor {
+enum: AnsiColor
+{
+	DEFAULT
 	counter: 30 BLACK
 	RED
 	GREEN
@@ -37,11 +39,25 @@ enum: AnsiColor {
 }
 : bright 60 + ; // BRIGHT colors are 60 greater than the normal code
 : term.color ( fg bg -- ) \0 33 .raw 10 + swap .fmt" [%d;%dm" ; // bg = fg + 10
+AnsiColor.DEFAULT =: USE_COLOR_FG
+AnsiColor.DEFAULT =: USE_COLOR_BG
+: use-color ( fg bg -- ) = USE_COLOR_BG = USE_COLOR_FG ;
+: with-color( ( -- )
+	` USE_COLOR_FG cpushvar ` USE_COLOR_BG cpushvar ' term.color ccall
+	TODO: always interprets enclosed code so could be slow,
+	TODO: but I expect to primarily be doing I/O so probs doesn't matter.
+	1 backtrack " %b()" parsematch clips cpush ' runstring ccall
+	' term.reset ccall
+	;immed
 : .color ( x fg bg -- ) term.color . term.reset ;
 : .color" ( fg bg -- )(TS: "s") postpone " ' -rot ccall ' .color ccall ;immed
+
+TODO: grayscale colors from the end of the 256 color palette?
 
 : term.rgb ( fg bg -- )
 	\0 33 .raw
 	unpack-rgb 3 roll unpack-rgb .fmt" [38;2;%d;%d;%d;48;2;%d;%d;%dm" ;
+TODO: use-rgb
+TODO: with-rgb
 : .rgb ( x fg bg -- ) term.rgb . term.reset ;
 : .rgb" ( fg bg -- )(TS: "s") postpone " ' -rot ccall ' .rgb ccall ;immed
