@@ -1,0 +1,67 @@
+// term.firth
+// ANSI terminal utilities for :Firth environments.
+//
+// Copyright © 2025 Brigham Toskin
+// This file is part of the :Firth language reference implementation. Usage
+// and redistribution of this software is governed by the terms of a modified
+// MIT-style license. You should have received a copy of the license with the
+// source distribution; if not, you may find it online at:
+// <https://github.com/IonoclastBrigham/firth/blob/master/LICENSE.firth>
+//
+// Formatting:
+//	utf-8 ; unix ; 80 cols ; tabwidth 4
+// /////////////////////////////////////////////////////////////////////////////
+
+
+// For a very nice explanation, see:
+// https://stackoverflow.com/questions/4842424/list-of-ansi-color-escape-sequences#75985833
+// https://en.wikipedia.org/wiki/ANSI_escape_code
+
+
+: \0 (TS: o)(EX: -- n) ` 0 word .. >number Lua.string.char cpush ;immed
+: extract-bytes24 ( i -- i1 i2 i3 )
+	dup 0x0000FF & over 0x00FF00 & 8 >> rot 0xFF0000 & 16 >> ;
+
+: term.clear (--) \0 33 .raw " [2J" .raw ;
+: term.reset (--) \0 33 .raw " [0m" .raw ;
+
+const: FG.BLACK 30
+const: BG.BLACK 40
+const: FG.RED 31
+const: BG.RED 41
+const: FG.GREEN 32
+const: BG.GREEN 42
+const: FG.YELLOW 33
+const: BG.YELLOW 43
+const: FG.BLUE 34
+const: BG.BLUE 44
+const: FG.MAGENTA 35
+const: BG.MAGENTA 45
+const: FG.CYAN 36
+const: BG.CYAN 46
+const: FG.WHITE 37
+const: BG.WHITE 47
+const: FG.BRIGHT_BLACK 90
+const: BG.BRIGHT_BLACK 100
+const: FG.BRIGHT_RED 91
+const: BG.BRIGHT_RED   101
+const: FG.BRIGHT_GREEN  92
+const: BG.BRIGHT_GREEN  102
+const: FG.BRIGHT_YELLOW 93
+const: BG.BRIGHT_YELLOW 103
+const: FG.BRIGHT_BLUE  94
+const: BG.BRIGHT_BLUE  104
+const: FG.BRIGHT_MAGENTA 95
+const: BG.BRIGHT_MAGENTA 105
+const: FG.BRIGHT_CYAN  96
+const: BG.BRIGHT_CYAN  106
+const: FG.BRIGHT_WHITE  97
+const: BG.BRIGHT_WHITE  107
+: term.color ( fg bg -- ) \0 33 .raw swap .fmt" [%d;%dm" ;
+
+: term.rgb ( fg bg -- )
+	\0 33 .raw
+	extract-bytes24
+	3 roll extract-bytes24
+	// " \\033" .raw .S .CR
+	.fmt" [38;2;%d;%d;%d;48;2;%d;%d;%dm" ;
