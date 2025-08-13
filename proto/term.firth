@@ -37,10 +37,11 @@ enum: AnsiColor {
 }
 : bright 60 + ; // BRIGHT colors are 60 greater than the normal code
 : term.color ( fg bg -- ) \0 33 .raw 10 + swap .fmt" [%d;%dm" ; // bg = fg + 10
+: .color ( x fg bg -- ) term.color . term.reset ;
+: .color" ( fg bg -- )(TS: "s") postpone " ' -rot ccall ' .color ccall ;immed
 
 : term.rgb ( fg bg -- )
 	\0 33 .raw
-	unpack-rgb
-	3 roll unpack-rgb
-	// " \\033" .raw .S .CR
-	.fmt" [38;2;%d;%d;%d;48;2;%d;%d;%dm" ;
+	unpack-rgb 3 roll unpack-rgb .fmt" [38;2;%d;%d;%d;48;2;%d;%d;%dm" ;
+: .rgb ( x fg bg -- ) term.rgb . term.reset ;
+: .rgb" ( fg bg -- )(TS: "s") postpone " ' -rot ccall ' .rgb ccall ;immed
