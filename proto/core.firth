@@ -88,7 +88,7 @@ char : create compile
 : .. (EX: s1 s2 -- s1..s2) " .." cbinop ;immed // string concat
 : .." ( s1 -- s1..s2)(TS: s2)(EX: s1 -- s1..s2) postpone " postpone .. ;immed
 : peekch input_buffer parse_pos dup Lua.string.sub ;
-: str>word ( s istart -- s iend word ) over -rot %s swap strparse ;
+: str>word ( s istart -- s iend word ) over %s rot strparse ;
 : strip ( s -- s' ) 0 str>word 2 shove 2 chop ;
 
 // some basic arithmetic operators
@@ -189,6 +189,7 @@ char : create compile
 : Rclear (--)(C: * -- ) rstack []clear ;
 : R# rstack []# ;
 : R#? R# 0 > ;
+: R++ ( -- n )(R: n -- n+1) R> dup 1+ >R ;
 
 // tables, arrays
 : {} ( -- {} ) lua{ return {}, ... } ;
@@ -280,6 +281,7 @@ char : create compile
 : xt ( {word} -- xt ) ` xt @@ ;
 : xt? ( x -- b ) Lua.type ` function == ;
 : xt?exec ( * x -- * ) dup xt? if execute end ;
+: !exec: ( -- * )(TS: word) word resolve execute ;immed
 : immediate ( xt|entry -- )
 	// redefining to allow making raw XTs immediate i.e. lambdas
 	dup xt? not if compile_target.XT @@ end
@@ -301,6 +303,7 @@ char : create compile
 	dup find nil ~= assert" Attempting to modify undefined variable %s" ?throw
 	store
 	;
+: @ find dup nil ~= assert" Attempting to load an undefined variable" ?throw ;
 : = ( x -- )(TS: name ) word cpush ' ! ccall ;immed
 : delete (--)(TS: name) nil cpush word cpush ' ! ccall ;immed
 : const ( x name -- )
@@ -347,6 +350,7 @@ const: type.stack ` stack
 	dup executable? not if find end
 	immediates swap @@ >bool // will be nil if not immediate, so cast to bool
 	;
+
 // : variable ( name -- entry ) create dup does> NOP ;
 // : var: ( x -- ) word variable ! ;immed
 // : val: ( x -- ) word variable ! last does> @ ;immed
@@ -461,6 +465,8 @@ alias: & Lua.bit.band
 alias: | Lua.bit.bor
 alias: ^ Lua.bit.bxor
 alias: ~ Lua.bit.bnot
+alias: << Lua.bit.lshift
+alias: >> Lua.bit.rshift
 
 : round>0 ( f -- i ) dup 0 < if ceil else floor end ;
 : round ( f -- i ) dup remainder drop abs 0.5 >= if ceil else floor end ;
@@ -480,6 +486,7 @@ alias: exit Lua.os.exit
 : )meta.tostring; ( mt -- mt)(EX: mt.__tostring = thr)
 	postpone ); ' swap ccall ` __tostring cpush ' !! ccall
 	;immed
+: meta.tostring[1] ( s mt -- mt ) " enum " rot .. :( )[1]; swap ` __tostring !! ;
 : entry? ( x -- b ) getmeta entrymt  == ;
 
 // symbols and enums
@@ -487,6 +494,32 @@ alias: exit Lua.os.exit
 	dup {} ` value !!
 	{} :( ` value @@  )meta.tostring; Lua.setmetatable swap store ;
 : symbol: (--)(TS: word) char : word .. dup defined not if symbol.create else drop end ;immed
+
+: counter: ( n -- ) Rdrop str>word >number >R ;immed
+: enum.collect
+	dup find dup xt? over immediate? && if
+		nip execute str>word dup >bool dup
+	else
+		drop false
+	end ;
+: enum.populate dup 4 pick @ R@ pivot !! drop ;
+: enum.inject 3 pick fmt" %s.%s" R++ swap const ;
+: enum.create ( name -- )
+	{} over store 0 >R
+	" %b{}" parsematch clips
+	1 str>word dup while
+		// execute immediates, otherwise it's an enumerant name
+		enum.collect ?continue
+
+		// grab the enum table and insert the counter with name
+		enum.populate
+
+		// add to dictionary as pre-dotted name
+		enum.inject
+	str>word dup end
+	3drop Rdrop dup dup find
+	Lua.table.frozen swap over getmeta meta.tostring[1] drop swap ! ;
+: enum: word enum.create ;immed
 
 // optional testing module
 ` Lua.test defined if

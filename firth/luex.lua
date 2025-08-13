@@ -108,13 +108,12 @@ function table.assign(t, ...)
 	return t
 end
 
-function table.freeze(t)
+function table.frozen(t)
 	local mt = table.assign({}, t)
-	-- TODO: some way to iterate values
-	function mt.__newindex()
-		error("Attemped to mutate a frozen table")
-	end
 	mt.__index = mt
+	function mt.__newindex()
+		error("Attemped to mutate a frozen table", 2)
+	end
 	return setmetatable({}, mt)
 end
 

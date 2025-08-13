@@ -1,15 +1,16 @@
 Ideas / TODOs
 -------------
 proto branch tasks
-	randomized choice
-		whatever ends up on the stack between words ends up a choice
-		optional weight/percentage?
-		rand:select
-			:ROCK  1 3 / ofthetime
-			:PAPER 50 percent ofthetime
-			:SCISSORS
-		end
-	vocabs
+	modules/vocabs/etc
+		Instead of raw `runfile` calls, some kinda structured module loading
+		Take advantage of setfenv() to load globals into module exports table?
+		module: util.term // adds `util.term` module to dictionary? just leaves on stack?
+			allow renaming?
+			as: TERM module: util.term // type type.module-remap if do rename... end
+		import: util.term // injects module globals into main dictionary
+		vocab: util.term // like module but also pushes onto parserules stack
+		similar to or extending lua package.loaded/package.loaders
+	vocabs (perhaps a wrapper around modules with just a bit of structure?)
 		vocab: name
 			creates words vocab:name, and vocab:name.dictionary, and vocab:pop
 			pushes parse rule that looks at currently-building vocab
@@ -25,6 +26,9 @@ proto branch tasks
 			setfenv?
 			many words directly reference `dictionary`, but could turn this into a function?
 			maybe when important _DICTIONARY as variable, dictionary as getter?
+	randomized choice
+		whatever ends up on the stack between words ends up a choice
+		optional weight/percentage?
 	Enums / Symbols
 		Declarative like C-alikes, or on-the-fly symbols like Scheme or Ruby?
 		If they need to be declared, harder to mess up with a typo, and could include symbols in module's "interface"
@@ -51,6 +55,7 @@ proto branch tasks
 			Maybe symbols and enums are different things that in 90% of cases work exactly the same.
 			Need string-ish things? Use a symbol. Need numberish things? Use an enum. Don't care? Pick what's easier.
 			Namespaced? Global? Dot prefix?
+			enum: Colors { INVALID counter: 30 BLACK RED GREEN counter: 34 BLUE }
 	deferred execution
 		defer word
 		defer{ word word word }

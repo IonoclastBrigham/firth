@@ -96,7 +96,7 @@ function stringio.nexttoken(str, delim, start)
 	local pattern = string.format("^([%s]*)([^%s]+)([%s]?)", delim, delim, delim)
 	local discard1, token, discard2 = str:match(pattern, start)
 
-	if token == nil then return "", math.huge end
+	if token == nil then return nil, #str + 1 end
 	return token, start + #discard1 + #token
 end
 

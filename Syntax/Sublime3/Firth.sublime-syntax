@@ -45,7 +45,7 @@ contexts:
     - include: paren_comment
   paren_comment:
     - meta_include_prototype: false
-    - match: (?<=\)|{{stdelim}})(\(--\))?\((..?:)?\s
+    - match: (?<=\)|{{stdelim}})(\(--\))?\((\S+?:)?\s
       scope: punctuation.definition.comment.firth
       push:
         - meta_scope: comment.block.firth

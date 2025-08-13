@@ -293,8 +293,9 @@ function wrapglobals(globalenv)
 		},
 		table = {
 			concat = 2,
+			frozen = 1,
 			insert = { 2, 0 },
-			push = { 1, 0 }
+			push = { 1, 0 },
 		}
 	})
 end
