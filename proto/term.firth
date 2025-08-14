@@ -25,6 +25,14 @@
 : term.clear (--) \0 33 .raw " [2J" .raw ;
 : term.reset (--) \0 33 .raw " [0m" .raw ;
 
+// Parsing word but not immediate.
+// Use in immediate context if in a function or block.
+: term.with-effect (--)(TS: "( code...)")
+	TODO: always interprets enclosed code so could be slow,
+	TODO: but I expect to primarily be doing I/O so probs doesn't matter.
+	1 backtrack " %b()" parsematch clips cpush ' runstring ccall
+	' term.reset ccall ;
+
 enum: AnsiColor
 {
 	DEFAULT
@@ -39,25 +47,28 @@ enum: AnsiColor
 }
 : bright 60 + ; // BRIGHT colors are 60 greater than the normal code
 : term.color ( fg bg -- ) \0 33 .raw 10 + swap .fmt" [%d;%dm" ; // bg = fg + 10
-AnsiColor.DEFAULT =: USE_COLOR_FG
-AnsiColor.DEFAULT =: USE_COLOR_BG
-: use-color ( fg bg -- ) = USE_COLOR_BG = USE_COLOR_FG ;
+AnsiColor.DEFAULT =: TERM_USE_COLOR_FG
+AnsiColor.DEFAULT =: TERM_USE_COLOR_BG
+: use-color ( fg bg -- ) = TERM_USE_COLOR_BG = TERM_USE_COLOR_FG ;
 : with-color( ( -- )
-	` USE_COLOR_FG cpushvar ` USE_COLOR_BG cpushvar ' term.color ccall
-	TODO: always interprets enclosed code so could be slow,
-	TODO: but I expect to primarily be doing I/O so probs doesn't matter.
-	1 backtrack " %b()" parsematch clips cpush ' runstring ccall
-	' term.reset ccall
+	` TERM_USE_COLOR_FG cpushvar ` TERM_USE_COLOR_BG cpushvar ' term.color ccall
+	term.with-effect
 	;immed
 : .color ( x fg bg -- ) term.color . term.reset ;
 : .color" ( fg bg -- )(TS: "s") postpone " ' -rot ccall ' .color ccall ;immed
 
 TODO: grayscale colors from the end of the 256 color palette?
 
+TODO: separate fg and bg versions too, so we can independently reset them?
 : term.rgb ( fg bg -- )
 	\0 33 .raw
 	unpack-rgb 3 roll unpack-rgb .fmt" [38;2;%d;%d;%d;48;2;%d;%d;%dm" ;
-TODO: use-rgb
-TODO: with-rgb
+0 =: TERM_USE_RGB_FG TODO: need to figure out decent defaults
+0 =: TERM_USE_RGB_BG TODO: need to figure out decent defaults
+: use-rgb ( fg bg - ) = TERM_USE_RGB_BG = TERM_USE_RGB_FG ;
+: with-rgb(
+	` TERM_USE_RGB_FG cpushvar ` TERM_USE_RGB_BG cpushvar ' term.rgb ccall
+	term.with-effect
+	;immed
 : .rgb ( x fg bg -- ) term.rgb . term.reset ;
 : .rgb" ( fg bg -- )(TS: "s") postpone " ' -rot ccall ' .rgb ccall ;immed
