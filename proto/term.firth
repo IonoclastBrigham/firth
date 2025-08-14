@@ -59,12 +59,14 @@ AnsiColor.DEFAULT =: TERM_USE_COLOR_BG
 
 TODO: grayscale colors from the end of the 256 color palette?
 
-TODO: separate fg and bg versions too, so we can independently reset them?
+const: TERM_RGB_DEFAULT -1
 : term.rgb ( fg bg -- )
 	\0 33 .raw
-	unpack-rgb 3 roll unpack-rgb .fmt" [38;2;%d;%d;%d;48;2;%d;%d;%dm" ;
-0 =: TERM_USE_RGB_FG TODO: need to figure out decent defaults
-0 =: TERM_USE_RGB_BG TODO: need to figure out decent defaults
+	dup TERM_RGB_DEFAULT == if drop " 10" else unpack-rgb fmt" 48;2;%d;%d;%d" end
+	swap dup TERM_RGB_DEFAULT == if drop " 0" else unpack-rgb fmt" 38;2;%d;%d;%d" end
+	.fmt" [%s;%sm" ;
+TERM_RGB_DEFAULT =: TERM_USE_RGB_FG
+TERM_RGB_DEFAULT =: TERM_USE_RGB_BG
 : use-rgb ( fg bg - ) = TERM_USE_RGB_BG = TERM_USE_RGB_FG ;
 : with-rgb(
 	` TERM_USE_RGB_FG cpushvar ` TERM_USE_RGB_BG cpushvar ' term.rgb ccall

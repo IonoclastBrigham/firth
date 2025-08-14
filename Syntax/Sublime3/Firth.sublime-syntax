@@ -40,6 +40,12 @@ contexts:
         - meta_scope: comment.line.todo.firth
         - match: $\n?
           pop: true
+    - match: (?<={{stdelim}})FIXME:(?={{endelim}})
+      scope: punctuation.definition.comment.firth
+      push:
+        - meta_scope: comment.line.fixme.firth
+        - match: $\n?
+          pop: true
     - match: (?<={{stdelim}})\(--\)(?={{endelim}})
       scope: comment.block.firth
     - include: paren_comment
@@ -129,7 +135,7 @@ contexts:
         1: string.unquoted.firth
         2: string.unquoted.firth
         3: comment.line.firth
-    - match: '(?<={{stdelim}})((\.\S*)?")\s'
+    - match: '(?<={{stdelim}})((\.\S*|fmt)?")\s'
       scope: punctuation.definition.string.quoted.begin.firth
       push:
         - meta_include_prototype: false

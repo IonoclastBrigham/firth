@@ -76,7 +76,8 @@ char : create compile
 : (--)(EX: postpone (EX: ;immed
 : (OUT: 4 backtrack postpone ( ;immed // output stream effects
 : (--)(OUT: postpone (OUT: ;immed
-: TODO: (TS: .*\n) postpone // ;immed  TODO: add to list with file/line/word?
+: TODO: (TS: .*\n) postpone // ;immed
+: FIXME: (TS: .*\n) postpone // ;immed
 : >string ( x -- s ) Lua.tostring ;
 : .CR (--) \n .raw ;
 : .2CR (--) \n \n .raw .raw ;
