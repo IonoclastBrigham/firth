@@ -13,16 +13,20 @@
 // /////////////////////////////////////////////////////////////////////////////
 
 
-// For a very nice explanation, see:
+// For info on terminal control codes and colors, see:
 // https://stackoverflow.com/questions/4842424/list-of-ansi-color-escape-sequences#75985833
 // https://en.wikipedia.org/wiki/ANSI_escape_code
 
+
+TODO: check for TERM=xterm-256color
+TODO: check for COLORTERM=truecolor
+TODO: parse out TERM_FEATURES? Looks messy...
 
 : \0 (TS: o)(EX: -- n) ` 0 word .. >number Lua.string.char cpush ;immed
 : unpack-rgb ( rgb -- b g r )
 	dup 0x0000FF & over 0x00FF00 & 8 >> rot 0xFF0000 & 16 >> ;
 
-: term.clear (--) \0 33 .raw " [2J" .raw ;
+: term.clear (--) \0 33 .raw " [2J" .raw ; TODO: "\27[3J\27[H\27[2J" ..?
 : term.reset (--) \0 33 .raw " [0m" .raw ;
 
 // Parsing word but not immediate.
@@ -32,7 +36,7 @@
 	TODO: but I expect to primarily be doing I/O so probs doesn't matter.
 	1 backtrack " %b()" parsematch clips cpush ' runstring ccall
 	' term.reset ccall ;
-
+// true = DEBUG_LOGS
 enum: AnsiColor
 {
 	DEFAULT
@@ -44,9 +48,13 @@ enum: AnsiColor
 	MAGENTA
 	CYAN
 	WHITE
+
+	// color code 38 indicates we want e.g. 256-color or RGB modes
+	EXTENDED
 }
+const: TERM_BG_DELTA 10
 : bright 60 + ; // BRIGHT colors are 60 greater than the normal code
-: term.color ( fg bg -- ) \0 33 .raw 10 + swap .fmt" [%d;%dm" ; // bg = fg + 10
+: term.color ( fg bg -- ) \0 33 .raw TERM_BG_DELTA + swap .fmt" [%d;%dm" ;
 AnsiColor.DEFAULT =: TERM_USE_COLOR_FG
 AnsiColor.DEFAULT =: TERM_USE_COLOR_BG
 : use-color ( fg bg -- ) = TERM_USE_COLOR_BG = TERM_USE_COLOR_FG ;
@@ -57,12 +65,42 @@ AnsiColor.DEFAULT =: TERM_USE_COLOR_BG
 : .color ( x fg bg -- ) term.color . term.reset ;
 : .color" ( fg bg -- )(TS: "s") postpone " ' -rot ccall ' .color ccall ;immed
 
-TODO: grayscale colors from the end of the 256 color palette?
+// Grayscale definitions at the tail end of 256 color mode
+enum: Greyscale256
+{
+	counter: -1 DEFAULT
+	counter: 232
+	GREY_0 GREY_1 GREY_2 GREY_3 GREY_4 GREY_5
+	GREY_6 GREY_7 GREY_8 GREY_9 GREY_10 GREY_11
+	GREY_12 GREY_13 GREY_14 GREY_15 GREY_16 GREY_17
+	GREY_18 GREY_19 GREY_20 GREY_21 GREY_22 GREY_23
+
+	// coarse-grained mnemonic convenience definitions
+	counter: 232 BLACK
+	counter: 237 DARK_GREY
+	counter: 243 MID_GREY
+	counter: 249 LIGHT_GREY
+	counter: 255 WHITE
+}
+: term.256 ( fg bg -- )
+	\0 33 .raw
+	dup Greyscale256.DEFAULT == if
+		drop AnsiColor.DEFAULT TERM_BG_DELTA + >string
+	else
+		AnsiColor.EXTENDED TERM_BG_DELTA + fmt" %d;5;%%d"
+	end
+	swap dup Greyscale256.DEFAULT == if
+		drop AnsiColor.DEFAULT >string
+	else
+		AnsiColor.EXTENDED fmt" %d;5;%d"
+	end
+	.fmt" [%s;%sm" ;
+
 
 const: TERM_RGB_DEFAULT -1
 : term.rgb ( fg bg -- )
 	\0 33 .raw
-	dup TERM_RGB_DEFAULT == if drop " 10" else unpack-rgb fmt" 48;2;%d;%d;%d" end
+	dup TERM_RGB_DEFAULT == if drop TERM_BG_DELTA >string else unpack-rgb fmt" 48;2;%d;%d;%d" end
 	swap dup TERM_RGB_DEFAULT == if drop " 0" else unpack-rgb fmt" 38;2;%d;%d;%d" end
 	.fmt" [%s;%sm" ;
 TERM_RGB_DEFAULT =: TERM_USE_RGB_FG

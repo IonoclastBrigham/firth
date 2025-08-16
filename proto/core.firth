@@ -235,7 +235,7 @@ char : create compile
 	// grab the assert string and squirrel it away
 	skipch ` [^"]* parsematch >C skipch // " compiles a push to the wrong stack
 	// then start compiling the assert cleanup body
-	` [[ASSERT]] false :( ( xt -- )
+	` [[ASSERT]] false :( ( xt -- xt false)
 		// pass compiled body thread along
 		false
 	); cbeginblock
@@ -304,7 +304,9 @@ char : create compile
 	dup find nil ~= assert" Attempting to modify undefined variable %s" ?throw
 	store
 	;
-: @ find dup nil ~= assert" Attempting to load an undefined variable" ?throw ;
+: @ dup find dup nil ~= assert" Attempting to load an undefined variable"
+		drop quote >string .raw " : " .raw
+	?throw nip ;
 : = ( x -- )(TS: name ) word cpush ' ! ccall ;immed
 : delete (--)(TS: name) nil cpush word cpush ' ! ccall ;immed
 : const ( x name -- )
@@ -496,29 +498,35 @@ alias: exit Lua.os.exit
 	{} :( ` value @@  )meta.tostring; Lua.setmetatable swap store ;
 : symbol: (--)(TS: word) char : word .. dup defined not if symbol.create else drop end ;immed
 
-: counter: ( n -- ) Rdrop str>word >number >R ;immed
-: enum.collect
-	dup find dup xt? over immediate? && if
-		nip execute str>word dup >bool dup
+: counter: ( n -- ) Rdrop word >number >R ;immed
+{} ( register of enumerant modifiers )
+	true swap ` counter: !!
+	true swap ` // !!
+	true swap ` ( !!
+	=: enum.MODIFIERS
+: enum.mod? ( word -- b ) enum.MODIFIERS swap @@ >bool ;
+: enum.parsebody (--)(TS: "{...enumerations}")
+	" %b{}" parsematch clips pushparsestate = input_buffer 1 = parse_pos 1 = line_num ;
+: enum.execmod ( word -- b )
+	dup enum.mod? if
+		find execute
+		word dup >bool dup FIXME: ?continue skips setting loop values
 	else
-		drop false
+		false
 	end ;
-: enum.populate dup 4 pick @ R@ pivot !! drop ;
-: enum.inject 3 pick fmt" %s.%s" R++ swap const ;
+: enum.populate ( enum enumerant -- enum enumerant) over @ over R@ -rot !! drop ;
+: enum.inject ( enum enumerant --)
+	over fmt" %s.%s" R++ swap const ;
 : enum.create ( name -- )
 	{} over store 0 >R
-	" %b{}" parsematch clips
-	1 str>word dup while
-		// execute immediates, otherwise it's an enumerant name
-		enum.collect ?continue
-
-		// grab the enum table and insert the counter with name
-		enum.populate
-
-		// add to dictionary as pre-dotted name
-		enum.inject
-	str>word dup end
-	3drop Rdrop dup dup find
+	enum.parsebody
+	word dup >bool while
+		enum.execmod ?continue // exec immeds, otherwise it's an enumeration
+		enum.populate // grab the enum table and insert the counter with name
+		enum.inject // add to dictionary as pre-dotted name
+	word dup >bool end drop
+	popparsestate
+	Rdrop dup dup find
 	Lua.table.frozen swap over getmeta meta.tostring[1] drop swap ! ;
 : enum: word enum.create ;immed
 

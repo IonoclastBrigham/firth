@@ -172,8 +172,13 @@ function err_middleware(success, ...)
 		stringio.output(stringio.stderr())
 		stringio.printline(("ERROR: %s"):format(errmsg))
 		stringio.printline(("while running %s:%d"):format(input_path, line_num))
-		local stackstring = '[ '..prepstack(recover())..']'
-		stringio.printline('stack : '..stackstring)
+		for _, prs in ipairs(cstack) do
+			if prs.line_num then
+				stringio.printline(("              %s:%d"):format(prs.input_path, prs.line_num))
+			end
+		end
+		-- local stackstring = '[ '..prepstack(recover())..']' -- FIXME!
+		-- stringio.printline('stack : '..stackstring)
 		stringio.printline('cstack: '..tostring(cstack))
 		stringio.printline('rstack: '..tostring(rstack))
 		stringio.printline(stacktrace(3))
@@ -450,6 +455,7 @@ end
 
 function pushparsestate(...)
 	cstack:push(setmetatable({
+		input_path = input_path, -- tracked here for error traces but used in xxxinputstate
 		input_buffer = input_buffer,
 		interp_running = interp_running,
 		parse_pos = parse_pos,

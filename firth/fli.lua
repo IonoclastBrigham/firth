@@ -282,7 +282,9 @@ function wrapglobals(globalenv)
 			randomseed = {1, 0},
 		},
 		os = {
+			execute = 1,
 			exit = { 1, 0 }, -- technically, never returns
+			getenv = 1,
 			time = 0,
 		},
 		string = {

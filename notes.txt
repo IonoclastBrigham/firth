@@ -29,33 +29,18 @@ proto branch tasks
 	randomized choice
 		whatever ends up on the stack between words ends up a choice
 		optional weight/percentage?
-	Enums / Symbols
-		Declarative like C-alikes, or on-the-fly symbols like Scheme or Ruby?
-		If they need to be declared, harder to mess up with a typo, and could include symbols in module's "interface"
-			➤ :DERD = monsterstate
-			:DERD is undefined
-			Did You Mean..?
-				:DEAD
-				:DUDE
-				:DAVID
-		We could allow a module to declare its valid symbols and not worry about collisions since they're stateless and immutable
-			// module A
-			symbol: STAYED
-			symbol: LEFT
-			...
-			// module B
-			symbol: RIGHT
-			symbol: LEFT // THIS IS FINE 👍
-		On the other hand, could push a parse rule for ":ALLCAPS" that just says "this is a symbol now"
-			Convenient, dynamic, easy to hack in unexpected values
-			Easier to use symbols that the consumer didn't explicitly think of ahead of time
-			This is mostly useful if they're are used as opaque keys or can convert to strings
-		Okay, but how to we feel about enumerations that count up e.g. from 0 or 1, and can convert to an int?
-			Definitely useful.
-			Maybe symbols and enums are different things that in 90% of cases work exactly the same.
-			Need string-ish things? Use a symbol. Need numberish things? Use an enum. Don't care? Pick what's easier.
-			Namespaced? Global? Dot prefix?
-			enum: Colors { INVALID counter: 30 BLACK RED GREEN counter: 34 BLUE }
+	Scopes, Blocks, Locals, and Macros
+		The more I think about it, the more I'm sure these are all related
+		Is a block a kind of scope, or scopes a kind of block, or are theey actually the same?
+		scope( a b c ) ... end // implicitly captures locals
+		scopes are implicitly nestable at compile time, so need to be able to walk the stack
+		Think I have to give up on the principle of not generating Lua code (it's my ASM, afterall)
+		scopes as preseented here implicitly include/implement a mechanism locals
+		True hygenic macros implictly need a scope mechanism
+			// want to write something like...
+			macro: foo
+				syntax{ foo thread... end }
+				replacement{ scope( a ) a not if 3 loops thread... end end }
 	deferred execution
 		defer word
 		defer{ word word word }
