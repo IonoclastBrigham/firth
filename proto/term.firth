@@ -36,7 +36,7 @@ TODO: parse out TERM_FEATURES? Looks messy...
 	TODO: but I expect to primarily be doing I/O so probs doesn't matter.
 	1 backtrack " %b()" parsematch clips cpush ' runstring ccall
 	' term.reset ccall ;
-// true = DEBUG_LOGS
+
 enum: AnsiColor
 {
 	DEFAULT
@@ -87,7 +87,7 @@ enum: Greyscale256
 	dup Greyscale256.DEFAULT == if
 		drop AnsiColor.DEFAULT TERM_BG_DELTA + >string
 	else
-		AnsiColor.EXTENDED TERM_BG_DELTA + fmt" %d;5;%%d"
+		AnsiColor.EXTENDED TERM_BG_DELTA + fmt" %d;5;%d"
 	end
 	swap dup Greyscale256.DEFAULT == if
 		drop AnsiColor.DEFAULT >string
@@ -95,7 +95,15 @@ enum: Greyscale256
 		AnsiColor.EXTENDED fmt" %d;5;%d"
 	end
 	.fmt" [%s;%sm" ;
-
+Greyscale256.DEFAULT =: TERM_USE_256_FG
+Greyscale256.DEFAULT =: TERM_USE_256_BG
+: use-256 ( fg bg - ) = TERM_USE_256_BG = TERM_USE_256_FG ;
+: with-256( (--)
+	` TERM_USE_256_FG cpushvar ` TERM_USE_256_BG cpushvar ' term.256 ccall
+	term.with-effect
+	;immed
+: .256 ( x fg bg -- ) term.256 . term.reset ;
+: .256" ( fg bg -- )(TS: "s") postpone " ' -rot ccall ' .256 ccall ;immed
 
 const: TERM_RGB_DEFAULT -1
 : term.rgb ( fg bg -- )
