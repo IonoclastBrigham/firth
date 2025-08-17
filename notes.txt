@@ -40,7 +40,7 @@ proto branch tasks
 			// want to write something like...
 			macro: foo
 				syntax{ foo thread... end }
-				replacement{ scope( a ) a not if 3 loops thread... end end }
+				replacement{ scope( a ) a >bool if 3 loops a thread... end end }
 	deferred execution
 		defer word
 		defer{ word word word }

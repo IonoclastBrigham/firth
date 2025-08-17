@@ -18,24 +18,61 @@
 // https://en.wikipedia.org/wiki/ANSI_escape_code
 
 
-TODO: check for TERM=xterm-256color
-TODO: check for COLORTERM=truecolor
-TODO: parse out TERM_FEATURES? Looks messy...
-
 : \0 (TS: o)(EX: -- n) ` 0 word .. >number Lua.string.char cpush ;immed
 : unpack-rgb ( rgb -- b g r )
 	dup 0x0000FF & over 0x00FF00 & 8 >> rot 0xFF0000 & 16 >> ;
 
-: term.clear (--) \0 33 .raw " [2J" .raw ; TODO: "\27[3J\27[H\27[2J" ..?
+// all color and font effects
 : term.reset (--) \0 33 .raw " [0m" .raw ;
 
-// Parsing word but not immediate.
-// Use in immediate context if in a function or block.
+TODO: Term size? Hard to see how to do this...
+
+: term.cursorxy       ( x y --) \0 33 .raw .fmt" [%d;%df" ; // output is col;row
+: term.cursorupby     ( n -- ) \0 33 .raw .fmt" [%dA" ;
+: term.cursordownby   ( n -- ) \0 33 .raw .fmt" [%dB" ;
+: term.cursorrightby  ( n -- ) \0 33 .raw .fmt" [%dC" ;
+: term.cursorleftby   ( n -- ) \0 33 .raw .fmt" [%dD" ;
+: term.cursorup       (--) 1 term.cursorupby ;
+: term.cursordown     (--) 1 term.cursordownby ;
+: term.cursorright    (--) 1 term.cursorrightby ;
+: term.cursorleft     (--) 1 term.cursorleftby ;
+: term.cursorhome     (--) \0 33 .raw " [H" .raw ;
+: term.cursorlinehome (--) \0 33 .raw " [0G" .raw ;
+: term.savecursor     (--) \0 33 .raw " [s" .raw ;
+: term.restorecursor  (--) \0 33 .raw " [u" .raw ;
+
+: term.bold      (--) \0 33 .raw " [1m" .raw ;
+: term/bold      (--) \0 33 .raw " [21m" .raw ;
+: term.faint     (--) \0 33 .raw " [2m" .raw ;
+: term/faint     (--) \0 33 .raw " [22m" .raw ;
+: term.italic    (--) \0 33 .raw " [3m" .raw ;
+: term/italic    (--) \0 33 .raw " [23m" .raw ;
+: term.underline (--) \0 33 .raw " [4m" .raw ;
+: term/underline (--) \0 33 .raw " [24m" .raw ;
+: term.blink     (--) \0 33 .raw " [5m" .raw ;
+: term/blnk      (--) \0 33 .raw " [25m" .raw ;
+: term.reverse   (--) \0 33 .raw " [7m" .raw ;
+: term/reverse   (--) \0 33 .raw " [27m" .raw ;
+
+true =: TERM_CLEAR_HISTORY?
+true =: TERM_CLEAR_HOME?
+: term.clear (--)
+	\0 33 .raw " [2J" .raw                            // clear current screenful
+	TERM_CLEAR_HISTORY? if \0 33 .raw " [3J" .raw end // clear scrollback history
+	TERM_CLEAR_HOME? if term.cursorhome end ;         // move cursor home
+true =: TERM_CLEARLINE_HOME?
+: term.clearline (--) \0 33 .raw " [2K" .raw ;
+: term.killline  (--) \0 33 .raw " [K" .raw ;
+
 : term.with-effect (--)(TS: "( code...)")
 	TODO: always interprets enclosed code so could be slow,
 	TODO: but I expect to primarily be doing I/O so probs doesn't matter.
 	1 backtrack " %b()" parsematch clips cpush ' runstring ccall
 	' term.reset ccall ;
+
+TODO: check for TERM=xterm-256color
+TODO: check for COLORTERM=truecolor
+TODO: parse out TERM_FEATURES? Looks messy...
 
 enum: AnsiColor
 {
