@@ -43,7 +43,9 @@ local success, err = firth([[
 		readline dup not if drop ." bye" bye end // nil => EOF => CTRL+D
 		' runstring Lua.pcall recurse ;
 
-	` firth/cli.firth runfile not if " Could not load cli extensions: " throw end
+	` firth/cli.firth runfile not if
+		" Couldn't load cli extensions: " .. throw
+	end
 	height 0 > if
 		reverse SPACE joinstack
 		 ' runstring Lua.pcall

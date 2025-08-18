@@ -29,7 +29,7 @@ proto branch tasks
 	randomized choice
 		whatever ends up on the stack between words ends up a choice
 		optional weight/percentage?
-	Scopes, Blocks, Locals, and Macros
+	Scopes, Blocks, Locals, Closures, and Macros
 		The more I think about it, the more I'm sure these are all related
 		Is a block a kind of scope, or scopes a kind of block, or are theey actually the same?
 		scope( a b c ) ... end // implicitly captures locals
