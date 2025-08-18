@@ -2,7 +2,8 @@ char //see:comment_block_below_for_copyright_notice drop
 
 char : create compile
 	char %s parse create compile
-	interpret buildfunc bindfunc
+	interpret buildfunc dup bindfunc
+	compile_target.XT @@ immediates true pivot !! drop
 : immediate
 	compile_target.XT @@ immediates true pivot !! drop
 	interpret buildfunc bindfunc
@@ -150,6 +151,7 @@ char : create compile
 	" local function lua(...)\n" ..
 	1 backtrack " %b{}" parsematch clips ..
 	" \nend\n" ..
+	" setfenv(lua, dictionary.Lua)\n" .. FIXME: link both ways? make Lua weak?
 	" return lua(select(2, ...))" .. fmt
 	Lua.loadstring ccall
 	;immed

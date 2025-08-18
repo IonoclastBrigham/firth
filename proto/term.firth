@@ -17,7 +17,6 @@
 // https://stackoverflow.com/questions/4842424/list-of-ansi-color-escape-sequences#75985833
 // https://en.wikipedia.org/wiki/ANSI_escape_code
 
-
 : \0 (TS: o)(EX: -- n) ` 0 word .. >number Lua.string.char cpush ;immed
 : unpack-rgb ( rgb -- b g r )
 	dup 0x0000FF & over 0x00FF00 & 8 >> rot 0xFF0000 & 16 >> ;
@@ -25,7 +24,45 @@
 // all color and font effects
 : term.reset (--) \0 33 .raw " [0m" .raw ;
 
-TODO: Term size? Hard to see how to do this...
+const: STD_IN_FD 0
+const: STD_OUT_FD 1
+const: STD_ERR_FD 2
+const: TERM_W_NUM_ID " co"
+const: TERM_H_NUM_ID " li"
+` TERM Lua.os.getenv ` TERM_TYPE const
+FIXME: big and messy and brittle and can't do anything conditionally???
+// Lua.package.loaded ` ffi @@ nil ~= if
+	" int isatty(int fd);" Lua.ffi.cdef
+//	STD_OUT_FD Lua.ffi.C ` isatty @@ execute if
+		." LOADING TERMCAP..." .S .CR
+		` termcap Lua.ffi.load ""
+			int tgetent(char* buffer, const char* termtype);
+			int tgetnum(const char* id);
+		"" Lua.ffi.cdef
+		." COPYING TERM TYPE INTO C STRING" .S .CR
+		" char[?]" TERM_TYPE # 1+ Lua.ffi.new =: term_type
+		term_type TERM_TYPE Lua.ffi.copy
+		." CREATING NEW TERM DATA BUFFER" .S .CR
+		" char[?]" 2048 Lua.ffi.new =: term_buffer
+		." LOADING TERM DATA" .S .CR
+		term_type term_buffer  Lua.ffi.C ` tgetent @@ execute
+		0 < if .err" TERM DATA LOAD FAILED." end
+		." COPYING WIDTH ID INTO C STRING" .S .CR
+		" char[?]" TERM_W_NUM_ID # 1+ Lua.ffi.new =: term_w_id
+		term_w_id TERM_W_NUM_ID Lua.ffi.copy
+		." COPYING HEIGHT ID INTO C STRING" .S .CR
+		" char[?]" TERM_H_NUM_ID # 1+ Lua.ffi.new =: term_h_id
+		term_h_id TERM_H_NUM_ID Lua.ffi.copy
+		:( ( -- i ) term_w_id Lua.ffi.C ` tgetnum @@ execute ); =: term.width
+		:( ( -- i ) term_h_id Lua.ffi.C ` tgetnum @@ execute ); =: term.height
+// 	else
+// 		:( ( -- 0 ) 0 ); =: term.width
+// 		:( ( -- 0 ) 0 ); =: term.height
+// 	end
+// else
+// 	:( ( -- 0 ) 0 ); =: term.width
+// 	:( ( -- 0 ) 0 ); =: term.height
+// end
 
 : term.cursorxy       ( x y --) \0 33 .raw .fmt" [%d;%df" ; // output is col;row
 : term.cursorupby     ( n -- ) \0 33 .raw .fmt" [%dA" ;

@@ -19,6 +19,7 @@
 
 local assert = assert
 local getmetatable, setmetatable = getmetatable, setmetatable
+local package, require = package, require
 local pairs = pairs
 local print = print
 local select = select
@@ -251,7 +252,7 @@ function wrapmodule(module, defs)
 end
 
 function wrapglobals(globalenv)
-	return wrapmodule(globalenv, {
+	local wrappedglobals = wrapmodule(globalenv, {
 		-- assert = nil, -- NOWRAP: returns all args
 		error = { 2, 0 },
 		loadstring = 1, -- TODO: change to 2 and pass in function or file name
@@ -300,6 +301,30 @@ function wrapglobals(globalenv)
 			push = { 1, 0 },
 		}
 	})
+	if package.loaded.jit then
+		-- LuaJIT
+		wrappedglobals.ffi = wrapmodule(require"ffi", {
+			new = 2,
+			-- cast = 2,
+			-- typeof = 1,
+			-- sizeof = 1,
+			-- alignof = 1,
+			-- istype = 2,
+			-- fill = 3,
+			cdef = {1, 0},
+			-- abi = 1,
+			-- metatype = 1,
+			copy = {2, 0},
+			-- errno = 1,
+			load = {1, 0}, -- TODO: returns a wrapped lib, need to FLI-wrap it..?
+			-- arch = 1,
+			-- string = 1,
+			-- gc = 1,
+			-- os = 1,
+			-- C = {},
+			-- offsetof = 1,
+		})
+	end
 end
 
 local PREFIX = "Lua"

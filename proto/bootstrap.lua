@@ -495,6 +495,7 @@ end
 
 function popcompilestate(...)
 	local cmp = cstack:pop()
+	trace("POPPED COMPILESTATE: %s", cmp)
 	compile_target = cmp.compile_target
 	compiling = cmp.compiling
 
