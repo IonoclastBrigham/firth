@@ -34,23 +34,17 @@ FIXME: big and messy and brittle and can't do anything conditionally???
 // Lua.package.loaded ` ffi @@ nil ~= if
 	" int isatty(int fd);" Lua.ffi.cdef
 //	STD_OUT_FD Lua.ffi.C ` isatty @@ execute if
-		." LOADING TERMCAP..." .S .CR
 		` termcap Lua.ffi.load ""
 			int tgetent(char* buffer, const char* termtype);
 			int tgetnum(const char* id);
 		"" Lua.ffi.cdef
-		." COPYING TERM TYPE INTO C STRING" .S .CR
 		" char[?]" TERM_TYPE # 1+ Lua.ffi.new =: term_type
 		term_type TERM_TYPE Lua.ffi.copy
-		." CREATING NEW TERM DATA BUFFER" .S .CR
 		" char[?]" 2048 Lua.ffi.new =: term_buffer
-		." LOADING TERM DATA" .S .CR
 		term_type term_buffer  Lua.ffi.C ` tgetent @@ execute
 		0 < if .err" TERM DATA LOAD FAILED." end
-		." COPYING WIDTH ID INTO C STRING" .S .CR
 		" char[?]" TERM_W_NUM_ID # 1+ Lua.ffi.new =: term_w_id
 		term_w_id TERM_W_NUM_ID Lua.ffi.copy
-		." COPYING HEIGHT ID INTO C STRING" .S .CR
 		" char[?]" TERM_H_NUM_ID # 1+ Lua.ffi.new =: term_h_id
 		term_h_id TERM_H_NUM_ID Lua.ffi.copy
 		:( ( -- i ) term_w_id Lua.ffi.C ` tgetnum @@ execute ); =: term.width
@@ -106,7 +100,7 @@ true =: TERM_CLEARLINE_HOME?
 	TODO: but I expect to primarily be doing I/O so probs doesn't matter.
 	1 backtrack " %b()" parsematch clips cpush ' runstring ccall
 	' term.reset ccall ;
-
+true
 TODO: check for TERM=xterm-256color
 TODO: check for COLORTERM=truecolor
 TODO: parse out TERM_FEATURES? Looks messy...

@@ -41,7 +41,7 @@ return rethrow(firth[[
 	//	:( -- 	0 " Hello" each ÷ end 195 " FOREACH should sum string character codes." test.assert_eq
 
 	// test_while_loop
-	:( 0 true while 1+ dup 5 < end 5 " WHILE loop should increment until 5." test.assert_eq );
+	:( 0 while dup 5 < do 1+ end 5 " WHILE loop should increment until 5." test.assert_eq );
 
 	// test_loops
 	:( 1 8 loops 2 * end 256 " LOOPS should execute code 8 times" test.assert_eq );

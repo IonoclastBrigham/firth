@@ -924,19 +924,36 @@ function eachi(...)
 end
 immediates[eachi] = true
 
--- ( cond -- )
+-- while/do
 dictionary['while'] = function(...)
-	-- TODO: a coopt the block thread to allow a `WHILE cond DO xxx END` form..?
-	cbeginblock("[[WHILE]]", true, function(whilethread)
-		local function _while_r(cond, ...)
-			if cond then return _while_r(whilethread(...)) end
-			return ...
+	cbeginblock("[[WHILE/COND]]", false, function(condthread)
+		local _while
+		local function _loopif(whilethread, cond, ...)
+			if cond then return _while(whilethread, whilethread(...)) else return ... end
+		end
+		function _while(whilethread, ...)
+			return _loopif(whilethread, condthread(...))
+		end
+		return false, _while
+	end)
+	return ...
+end
+immediates[dictionary['while']] = true
+
+-- while/do
+-- ( cond -- )
+dictionary['do'] = function(...)
+	local condthread = cendblock()
+
+	cbeginblock("[[WHILE/DO]]", true, function(whilethread)
+		local function _while_r(...)
+			return condthread(whilethread, ...)
 		end
 		return true, _while_r
 	end)
 	return ...
 end
-immediates[dictionary['while']] = true
+immediates[dictionary['do']] = true
 
 function loops(...)
 	cbeginblock("[[LOOPS]]", true, function(loopsthread)

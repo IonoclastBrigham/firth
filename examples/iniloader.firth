@@ -13,7 +13,7 @@
 // /////////////////////////////////////////////////////////////////////////////
 
 
-false val: INIDONE
+false =: INIDONE
 : = ( var -- ) ( TS: val ) word swap ! ;
 : inidef ( -- ) ( TS: name = val )
 	word dup char } equal? if
@@ -21,7 +21,7 @@ false val: INIDONE
 	else
 		variable word call
 	end ;
-: { ( -- ) true while inidef INIDONE not end ;
+: { ( -- ) while INIDONE not do inidef end ;
 : inifile: ( -- ) ( TS: path )
 	false ` INIDONE !
 	word loadfile ;

@@ -36,7 +36,7 @@ MAX_TRIES =: tries
 :TIE =: result
 
 .fmt" Let's play Rock-Paper-Scissors! 🪨  📄 ✂️\n"
-true while
+while tries 0 > do
 	tries MAX_TRIES .fmt" \nBest out of %d, %d tries remaining.\n"
 	." What is your choice? [r]ock, [p]aper, or [s]cissors:"
 
@@ -68,7 +68,8 @@ true while
 	++ tries drop end end
 	result p_score c_score pivot .fmt" %s!\nScore: Player: %d, Computer: %d\n"
 
--- tries 0 > end // while
+	1 -= tries
+end
 
 // final outcome
 " Tie Game!"

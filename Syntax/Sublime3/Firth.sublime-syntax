@@ -200,7 +200,7 @@ contexts:
       push:
         - meta_scope: meta.block.control.firth
         - include: main
-    - match: (?<={{stdelim}})for|loops|forever|while|eachi?|eachstack|mapstack(?={{endelim}})
+    - match: (?<={{stdelim}})for|loops|forever|while|do|eachi?|eachstack|mapstack(?={{endelim}})
       scope: keyword.control.loop.firth
       push:
         - meta_scope: meta.block.control.firth

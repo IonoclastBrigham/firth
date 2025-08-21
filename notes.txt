@@ -26,6 +26,7 @@ proto branch tasks
 			setfenv?
 			many words directly reference `dictionary`, but could turn this into a function?
 			maybe when important _DICTIONARY as variable, dictionary as getter?
+	FFI-Bindings
 	randomized choice
 		whatever ends up on the stack between words ends up a choice
 		optional weight/percentage?
@@ -61,7 +62,7 @@ proto branch tasks
 		elseif
 		some kinda multi-cond / when / switch
 		break and continue
-		while( condition ) stuff end
+		while condition do stuff... end
 	guard
 		can we make guard work without early-exit flow?
 		is this really helpful?

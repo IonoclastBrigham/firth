@@ -22,7 +22,7 @@
 0 =: guess
 
 // game loop
-true while
+while tries 0 > do
 	tries .fmt" Enter a number between 0 and 20, %d tries remaining: "
 
 	STDIN .readline strip >number = guess
@@ -33,6 +33,6 @@ true while
 
 		tries 1- = tries
 	end
-tries 0 > end
+end
 
 .fmt" Game Over\n"

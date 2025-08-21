@@ -124,6 +124,14 @@ char : create compile
 		find 1- dup dictionary 3 roll !! drop
 	end
 	;immed
+: -= ( n -- )(TS: ivar)
+	word dup
+	compiling if
+		cpushvar ' swap ccall postpone - dictionary cpush cpush ' !! ccall ' drop ccall
+	else
+		find rot swap - dictionary rot !! drop
+	end
+	;immed
 
 // some basic boolean operators
 : > ( a b -- a>b ) char > cbinop ;immed
@@ -200,22 +208,12 @@ char : create compile
 : freeze ( n*x -- [ ...n*x ] ) stack.new ;
 : insert ( x t -- t ) dup rot Lua.table.insert ; // Lua.table.insert "feels" backward, table first
 : { (--)(TS: * '}' )(EX: * -- t )
-	TODO: distinguish between a variable and a literal
-	{} compiling if
-		cpush true while
-			word dup ` } ~= if
-				dup resolve dup Lua.type ` function == if ccall else cpush end
-				' swap ccall ' insert ccall
-			end
-		` } ~= end
-	else
-		true while
-			word dup ` } ~= if
-				dup resolve dup Lua.type ` function == if execute end
-				rot insert swap
-			end
-		` } ~= end
-	end
+	TODO: distinguish between a variable and a literal?
+	{} while word dup ` } ~= do
+		resolve dup Lua.type ` function == if execute end
+		swap insert
+	end drop
+	compiling if cpush end
 	;immed
 : search ( x t -- n|nil ) nil >R eachi 2 pick ~= if drop else Rdrop >R end end drop R> ;
 
@@ -403,7 +401,7 @@ const: EMPTY " "
 : printstack ( * -- ) .fmt" \n<==[ " .S .char ] .CR ;
 : joinstack ( * s -- s' )
 	>R EMPTY
-	height 1 > while swap >string R@ rot .. .. height 1 > end
+	while height 1 > do swap >string R@ rot .. .. end
 	Rdrop 1 -2 Lua.string.sub ;
 
 : see ( word -- )
@@ -522,11 +520,11 @@ alias: exit Lua.os.exit
 : enum.create ( name -- )
 	{} over store 0 >R
 	enum.parsebody
-	word dup >bool while
+	while word dup >bool do
 		enum.execmod ?continue // exec immeds, otherwise it's an enumeration
 		enum.populate // grab the enum table and insert the counter with name
 		enum.inject // add to dictionary as pre-dotted name
-	word dup >bool end drop
+	end drop
 	popparsestate
 	Rdrop dup dup find
 	Lua.table.frozen swap over getmeta meta.tostring[1] drop swap ! ;
