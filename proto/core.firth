@@ -217,8 +217,13 @@ char : create compile
 	;immed
 : search ( x t -- n|nil ) nil >R eachi 2 pick ~= if drop else Rdrop >R end end drop R> ;
 
-// error handling
-: throw ( x -- ) 2 Lua.error ;
+// error handling and debugging
+: file.line line_num cpush ;immed
+: file.name input_path cpush ;immed
+: throw ( x -- )
+	postpone file.line postpone file.name " %s:%d %s" cpush ' fmt ccall
+	2 cpush ' Lua.error ccall
+	;immed
 : try ( compiles: * -- * )
 	` [[TRY]] false :( ( xt -- xt )
 		:( ( [xt] -- *) Lua.pcall )[1]; true
