@@ -164,9 +164,9 @@ end
 function err_middleware(success, ...)
 	if success then return ... end
 
-	local errmsg = (...)
-	-- print("💥 MIDDLEWARE CAUGHT ERROR WITH MESSAGE", errmsg)
 	if dictionary.PRINT_ERRS then
+		local errmsg = (...)
+		-- print("💥 MIDDLEWARE CAUGHT ERROR WITH MESSAGE", errmsg)
 		stringio.output():flush()
 		local savedout = stringio.output()
 		stringio.output(stringio.stderr())
@@ -181,7 +181,7 @@ function err_middleware(success, ...)
 		-- stringio.printline('stack : '..stackstring)
 		stringio.printline('cstack: '..tostring(cstack))
 		stringio.printline('rstack: '..tostring(rstack))
-		stringio.printline(stacktrace(3))
+		-- stringio.printline(stacktrace(3))
 		stringio.output():flush()
 		stringio.output(savedout)
 		return clear_cstate(true, errmsg, ...)
@@ -192,7 +192,7 @@ end
 
 -- ( n -- s )
 function stacktrace(i, ...)
-	return "call"..debug.traceback("", i or 2):sub(2), ...
+	return "lua call"..debug.traceback("", i or 2):sub(2), ...
 end
 
 local function runtime_err(name, msg, level, ...)
@@ -236,7 +236,7 @@ local LOOKUP_ERR_MSG = "%q is undefined%s"
 -- ( b s -- *? )
 local function lookup_err(tok, throw, ...)
 	local __FIRTH_DUMPTRACE__ = true -- TODO
-	
+
 	local path = input_path--:gsub("^(.-)(/?)([^/]*)$", "%1%2")
 	if not path or #path == 0 then path = "./" end
 	local prefix = path..':'..line_num
@@ -251,7 +251,7 @@ local function lookup_err(tok, throw, ...)
 			end
 		end
 	end
-	
+
 	local suggestions = sortmatches(buckets, tok)
 	local suffix = dictionary.PRINT_ERRS and "\nDid You Mean..?\n\t"..table.concat(suggestions, "\n\t") or ""
 	local msg = LOOKUP_ERR_MSG:format(tok, suffix)

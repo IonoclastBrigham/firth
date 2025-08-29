@@ -1,4 +1,4 @@
-#!/usr/bin/env rlwrap --always-readline luajit
+#!/usr/bin/env rlwrap -q'"' --always-readline --ansi-colour-aware luajit
 --------------------------------------------------------------------------------
 --! @file
 --! @brief Tiny minimal REPL for :Firth language.
@@ -34,8 +34,7 @@ local success, err = firth([[
 		compiling if
 			drop .fmt" \t" // if compiling is true we know there wasn't an error
 		else
-			if ." ok" else PRINT_ERRS if fmt" %s\n" .err else (NOTHING) end end
-			` ➤ .
+			if ." ok" end ` ➤ . TODO: coloring depending on succes flag
 		end ;
 
 	: REPL ( * b -- *' b' )
