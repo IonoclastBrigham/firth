@@ -217,9 +217,15 @@ char : create compile
 	;immed
 : search ( x t -- n|nil ) nil >R eachi 2 pick ~= if drop else Rdrop >R end end drop R> ;
 
-// error handling and debugging
+// file info, error handling, and debugging
 : file.line line_num cpush ;immed
 : file.name input_path cpush ;immed
+: withpath" ( s -- s' )(TS: path)
+	1 backtrack postpone "
+	" ( __FIRTH__) ` %s = input_path ( __ENDFIRTH__) %s" cpush
+	' fmt ccall
+	;immed
+
 : throw ( x -- )
 	postpone file.line postpone file.name " %s:%d %s" cpush ' fmt ccall
 	2 cpush ' Lua.error ccall
@@ -295,7 +301,10 @@ char : create compile
 	;
 : 2word ( -- s1 s2 )(TS: word word ) word word ;
 : #! ( -- )(TS: line)
-	line_num 1 > input STDIN ~= && assert" Shebang only valid on first line; found on: " output line_num STDERR useoutput Lua.tostring .raw useoutput ?throw
+	line_num 1 > input STDIN ~= &&
+	assert" Shebang only valid on first line; found on: "
+		output line_num STDERR useoutput Lua.tostring .raw STDIN useoutput
+	?throw
 	postpone //
 	;immed
 

@@ -76,9 +76,6 @@ fli.inject(dictionary, fli) -- do we want to do this ???
 
 --! @endcond
 
--- the export
-local firth = {}
-
 -- global parser / interpreter / compiler state
 DEBUG_LOGS = false
 PRINT_ERRS = true
@@ -162,32 +159,28 @@ function recover(...)
 end
 
 function err_middleware(success, ...)
-	if success then return ... end
+	if success then return true, ... end
 
-	if dictionary.PRINT_ERRS then
-		local errmsg = (...)
+	local errmsg = (...)
+	if PRINT_ERRS then
 		-- print("💥 MIDDLEWARE CAUGHT ERROR WITH MESSAGE", errmsg)
-		stringio.output():flush()
-		local savedout = stringio.output()
-		stringio.output(stringio.stderr())
-		stringio.printline(("ERROR: %s"):format(errmsg))
-		stringio.printline(("while running %s:%d"):format(input_path, line_num))
+		errmsg = ("ERROR: %s\n"):format(errmsg)
+		errmsg = errmsg .. ("while running %s:%d\n"):format(input_path, line_num)
 		for _, prs in ipairs(cstack) do
 			if prs.line_num then
-				stringio.printline(("              %s:%d"):format(prs.input_path, prs.line_num))
+				errmsg = errmsg .. ("              %s:%d\n"):format(prs.input_path, prs.line_num)
 			end
 		end
 		-- local stackstring = '[ '..prepstack(recover())..']' -- FIXME!
 		-- stringio.printline('stack : '..stackstring)
-		stringio.printline('cstack: '..tostring(cstack))
-		stringio.printline('rstack: '..tostring(rstack))
+		errmsg = errmsg .. ('rstack: %s\n'):format(tostring(rstack))
+		errmsg = errmsg .. ('cstack: %s\n'):format(tostring(cstack))
 		-- stringio.printline(stacktrace(3))
-		stringio.output():flush()
-		stringio.output(savedout)
-		return clear_cstate(true, errmsg, ...)
+
 	end
-	-- local die = current_infile ~= "{STDIN}"
-	-- return clear_cstate(die, select(2, ...))
+
+	clear_cstate(false)
+	return false, errmsg
 end
 
 -- ( n -- s )
@@ -377,9 +370,7 @@ end
 
 --! ( pattern -- tok )
 function parsematch(pattern, ...)
-	-- TODO: seems redundant to pcall and then assert??
-	local success, word, endpos = pcall(stringio.matchtoken, input_buffer, pattern, parse_pos)
-	assert(success, word)
+	local word, endpos = stringio.matchtoken(input_buffer, pattern, parse_pos)
 	parse_pos = endpos
 	return word, ...
 end
@@ -430,15 +421,24 @@ function clear_cstate(die, ...)
 	return ...
 end
 
+local iostate_mt = {
+	__tostring = function(io)
+		return ("I/O{ %q, %s, %q }"):format(
+			io.input_path,
+			io.input_file,
+			"..."..io.input_buffer:sub(parse_pos, 20).."..."
+		 )
+	end
+}
+
 local function pushinputstate(...)
 	stringio.flush()
 
 	iostack:push(setmetatable({
 		input_path = input_path,
 		input_file = stringio.input(),
-	}, {
-		__tostring = function(io) return ("I/O{ %q, %s }"):format(io.input_path, io.input_file) end
-	}))
+		input_buffer = input_buffer,
+	}, iostate_mt))
 
 	return ...
 end
@@ -447,24 +447,30 @@ local function popinputstate(...)
 	stringio.flush()
 
 	local io = iostack:pop()
+	input_buffer = io.input_buffer
 	stringio.input(io.input_file)
 	input_path = io.input_path
 
 	return ...
 end
 
+local pstate_mt = {
+	__tostring = function(prs)
+		return ("PRS{ %s, %s, %d }"):format(
+			prs.interp_running,
+			prs.parse_pos,
+			prs.line_num
+		)
+	end
+}
+
 function pushparsestate(...)
 	cstack:push(setmetatable({
-		input_path = input_path, -- tracked here for error traces but used in xxxinputstate
-		input_buffer = input_buffer,
+		input_path = input_path, -- FIXME: tracked here for error traces but used in xxxinputstate
 		interp_running = interp_running,
 		parse_pos = parse_pos,
 		line_num = line_num,
-	}, {
-		__tostring = function(prs)
-			return ("PRS{ %q, %s, %s, %d }"):format(prs.input_buffer:sub(1, 10), prs.interp_running, prs.parse_pos, prs.line_num)
-		end
-	}))
+	}, pstate_mt))
 
 	return ...
 end
@@ -479,16 +485,17 @@ function popparsestate(...)
 	return ...
 end
 
-local cstatemt = {
-		__tostring = function(cmp)
-			return ("CMP{ %s, %s }"):format(cmp.compiling, cmp.compile_target)
-		end
-	}
+local cstate_mt = {
+	__tostring = function(cmp)
+		return ("CMP{ %s, %s }"):format(cmp.compiling, cmp.compile_target)
+	end
+}
+
 function pushcompilestate(...)
 	cstack:push(setmetatable({
 		compiling = compiling,
 		compile_target = compile_target,
-	}, cstatemt))
+	}, cstate_mt))
 
 	return ...
 end
@@ -1082,9 +1089,13 @@ end)
 -- TODO: make this as minimal as possible, and replace with :Firth impl?
 --! @private
 local function _interpret_r(...)
-	-- bail if we're done
+	-- base case; bail if we're done
 	if not interp_running or parse_pos > #input_buffer then
-		if cstack.height > 0 then popparsestate() end -- may have been cleared in error handler
+		if cstack.height > 0 then -- may have been cleared in error handler
+			if compiling then popcompilestate() end -- TODO: error if compiling?
+			popparsestate()
+			popinputstate()
+		end
 		return ...
 	end
 
@@ -1102,6 +1113,7 @@ local function _interpret_r(...)
 		-- EOF; bail
 		if compiling then popcompilestate() end -- TODO: error if compiling?
 		popparsestate()
+		popinputstate()
 		return ...
 	end
 	if compiling then srcappend(word) end
@@ -1120,7 +1132,7 @@ local function _interpret_r(...)
 	if type(found) == "function" then
 		if not compiling or immediates[found] then
 			trace("EXECUTING %s", word)
-			return _interpret_r(err_middleware(pcall(found, ...)))
+			return _interpret_r(found(...))
 		else
 			trace("COMPILING CALL TO %s", word)
 			return _interpret_r(ccall(found, ...)) -- pass `word` instead to dynamic-link
@@ -1143,6 +1155,7 @@ end
 -- ( s -- * )
 function runstring(src, ...)
 	trace("RUNSTRING WITH INCOMING STACK HEIGHT: %d", height(...))
+	pushinputstate()
 	pushparsestate()
 	input_buffer = src
 	interp_running = nonempty(src)
@@ -1150,7 +1163,7 @@ function runstring(src, ...)
 	parse_pos  = 1
 
 	trace("--- %s:1 ---", input_path)
-	return _interpret_r(...)
+	return err_middleware(pcall(_interpret_r, ...))
 end
 
 local function _afterfile(path, success, ...)
@@ -1161,15 +1174,7 @@ local function _afterfile(path, success, ...)
 		trace("RETURNING TO READING %s, %d CHARS LEFT", input_path, #input_buffer - parse_pos)
 	end
 
-	if success then return true, ... end
-
-	-- if not success then
-	-- 	runtime_err(("`%q runfile`"):format(path), "ERROR WHILE RUNNING FILE", 0)
-	-- elseif compiling then
-	-- 	runtime_err(("`%q runfile`"):format(path), "UNEXPECTED EOF WILE COMPILING", 0)
-	-- end
-
-	return false, ...
+	return success, ...
 end
 
 -- ( path -- * )
@@ -1194,7 +1199,7 @@ function runfile(path, ...)
 	success, src = pcall(stringio.read)
 	if not success then return _afterfile(path, false, "Could not read file", ...) end
 
-	return _afterfile(path, pcall(runstring, src, ...))
+	return _afterfile(path, runstring(src, ...))
 end
 
 --[[
@@ -1231,22 +1236,24 @@ for k, v in pairs(dictionary) do
 end
 
 -- Prepare the Export
-firth = table.assign(firth, {
+local firth = {
 	runstring = runstring,
 	runfile = runfile,
 	dictionary = dictionary,
 	loaded = false,
 	-- don't overrwrite load_err, which may be assigned elsewhere
-})
+}
 
 clear_cstate(false)
-firth.loaded, firth.load_err = runfile "proto/core.firth"
+firth.loaded, firth.load_err = runfile("proto/core.firth")
 PRINT_ERRS = false -- default error printing to disabled after core is loaded
 
 return setmetatable(firth, {
 	__call = function(f, str, ...)
 		if not f.loaded then error("UNINITIALIZED", 2) end
-		return pcall(runstring, str, ...)
+		-- local calledfrom = debug.getinfo(2, "Sl")
+		-- for k,v in pairs(calledfrom) do print(k, v) end
+		return runstring(str, ...)
 	end,
 	__index = firth
 })

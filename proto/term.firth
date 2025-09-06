@@ -98,9 +98,10 @@ true =: TERM_CLEARLINE_HOME?
 : term.with-effect (--)(TS: "( code...)")
 	TODO: always interprets enclosed code so could be slow,
 	TODO: but I expect to primarily be doing I/O so probs doesn't matter.
-	1 backtrack " %b()" parsematch clips cpush ' runstring ccall
+	FIXME: we're throwing away the success flag of runstring, but leaving errors
+	1 backtrack " %b()" parsematch clips cpush ' runstring ccall ' drop ccall
 	' term.reset ccall ;
-true
+
 TODO: check for TERM=xterm-256color
 TODO: check for COLORTERM=truecolor
 TODO: parse out TERM_FEATURES? Looks messy...
