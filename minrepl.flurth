@@ -39,14 +39,14 @@ local success, err = firth([[
 	: REPL ( * b -- *' b' )
 		?printstack _repl_status_prompt
 		readline dup not if drop ." bye" bye end // nil => EOF => CTRL+D
-		withpath" firth-repl" runstring recurse ;
+		withpath" {repl}" runstring recurse ;
 
 	` firth/cli.firth runfile not if
 		" Couldn't load cli extensions: " .. throw
 	end
 	height 0 > if
 		// run CLI args as code...
-		reverse SPACE joinstack withpath" {CLI-ARGS}" runstring not if
+		reverse SPACE joinstack withpath" {args}" runstring not if
 			// case 1: error compiling or running
 			( ." case 1" .S .CR) throw // fall through to lua land and let it clean up...
 		else DOREPL not if

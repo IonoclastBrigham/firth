@@ -218,7 +218,7 @@ char : create compile
 : search ( x t -- n|nil ) nil >R eachi 2 pick ~= if drop else Rdrop >R end end drop R> ;
 
 // file info, error handling, and debugging
-: file.line line_num cpush ;immed
+: file.line line_num embedded_line_num + cpush ;immed
 : file.name input_path cpush ;immed
 : withpath" ( s -- s' )(TS: path)
 	1 backtrack postpone "

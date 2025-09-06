@@ -85,6 +85,7 @@ interp_running = false
 input_buffer = ""
 parse_pos = 1
 line_num = 1
+embedded_line_num = 0
 
 parserules = stack.new()
 cstack = stack.new()
@@ -164,18 +165,28 @@ function err_middleware(success, ...)
 	local errmsg = (...)
 	if PRINT_ERRS then
 		-- print("💥 MIDDLEWARE CAUGHT ERROR WITH MESSAGE", errmsg)
-		errmsg = ("ERROR: %s\n"):format(errmsg)
-		errmsg = errmsg .. ("while running %s:%d\n"):format(input_path, line_num)
-		for _, prs in ipairs(cstack) do
-			if prs.line_num then
-				errmsg = errmsg .. ("              %s:%d\n"):format(prs.input_path, prs.line_num)
+		errmsg = ("ERROR: %s\n"):format(errmsg:gsub("ERROR: ", ""))
+		if input_buffer ~= "" then -- don't print trailing "empty" parse state
+			errmsg = errmsg ..
+				("compiler trace %s:%d\n"):format(
+					input_path,
+					line_num + embedded_line_num
+				)
+			for _, prs in ipairs(cstack) do
+				if prs.line_num then
+					errmsg = errmsg ..
+						("               %s:%d\n"):format(
+							prs.input_path,
+							prs.line_num + prs.embedded_line_num
+						)
+				end
 			end
+			-- local stackstring = '[ '..prepstack(recover())..']' -- FIXME!
+			-- stringio.printline('stack : '..stackstring)
+			errmsg = errmsg .. ('rstack: %s\n'):format(rstack)
+			errmsg = errmsg .. ('cstack: %s\n'):format(cstack)
+			-- stringio.printline(stacktrace(3))
 		end
-		-- local stackstring = '[ '..prepstack(recover())..']' -- FIXME!
-		-- stringio.printline('stack : '..stackstring)
-		errmsg = errmsg .. ('rstack: %s\n'):format(tostring(rstack))
-		errmsg = errmsg .. ('cstack: %s\n'):format(tostring(cstack))
-		-- stringio.printline(stacktrace(3))
 
 	end
 
@@ -232,7 +243,7 @@ local function lookup_err(tok, throw, ...)
 
 	local path = input_path--:gsub("^(.-)(/?)([^/]*)$", "%1%2")
 	if not path or #path == 0 then path = "./" end
-	local prefix = path..':'..line_num
+	local prefix = path..':'..line_num + embedded_line_num
 	local buckets = {}
 	for k,v in pairs(dictionary) do
 		for i = 1, #tok do
@@ -411,6 +422,7 @@ function clear_cstate(die, ...)
 	interp_running = not die
 	parse_pos = 1
 	line_num = 1
+	embedded_line_num = 0
 
 	compiling = false
 	compile_target = nil
@@ -456,10 +468,10 @@ end
 
 local pstate_mt = {
 	__tostring = function(prs)
-		return ("PRS{ %s, %s, %d }"):format(
-			prs.interp_running,
-			prs.parse_pos,
-			prs.line_num
+		return ("PRS{ %d, %d, %d }"):format(
+			prs.line_num,
+			prs.embedded_line_num,
+			prs.parse_pos
 		)
 	end
 }
@@ -470,6 +482,7 @@ function pushparsestate(...)
 		interp_running = interp_running,
 		parse_pos = parse_pos,
 		line_num = line_num,
+		embedded_line_num = embedded_line_num,
 	}, pstate_mt))
 
 	return ...
@@ -477,6 +490,7 @@ end
 
 function popparsestate(...)
 	local prs = cstack:pop()
+	embedded_line_num = prs.embedded_line_num
 	line_num = prs.line_num
 	parse_pos = prs.parse_pos
 	interp_running = prs.interp_running
@@ -1160,6 +1174,7 @@ function runstring(src, ...)
 	input_buffer = src
 	interp_running = nonempty(src)
 	line_num = 1
+	embedded_line_num = 0
 	parse_pos  = 1
 
 	trace("--- %s:1 ---", input_path)
@@ -1241,7 +1256,7 @@ local firth = {
 	runfile = runfile,
 	dictionary = dictionary,
 	loaded = false,
-	-- don't overrwrite load_err, which may be assigned elsewhere
+	-- don't assign load_err, which may be set elsewhere
 }
 
 clear_cstate(false)
@@ -1251,9 +1266,10 @@ PRINT_ERRS = false -- default error printing to disabled after core is loaded
 return setmetatable(firth, {
 	__call = function(f, str, ...)
 		if not f.loaded then error("UNINITIALIZED", 2) end
-		-- local calledfrom = debug.getinfo(2, "Sl")
+		local calledfrom = debug.getinfo(2, "Sl")
 		-- for k,v in pairs(calledfrom) do print(k, v) end
-		return runstring(str, ...)
+		local pathprefix = ('" %s" = input_path %d = embedded_line_num '):format(calledfrom.short_src, calledfrom.currentline)
+		return runstring(pathprefix..str, ...)
 	end,
-	__index = firth
+	__index = firth,
 })
