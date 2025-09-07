@@ -1266,9 +1266,14 @@ PRINT_ERRS = false -- default error printing to disabled after core is loaded
 return setmetatable(firth, {
 	__call = function(f, str, ...)
 		if not f.loaded then error("UNINITIALIZED", 2) end
-		local calledfrom = debug.getinfo(2, "Sl")
-		-- for k,v in pairs(calledfrom) do print(k, v) end
-		local pathprefix = ('" %s" = input_path %d = embedded_line_num '):format(calledfrom.short_src, calledfrom.currentline)
+		local info = debug.getinfo(2, "Sl")
+		-- for k,v in pairs(info) do print(k, v) end
+		local pathprefix = (
+			'" %s" = input_path %d = embedded_line_num '
+		):format(
+			info.short_src,
+			info.currentline
+		)
 		return runstring(pathprefix..str, ...)
 	end,
 	__index = firth,
